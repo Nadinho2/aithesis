@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /topic-generator
+Disallow: /my-topics
