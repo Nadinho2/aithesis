@@ -29,8 +29,8 @@ export const generateTopics = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Lovable AI is not configured.");
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
     const systemPrompt = `You are a senior academic research advisor. Generate exactly ${data.count} ORIGINAL, specific, and feasible research topics tailored to the inputs.
 Each topic must have a precise problem statement (2-3 sentences), an identified research gap (1-2 sentences), 3 SMART objectives, a novelty score (1-10), and a feasibility score (1-10).
@@ -52,7 +52,7 @@ Generate exactly ${data.count} topics now.`;
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "deepseek-v4-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -102,9 +102,7 @@ Generate exactly ${data.count} topics now.`;
     if (!resp.ok) {
       const text = await resp.text();
       if (resp.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-      if (resp.status === 402)
-        throw new Error("AI credits exhausted. Add credits in workspace settings.");
-      throw new Error(`AI gateway error ${resp.status}: ${text}`);
+      throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
     }
 
     const payload = await resp.json();

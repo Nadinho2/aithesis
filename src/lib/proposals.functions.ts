@@ -49,8 +49,8 @@ export const generateProposal = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Lovable AI is not configured.");
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
     let topicCtx: {
       title: string;
@@ -211,8 +211,8 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
     ];
 
     let parsed = ProposalSchema.parse(
-      await callLovableAI(apiKey, {
-        model: "google/gemini-2.5-flash",
+      await callAI(apiKey, {
+        model: "deepseek-v4-flash",
         system: systemPrompt,
         user: userPrompt,
         tools,
@@ -232,8 +232,8 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       attempts++;
       const diff = target - total;
       try {
-        const refine = await callLovableAI(apiKey, {
-          model: "google/gemini-2.5-flash",
+        const refine = await callAI(apiKey, {
+          model: "deepseek-v4-flash",
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
 Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across literature_review, background, and methodology. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal via submit_proposal.
