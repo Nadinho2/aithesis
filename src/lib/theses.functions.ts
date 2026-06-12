@@ -189,7 +189,7 @@ Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
     // Multi-pass exact word enforcement.
     let total = countWordsDeep(parsed);
     let attempts = 0;
-    while (total < target && attempts < 3) {
+    while (total < target && attempts < 1) {
       attempts++;
       const diff = target - total;
       const shortfalls: string[] = [];

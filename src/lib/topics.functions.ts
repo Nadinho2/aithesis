@@ -52,7 +52,7 @@ Generate exactly ${data.count} topics now.`;
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "deepseek-v4-pro",
+        model: "deepseek-v4-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

@@ -199,7 +199,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
     // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
     let total = countWordsDeep(parsed);
     let attempts = 0;
-    while (total < target && attempts < 3) {
+    while (total < target && attempts < 1) {
       attempts++;
       const diff = target - total;
       try {
