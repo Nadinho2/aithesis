@@ -114,56 +114,29 @@ export const generateThesis = createServerFn({ method: "POST" })
       chapter_5_discussion_conclusion: Math.round(target * 0.15),
     };
 
-    const systemPrompt = `You are a senior academic writing a full ${data.level} thesis. Every word must read as authored by a human researcher and must pass plagiarism and AI-detection screening.
-
-OUTPUT FORMAT — STRICT:
+    const baseRules = `OUTPUT FORMAT — STRICT:
 - Plain text only. NEVER use markdown syntax. NO asterisks (* or **), NO underscores for emphasis, NO backticks, NO hashes (#) for headings, NO hyphen bullets at line starts.
-- Do NOT bold, italicise, or otherwise emphasise words. Emphasis is conveyed through prose, not formatting marks.
-- Separate paragraphs with a single blank line. Paragraphs should be 3–6 sentences; do NOT produce 800-word walls of text.
-- Put every subheading (e.g. "1.1 Background to the Study", "3.2 Population and Sample", "Definition of Terms") on its OWN line with a blank line above and below it. Do not embed subheading labels inside paragraph prose.
+- Do NOT bold, italicise, or otherwise emphasise words.
+- Separate paragraphs with a single blank line. Paragraphs should be 3–6 sentences.
+- Put every subheading on its OWN line with a blank line above and below it.
 
 ORIGINALITY & HUMAN-VOICE RULES (absolute):
 - Compose entirely in your own words. NEVER copy any phrasing from the reference abstracts.
 - Vary sentence length aggressively; mix short declarative sentences with longer analytical ones.
 - Use concrete, specific details: actual numbers, named methods, locations, instruments, dates.
-- Insert occasional hedged claims ("appears to", "suggests that", "remains contested") rather than absolute pronouncements.
-- BANNED PHRASES (do not use any of these): "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "at the end of the day", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of".
+- Insert occasional hedged claims ("appears to", "suggests that", "remains contested").
+- BANNED PHRASES: "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of".
 - Do NOT begin any paragraph with "In summary", "In conclusion", "Furthermore," or "Moreover,".
 - At most two em-dashes per chapter.
 
 CITATION RULES — STRICT APA 7th EDITION:
 - Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
 - Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
-- Across the thesis, synthesise at least 20 references; argue, compare, and identify gaps — never summarise sources sequentially.
 - Reference list is rendered programmatically; do NOT output a bibliography.
 
-STRUCTURE (5 chapters):
-- Chapter 1: Introduction (background, problem statement, research questions, objectives, scope, significance, definitions) — target ${chapterTargets.chapter_1_introduction} words.
-- Chapter 2: Literature Review (thematic synthesis, theoretical framework, gap identification) — target ${chapterTargets.chapter_2_literature_review} words.
-- Chapter 3: Methodology (research design, population/sample, sampling technique, instruments, data collection procedure, data analysis techniques, validity/reliability, ethics) — target ${chapterTargets.chapter_3_methodology} words.
-- Chapter 4: Results / Findings (presented as if data were collected; include realistic-sounding tables described in prose, descriptive and inferential analysis results) — target ${chapterTargets.chapter_4_results_findings} words.
-- Chapter 5: Discussion, Conclusion & Recommendations (interpret findings against literature, implications, limitations, recommendations, suggestions for further research) — target ${chapterTargets.chapter_5_discussion_conclusion} words.
-- Abstract: ~${abstractTarget} words.
+Return STRICT JSON with a single key "content" containing the chapter text as a string.`;
 
-TOTAL TARGET: EXACTLY ${target} words across abstract + all five chapters.
-
-Use clear sub-headings inside each chapter (e.g. "1.1 Background to the Study", "1.2 Statement of the Problem") rendered as plain text lines.
-
-Return STRICT JSON matching this exact schema:
-
-{
-  "abstract": "full abstract text",
-  "chapters": {
-    "chapter_1_introduction": "full chapter 1 text",
-    "chapter_2_literature_review": "full chapter 2 text",
-    "chapter_3_methodology": "full chapter 3 text",
-    "chapter_4_results_findings": "full chapter 4 text",
-    "chapter_5_discussion_conclusion": "full chapter 5 text"
-  }
-}`;
-
-    const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
-
+    const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
 PROBLEM: ${topicCtx.problem_statement}
 RESEARCH GAP: ${topicCtx.research_gap}
 OBJECTIVES: ${topicCtx.objectives.join("; ")}
@@ -173,57 +146,71 @@ RESEARCH TYPE: ${topicCtx.research_type ?? "Not specified"}
 ACADEMIC LEVEL: ${data.level}
 
 VERIFIED SCHOLARLY REFERENCES (cite these only):
-${refContext}
+${refContext}`;
 
-Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
+    const chapterDefs: { key: string; label: string; instructions: string; target: number }[] = [
+      { key: "chapter_1_introduction", label: "Chapter 1: Introduction", instructions: "Background to the study, statement of the problem, research questions, objectives, scope and delimitations, significance, and definition of terms.", target: chapterTargets.chapter_1_introduction },
+      { key: "chapter_2_literature_review", label: "Chapter 2: Literature Review", instructions: "Thematic synthesis of related literature, theoretical/conceptual framework, and identification of the research gap. Synthesise at least 8 references, arguing themes rather than summarising one-by-one.", target: chapterTargets.chapter_2_literature_review },
+      { key: "chapter_3_methodology", label: "Chapter 3: Methodology", instructions: "Research design, population and sample, sampling technique, instruments, data collection procedure, data analysis techniques, validity/reliability, and ethical considerations.", target: chapterTargets.chapter_3_methodology },
+      { key: "chapter_4_results_findings", label: "Chapter 4: Results / Findings", instructions: "Presented as if data were collected. Include realistic-sounding tables described in prose, descriptive and inferential analysis results.", target: chapterTargets.chapter_4_results_findings },
+      { key: "chapter_5_discussion_conclusion", label: "Chapter 5: Discussion, Conclusion & Recommendations", instructions: "Interpret findings against literature, implications, limitations, recommendations, and suggestions for further research.", target: chapterTargets.chapter_5_discussion_conclusion },
+    ];
 
-    let parsed = ThesisSchema.parse(
-      await callAI(apiKey, {
-        model: "deepseek-v4-pro",
-        system: systemPrompt,
-        user: userPrompt,
-      }),
-    );
-    parsed = scrubObject(parsed) as typeof parsed;
+    // Generate abstract and all 5 chapters in parallel.
+    const genChapter = async (key: string, label: string, instructions: string, wordTarget: number) => {
+      const systemPrompt = `You are a senior academic writing ${label} of a ${data.level} thesis.
 
-    // Multi-pass exact word enforcement.
-    let total = countWordsDeep(parsed);
-    let attempts = 0;
-    while (total < target && attempts < 1) {
-      attempts++;
-      const diff = target - total;
-      const shortfalls: string[] = [];
-      const targets = chapterTargets as Record<string, number>;
-      for (const [k, t] of Object.entries(targets)) {
-        const actual = countWords((parsed.chapters as any)[k]);
-        if (actual < t) shortfalls.push(`${k}: have ${actual}, need ${t}`);
-      }
-      try {
-        const refine = await callAI(apiKey, {
-          model: "deepseek-v4-pro",
-          system: systemPrompt,
-          user: `Your draft is ${total} words. Target is EXACTLY ${target} (SHORT by ${diff}).
-Expand under-length chapters with additional substantive content (extra paragraphs of analysis, more synthesised citations, more concrete methodological/empirical detail). Keep all existing arguments and citations; add depth, do not pad. Re-submit the COMPLETE thesis.
+${baseRules}
 
-UNDER-LENGTH CHAPTERS:
-${shortfalls.join("\n") || "(distribute additions across chapter 2 and chapter 4)"}
+Write exactly one chapter: ${label}. ${instructions}
+Target: EXACTLY ${wordTarget} words.
+Use sub-headings (e.g. "1.1 Background to the Study", "3.2 Population and Sample") on their own lines.
 
-PREVIOUS DRAFT:
-${JSON.stringify(parsed)}`,
-        });
-        const refined = ThesisSchema.parse(refine);
-        const scrubbed = scrubObject(refined) as typeof parsed;
-        const newTotal = countWordsDeep(scrubbed);
-        if (newTotal > total) {
-          parsed = scrubbed;
-          total = newTotal;
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
+{
+  "content": "full chapter text here"
+}`;
+      const userPrompt = `${topicContext}
+
+Write ${label} now — EXACTLY ${wordTarget} words.`;
+      const result = await callAI(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+      const content = typeof result.content === "string" ? result.content : "";
+      return { key, content };
+    };
+
+    const genAbstract = async () => {
+      const systemPrompt = `You are a senior academic writing the abstract of a ${data.level} thesis.
+
+${baseRules}
+
+Write the abstract. Target: EXACTLY ${abstractTarget} words.
+Do NOT use sub-headings. The abstract is a single continuous paragraph.
+
+{
+  "content": "full abstract text here"
+}`;
+      const userPrompt = `${topicContext}
+
+Write the abstract now — EXACTLY ${abstractTarget} words.`;
+      const result = await callAI(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+      return typeof result.content === "string" ? result.content : "";
+    };
+
+    const [abstractResult, ...chapterResults] = await Promise.all([
+      genAbstract(),
+      ...chapterDefs.map((c) => genChapter(c.key, c.label, c.instructions, c.target)),
+    ]);
+
+    const abstract = abstractResult;
+    const chapters: Record<string, string> = {};
+    let total = 0;
+    for (const cr of chapterResults) {
+      chapters[cr.key] = cr.content;
+      total += countWords(cr.content);
     }
+    total += countWords(abstract);
+
+    let parsed: z.infer<typeof ThesisSchema> = { abstract, chapters } as any;
+    parsed = scrubObject(parsed) as typeof parsed;
 
     if (total > target) {
       parsed = trimThesisToExact(parsed, target);
