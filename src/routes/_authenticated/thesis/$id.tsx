@@ -130,10 +130,90 @@ function ThesisPage() {
 
 function Section({ title, body }: { title: string; body?: string }) {
   if (!body) return null;
+  const blocks = parseRichBlocks(body);
   return (
     <section className="mb-10">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap">{body}</div>
+      {blocks.map((block, i) => {
+        if (block.type === "text") {
+          return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4">{block.content}</p>;
+        }
+        if (block.type === "table") {
+          return (
+            <div key={i} className="mb-6 overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr>
+                    {block.headers.map((h, ci) => (
+                      <th key={ci} className="border border-ink/20 bg-ink/5 px-3 py-2 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.rows.map((row, ri) => (
+                    <tr key={ri} className="even:bg-ink/[0.02]">
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="border border-ink/20 px-3 py-2">{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {block.caption && <p className="text-xs text-ink/60 mt-1 italic">{block.caption}</p>}
+            </div>
+          );
+        }
+        if (block.type === "figure") {
+          return (
+            <div key={i} className="mb-6 p-4 border border-dashed border-ink/30 rounded-sm bg-ink/[0.02]">
+              <div className="text-sm text-ink/60 italic mb-2">[{block.caption}]</div>
+              {block.description && <p className="text-xs text-ink/50">{block.description}</p>}
+            </div>
+          );
+        }
+        return null;
+      })}
     </section>
   );
+}
+
+function parseRichBlocks(text: string): Array<
+  | { type: "text"; content: string }
+  | { type: "table"; caption: string; headers: string[]; rows: string[][] }
+  | { type: "figure"; caption: string; description: string }
+> {
+  const blocks: Array<any> = [];
+  const parts = text.split(/\n{2,}/);
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+
+    // Table block
+    const tableMatch = trimmed.match(/^\[TABLE:\s*(.+?)\]([\s\S]*)/i);
+    if (tableMatch) {
+      const caption = tableMatch[1];
+      const rows = tableMatch[2].trim().split(/\n/).map((r) => r.trim()).filter(Boolean);
+      if (rows.length >= 2) {
+        const parsedRows = rows.map((r) => r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim()));
+        const headers = parsedRows[0];
+        const dataRows = parsedRows.slice(1);
+        blocks.push({ type: "table", caption, headers, rows: dataRows });
+        continue;
+      }
+    }
+
+    // Figure block
+    const figureMatch = trimmed.match(/^\[FIGURE:\s*(.+?)\]([\s\S]*)/i);
+    if (figureMatch) {
+      blocks.push({ type: "figure", caption: figureMatch[1], description: figureMatch[2].trim() });
+      continue;
+    }
+
+    // Plain text — split into paragraphs
+    const subParts = trimmed.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    for (const sp of subParts) {
+      if (sp) blocks.push({ type: "text", content: sp });
+    }
+  }
+  return blocks;
 }

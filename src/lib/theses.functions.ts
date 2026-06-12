@@ -134,6 +134,21 @@ CITATION RULES — STRICT APA 7th EDITION:
 - Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
 - Reference list is rendered programmatically; do NOT output a bibliography.
 
+TABLES & FIGURES:
+When you present tabular data, embed it as:
+[TABLE: Table X: Caption]
+| Header 1 | Header 2 | Header 3 |
+| Cell 1,1 | Cell 1,2 | Cell 1,3 |
+| Cell 2,1 | Cell 2,2 | Cell 2,3 |
+
+Each table starts with [TABLE: caption] on its own line, has pipe-delimited rows, and closes with ] on its own line after all rows.
+
+For figures:
+[FIGURE: Figure X: Caption]
+Prose describing the figure, key values, and trends.
+
+Place tables ONLY in Chapter 4 (Results) and Chapter 3 (Methodology). At most 3 tables and 2 figures total.
+
 Output the chapter text as plain text — NOT wrapped in any format like JSON or markdown.`;
 
     const topicContext = `RESEARCH TOPIC: ${topicCtx.title}

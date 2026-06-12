@@ -9,6 +9,12 @@ import {
   ExternalHyperlink,
   PageBreak,
   PageOrientation,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  ShadingType,
+  BorderStyle,
 } from "docx";
 import { formatAPAParts, type ScholarlyRef } from "./scholarly.server";
 
@@ -81,13 +87,81 @@ function looksLikeBullet(line: string): boolean {
 }
 
 function paragraphs(text: string): Paragraph[] {
+  return parseRichText(text).filter((c): c is Paragraph => c instanceof Paragraph);
+}
+
+function parseRichText(text: string): (Paragraph | Table)[] {
   if (!text) return [];
-  // Normalise line endings, collapse 3+ newlines, split on blank lines OR newlines that precede a subheading.
   const normalised = text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  // Pre-split into logical blocks by blank lines.
   const blocks = normalised.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
-  const out: Paragraph[] = [];
+  const out: (Paragraph | Table)[] = [];
+
   for (const block of blocks) {
+    // Check for TABLE block
+    const tableMatch = block.match(/^\[TABLE:\s*(.+?)\]([\s\S]*)/i);
+    if (tableMatch) {
+      const caption = tableMatch[1];
+      const rows = tableMatch[2].trim().split(/\n/).map((r) => r.trim()).filter(Boolean);
+      if (rows.length >= 2) {
+        const parsedRows = rows.map((r) => r.replace(/^\||\|$/g, "").split("|").map((c) => c.trim()));
+        const maxCols = Math.max(...parsedRows.map((r) => r.length));
+        const docxRows: TableRow[] = [];
+        parsedRows.forEach((row, ri) => {
+          const cells = [];
+          for (let c = 0; c < maxCols; c++) {
+            const text = row[c] || "";
+            cells.push(
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text, bold: ri === 0 })], spacing: { after: 60 }, alignment: AlignmentType.LEFT })],
+                width: { size: Math.round(9000 / maxCols), type: WidthType.DXA },
+                shading: ri === 0 ? { type: ShadingType.CLEAR, fill: "eeeeee" } : undefined,
+              }),
+            );
+          }
+          docxRows.push(new TableRow({ children: cells }));
+        });
+        out.push(new Table({ rows: docxRows }));
+        // Caption paragraph below the table
+        if (caption) {
+          out.push(
+            new Paragraph({
+              children: [new TextRun({ text: caption, italics: true, size: 18 })],
+              alignment: AlignmentType.LEFT,
+              spacing: { before: 60, after: 200 },
+            }),
+          );
+        }
+        continue;
+      }
+    }
+
+    // Check for FIGURE block
+    const figureMatch = block.match(/^\[FIGURE:\s*(.+?)\]([\s\S]*)/i);
+    if (figureMatch) {
+      const caption = figureMatch[1];
+      const description = figureMatch[2].trim();
+      // Figure placeholder box
+      out.push(
+        new Paragraph({
+          children: [new TextRun({ text: "[ Figure placeholder — " + caption + " ]", italics: true, color: "666666", size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 60 },
+          border: { top: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" }, bottom: { style: BorderStyle.SINGLE, size: 1, color: "cccccc" } },
+        }),
+      );
+      if (description) {
+        out.push(
+          new Paragraph({
+            children: [new TextRun({ text: description, italics: true, size: 18, color: "666666" })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+          }),
+        );
+      }
+      continue;
+    }
+
+    // Regular paragraph block
     const lines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
     let buffer: string[] = [];
     const flush = () => {
@@ -353,7 +427,7 @@ export async function buildThesisDocx(p: {
   chapters: Record<string, string>;
   references_list: ScholarlyRef[];
 }): Promise<Uint8Array> {
-  const children: Paragraph[] = [];
+  const children: (Paragraph | Table)[] = [];
 
   // Title page
   children.push(
@@ -417,7 +491,7 @@ export async function buildThesisDocx(p: {
     const v = p.chapters?.[key];
     if (!v) continue;
     children.push(heading(title, 1));
-    children.push(...paragraphs(v));
+    children.push(...parseRichText(v));
     if (i < ordered.length - 1) children.push(new Paragraph({ children: [new PageBreak()] }));
   }
 
