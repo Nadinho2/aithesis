@@ -212,7 +212,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
 
     let parsed = ProposalSchema.parse(
       await callAI(apiKey, {
-        model: "deepseek-v4-flash",
+        model: "deepseek-v4-pro",
         system: systemPrompt,
         user: userPrompt,
         tools,
@@ -233,7 +233,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       const diff = target - total;
       try {
         const refine = await callAI(apiKey, {
-          model: "deepseek-v4-flash",
+          model: "deepseek-v4-pro",
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
 Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across literature_review, background, and methodology. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal via submit_proposal.

@@ -202,7 +202,7 @@ Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
 
     let parsed = ThesisSchema.parse(
       await callAI(apiKey, {
-        model: "deepseek-v4-flash",
+        model: "deepseek-v4-pro",
         system: systemPrompt,
         user: userPrompt,
         tools,
@@ -225,7 +225,7 @@ Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
       }
       try {
         const refine = await callAI(apiKey, {
-          model: "deepseek-v4-flash",
+          model: "deepseek-v4-pro",
           system: systemPrompt,
           user: `Your draft is ${total} words. Target is EXACTLY ${target} (SHORT by ${diff}).
 Expand under-length chapters with additional substantive content (extra paragraphs of analysis, more synthesised citations, more concrete methodological/empirical detail). Keep all existing arguments and citations; add depth, do not pad. Re-submit the COMPLETE thesis via submit_thesis.
