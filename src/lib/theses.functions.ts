@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
-import { scrubAITells, scrubObject, countWords, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
+import { scrubAITells, scrubObject, countWords, countWordsDeep, trimToExactWords, callAI, callAIText } from "./ai-utils.server";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -134,7 +134,7 @@ CITATION RULES — STRICT APA 7th EDITION:
 - Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
 - Reference list is rendered programmatically; do NOT output a bibliography.
 
-Return STRICT JSON with a single key "content" containing the chapter text as a string.`;
+Output the chapter text as plain text — NOT wrapped in any format like JSON or markdown.`;
 
     const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
 PROBLEM: ${topicCtx.problem_statement}
@@ -166,14 +166,11 @@ Write exactly one chapter: ${label}. ${instructions}
 Target: EXACTLY ${wordTarget} words.
 Use sub-headings (e.g. "1.1 Background to the Study", "3.2 Population and Sample") on their own lines.
 
-{
-  "content": "full chapter text here"
-}`;
+Output the chapter text directly as plain text — NOT wrapped in JSON.`;
       const userPrompt = `${topicContext}
 
 Write ${label} now — EXACTLY ${wordTarget} words.`;
-      const result = await callAI(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
-      const content = typeof result.content === "string" ? result.content : "";
+      const content = await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
       return { key, content };
     };
 
@@ -185,14 +182,11 @@ ${baseRules}
 Write the abstract. Target: EXACTLY ${abstractTarget} words.
 Do NOT use sub-headings. The abstract is a single continuous paragraph.
 
-{
-  "content": "full abstract text here"
-}`;
+Output the abstract text directly as plain text — NOT wrapped in JSON.`;
       const userPrompt = `${topicContext}
 
 Write the abstract now — EXACTLY ${abstractTarget} words.`;
-      const result = await callAI(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
-      return typeof result.content === "string" ? result.content : "";
+      return await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
     };
 
     const [abstractResult, ...chapterResults] = await Promise.all([

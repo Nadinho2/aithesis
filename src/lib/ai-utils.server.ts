@@ -132,3 +132,39 @@ export async function callAI(
   const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
   return JSON.parse(json);
 }
+
+/**
+ * Like callAI but without response_format: json_object.
+ * Returns the raw text content. Use for long-form prose where
+ * embedding the text inside a JSON string value would risk
+ * unescaped characters.
+ */
+export async function callAIText(
+  apiKey: string,
+  opts: {
+    model: string;
+    system: string;
+    user: string;
+  },
+): Promise<string> {
+  const resp = await fetch("https://api.deepseek.com/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: opts.model,
+      messages: [
+        { role: "system", content: opts.system },
+        { role: "user", content: opts.user },
+      ],
+    }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    if (resp.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
+    throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
+  }
+  const payload = await resp.json();
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("AI did not return a response.");
+  return content.trim();
+}
