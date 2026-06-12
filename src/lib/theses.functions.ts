@@ -149,7 +149,7 @@ TOTAL TARGET: EXACTLY ${target} words across abstract + all five chapters.
 
 Use clear sub-headings inside each chapter (e.g. "1.1 Background to the Study", "1.2 Statement of the Problem") rendered as plain text lines.
 
-Return STRICT JSON via the submit_thesis tool.`;
+Return STRICT JSON.`;
 
     const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
 
@@ -166,47 +166,11 @@ ${refContext}
 
 Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
 
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "submit_thesis",
-          description: "Submit the generated full thesis",
-          parameters: {
-            type: "object",
-            properties: {
-              abstract: { type: "string" },
-              chapters: {
-                type: "object",
-                properties: {
-                  chapter_1_introduction: { type: "string" },
-                  chapter_2_literature_review: { type: "string" },
-                  chapter_3_methodology: { type: "string" },
-                  chapter_4_results_findings: { type: "string" },
-                  chapter_5_discussion_conclusion: { type: "string" },
-                },
-                required: [
-                  "chapter_1_introduction",
-                  "chapter_2_literature_review",
-                  "chapter_3_methodology",
-                  "chapter_4_results_findings",
-                  "chapter_5_discussion_conclusion",
-                ],
-              },
-            },
-            required: ["abstract", "chapters"],
-          },
-        },
-      },
-    ];
-
     let parsed = ThesisSchema.parse(
       await callAI(apiKey, {
         model: "deepseek-v4-pro",
         system: systemPrompt,
         user: userPrompt,
-        tools,
-        toolName: "submit_thesis",
       }),
     );
     parsed = scrubObject(parsed) as typeof parsed;
@@ -228,15 +192,13 @@ Write the complete five-chapter thesis now — TOTAL EXACTLY ${target} words.`;
           model: "deepseek-v4-pro",
           system: systemPrompt,
           user: `Your draft is ${total} words. Target is EXACTLY ${target} (SHORT by ${diff}).
-Expand under-length chapters with additional substantive content (extra paragraphs of analysis, more synthesised citations, more concrete methodological/empirical detail). Keep all existing arguments and citations; add depth, do not pad. Re-submit the COMPLETE thesis via submit_thesis.
+Expand under-length chapters with additional substantive content (extra paragraphs of analysis, more synthesised citations, more concrete methodological/empirical detail). Keep all existing arguments and citations; add depth, do not pad. Re-submit the COMPLETE thesis.
 
 UNDER-LENGTH CHAPTERS:
 ${shortfalls.join("\n") || "(distribute additions across chapter 2 and chapter 4)"}
 
 PREVIOUS DRAFT:
 ${JSON.stringify(parsed)}`,
-          tools,
-          toolName: "submit_thesis",
         });
         const refined = ThesisSchema.parse(refine);
         const scrubbed = scrubObject(refined) as typeof parsed;

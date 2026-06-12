@@ -57,44 +57,7 @@ Generate exactly ${data.count} topics now.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_topics",
-              description: "Submit the generated research topics",
-              parameters: {
-                type: "object",
-                properties: {
-                  topics: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        problem_statement: { type: "string" },
-                        research_gap: { type: "string" },
-                        objectives: { type: "array", items: { type: "string" } },
-                        novelty_score: { type: "number" },
-                        feasibility_score: { type: "number" },
-                        category: { type: "string" },
-                      },
-                      required: [
-                        "title",
-                        "problem_statement",
-                        "research_gap",
-                        "objectives",
-                        "novelty_score",
-                        "feasibility_score",
-                      ],
-                    },
-                  },
-                },
-                required: ["topics"],
-              },
-            },
-          },
-        ],
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -105,15 +68,10 @@ Generate exactly ${data.count} topics now.`;
     }
 
     const payload = await resp.json();
-    const msg = payload?.choices?.[0]?.message;
-    let args: any;
-    if (msg?.tool_calls?.[0]?.function?.arguments) {
-      args = JSON.parse(msg.tool_calls[0].function.arguments);
-    } else if (msg?.content) {
-      const json = msg.content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-      try { args = JSON.parse(json); } catch {}
-    }
-    if (!args) throw new Error("AI did not return topics.");
+    const content = payload?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("AI did not return topics.");
+    const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+    const args = JSON.parse(json);
     const parsed = TopicsResponse.parse(args);
 
     const { data: gen, error: genErr } = await supabase

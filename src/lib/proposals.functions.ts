@@ -147,7 +147,7 @@ DOCUMENT REQUIREMENTS:
 - Methodology must specify: research design, population and sample, sampling technique, instruments, data collection, data analysis, validity/reliability, ethical considerations.
 - ${timelineRule}
 
-Return STRICT JSON via the submit_proposal tool. No markdown, no commentary.`;
+Return STRICT JSON. No markdown, no commentary.`;
 
     const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
 
@@ -164,59 +164,11 @@ ${refContext}
 
 Write the proposal now — TOTAL EXACTLY ${target} words.`;
 
-    const tools = [
-      {
-        type: "function",
-        function: {
-          name: "submit_proposal",
-          description: "Submit the generated research proposal",
-          parameters: {
-            type: "object",
-            properties: {
-              abstract: { type: "string" },
-              sections: {
-                type: "object",
-                properties: {
-                  introduction: { type: "string" },
-                  background: { type: "string" },
-                  problem_statement: { type: "string" },
-                  research_questions: { type: "array", items: { type: "string" } },
-                  objectives: { type: "array", items: { type: "string" } },
-                  significance: { type: "string" },
-                  scope_and_limitations: { type: "string" },
-                  literature_review: { type: "string" },
-                  methodology: { type: "string" },
-                  expected_outcomes: { type: "string" },
-                  timeline: { type: "string" },
-                },
-                required: [
-                  "introduction",
-                  "background",
-                  "problem_statement",
-                  "research_questions",
-                  "objectives",
-                  "significance",
-                  "scope_and_limitations",
-                  "literature_review",
-                  "methodology",
-                  "expected_outcomes",
-                  "timeline",
-                ],
-              },
-            },
-            required: ["abstract", "sections"],
-          },
-        },
-      },
-    ];
-
     let parsed = ProposalSchema.parse(
       await callAI(apiKey, {
         model: "deepseek-v4-pro",
         system: systemPrompt,
         user: userPrompt,
-        tools,
-        toolName: "submit_proposal",
       }),
     );
 
@@ -236,12 +188,10 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
           model: "deepseek-v4-pro",
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
-Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across literature_review, background, and methodology. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal via submit_proposal.
+Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across literature_review, background, and methodology. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal.
 
 PREVIOUS DRAFT (JSON):
 ${JSON.stringify(parsed)}`,
-          tools,
-          toolName: "submit_proposal",
         });
         const refined = ProposalSchema.parse(refine);
         if (isUndergrad) refined.sections.timeline = "";

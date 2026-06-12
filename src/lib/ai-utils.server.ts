@@ -106,8 +106,6 @@ export async function callAI(
     model: string;
     system: string;
     user: string;
-    tools: any[];
-    toolName: string;
   },
 ): Promise<any> {
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
@@ -119,7 +117,7 @@ export async function callAI(
         { role: "system", content: opts.system },
         { role: "user", content: opts.user },
       ],
-      tools: opts.tools,
+      response_format: { type: "json_object" },
     }),
   });
   if (!resp.ok) {
@@ -128,16 +126,9 @@ export async function callAI(
     throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
   }
   const payload = await resp.json();
-  const msg = payload?.choices?.[0]?.message;
-  // Prefer tool call; fall back to plain-text JSON.
-  if (msg?.tool_calls?.[0]?.function?.arguments) {
-    return JSON.parse(msg.tool_calls[0].function.arguments);
-  }
-  if (msg?.content) {
-    const trimmed = msg.content.trim();
-    // Strip markdown fences if present
-    const json = trimmed.replace(/^```(?:json)?\s*|\s*```$/g, "");
-    try { return JSON.parse(json); } catch {}
-  }
-  throw new Error("AI did not return a structured response.");
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("AI did not return a response.");
+  // Strip markdown fences if present
+  const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+  return JSON.parse(json);
 }
