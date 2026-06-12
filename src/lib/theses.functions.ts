@@ -149,7 +149,18 @@ TOTAL TARGET: EXACTLY ${target} words across abstract + all five chapters.
 
 Use clear sub-headings inside each chapter (e.g. "1.1 Background to the Study", "1.2 Statement of the Problem") rendered as plain text lines.
 
-Return STRICT JSON.`;
+Return STRICT JSON matching this exact schema:
+
+{
+  "abstract": "full abstract text",
+  "chapters": {
+    "chapter_1_introduction": "full chapter 1 text",
+    "chapter_2_literature_review": "full chapter 2 text",
+    "chapter_3_methodology": "full chapter 3 text",
+    "chapter_4_results_findings": "full chapter 4 text",
+    "chapter_5_discussion_conclusion": "full chapter 5 text"
+  }
+}`;
 
     const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
 

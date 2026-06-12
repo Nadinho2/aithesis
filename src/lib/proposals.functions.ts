@@ -147,7 +147,26 @@ DOCUMENT REQUIREMENTS:
 - Methodology must specify: research design, population and sample, sampling technique, instruments, data collection, data analysis, validity/reliability, ethical considerations.
 - ${timelineRule}
 
-Return STRICT JSON. No markdown, no commentary.`;
+Return STRICT JSON matching this exact schema:
+
+{
+  "abstract": "full abstract text",
+  "sections": {
+    "introduction": "full introduction text",
+    "background": "full background text",
+    "problem_statement": "full problem statement text",
+    "research_questions": ["RQ1", "RQ2"],
+    "objectives": ["Obj1", "Obj2"],
+    "significance": "full significance text",
+    "scope_and_limitations": "full scope text",
+    "literature_review": "full literature review text",
+    "methodology": "full methodology text",
+    "expected_outcomes": "full outcomes text",
+    "timeline": "timeline text or empty string if undergraduate"
+  }
+}
+
+No markdown, no commentary.`;
 
     const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
 
