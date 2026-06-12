@@ -31,7 +31,7 @@ function TopicGeneratorPage() {
       qc.invalidateQueries({ queryKey: ["my-topics"] });
       navigate({ to: "/my-topics" });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Generation failed"),
+    onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
   const submit = (e: React.FormEvent) => {

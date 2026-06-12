@@ -75,7 +75,7 @@ function NewThesisPage() {
       qc.invalidateQueries({ queryKey: ["theses"] });
       navigate({ to: "/thesis/$id", params: { id: res.thesis.id } });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Generation failed"),
+    onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
   const submit = (e: React.FormEvent) => {

@@ -51,7 +51,7 @@ function QuickProposalPage() {
       qc.invalidateQueries({ queryKey: ["proposals"] });
       navigate({ to: "/proposal/$id", params: { id: res.proposal.id } });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Generation failed"),
+    onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
   const submit = (e: React.FormEvent) => {
