@@ -120,7 +120,6 @@ export async function callAI(
         { role: "user", content: opts.user },
       ],
       tools: opts.tools,
-      tool_choice: "required",
     }),
   });
   if (!resp.ok) {

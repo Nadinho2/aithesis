@@ -95,7 +95,6 @@ Generate exactly ${data.count} topics now.`;
             },
           },
         ],
-        tool_choice: "required",
       }),
     });
 
