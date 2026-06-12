@@ -95,7 +95,7 @@ Generate exactly ${data.count} topics now.`;
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "submit_topics" } },
+        tool_choice: "required",
       }),
     });
 
