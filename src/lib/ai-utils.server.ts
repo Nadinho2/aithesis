@@ -128,7 +128,16 @@ export async function callAI(
     throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
   }
   const payload = await resp.json();
-  const toolCall = payload?.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) throw new Error("AI did not return a structured response.");
-  return JSON.parse(toolCall.function.arguments);
+  const msg = payload?.choices?.[0]?.message;
+  // Prefer tool call; fall back to plain-text JSON.
+  if (msg?.tool_calls?.[0]?.function?.arguments) {
+    return JSON.parse(msg.tool_calls[0].function.arguments);
+  }
+  if (msg?.content) {
+    const trimmed = msg.content.trim();
+    // Strip markdown fences if present
+    const json = trimmed.replace(/^```(?:json)?\s*|\s*```$/g, "");
+    try { return JSON.parse(json); } catch {}
+  }
+  throw new Error("AI did not return a structured response.");
 }

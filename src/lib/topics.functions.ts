@@ -105,9 +105,15 @@ Generate exactly ${data.count} topics now.`;
     }
 
     const payload = await resp.json();
-    const toolCall = payload?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI did not return topics.");
-    const args = JSON.parse(toolCall.function.arguments);
+    const msg = payload?.choices?.[0]?.message;
+    let args: any;
+    if (msg?.tool_calls?.[0]?.function?.arguments) {
+      args = JSON.parse(msg.tool_calls[0].function.arguments);
+    } else if (msg?.content) {
+      const json = msg.content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
+      try { args = JSON.parse(json); } catch {}
+    }
+    if (!args) throw new Error("AI did not return topics.");
     const parsed = TopicsResponse.parse(args);
 
     const { data: gen, error: genErr } = await supabase
