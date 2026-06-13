@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { buildProposalDocx, buildTopicsDocx, toBase64 } from "./docx.server";
 
@@ -15,7 +15,7 @@ async function assertAdmin(supabase: any, userId: string) {
 }
 
 export const adminCheck = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data } = await supabase
@@ -28,7 +28,7 @@ export const adminCheck = createServerFn({ method: "GET" })
   });
 
 export const adminStats = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
@@ -70,7 +70,7 @@ async function loadAuthUsers(): Promise<Map<string, { email: string | null; bann
 }
 
 export const adminListUsers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
@@ -117,7 +117,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
   });
 
 export const adminListGenerations = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
@@ -137,7 +137,7 @@ export const adminListGenerations = createServerFn({ method: "GET" })
   });
 
 export const adminListProposals = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertAdmin(supabase, userId);
@@ -153,7 +153,7 @@ export const adminListProposals = createServerFn({ method: "GET" })
   });
 
 export const adminDownloadProposal = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -184,7 +184,7 @@ export const adminDownloadProposal = createServerFn({ method: "POST" })
   });
 
 export const adminDownloadUserTopics = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -222,7 +222,7 @@ export const adminDownloadUserTopics = createServerFn({ method: "POST" })
   });
 
 export const adminSetBan = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((i: unknown) =>
     z.object({ user_id: z.string().uuid(), banned: z.boolean() }).parse(i),
   )
@@ -239,7 +239,7 @@ export const adminSetBan = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteUser = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -252,7 +252,7 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
   });
 
 export const adminSetRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((i: unknown) =>
     z
       .object({

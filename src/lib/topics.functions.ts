@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { buildTopicsDocx, toBase64 } from "./docx.server";
 
@@ -25,7 +25,7 @@ const TopicSchema = z.object({
 const TopicsResponse = z.object({ topics: z.array(TopicSchema).min(1).max(7) });
 
 export const generateTopics = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -116,7 +116,7 @@ Generate exactly ${data.count} topics now.`;
   });
 
 export const listTopics = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -140,7 +140,7 @@ export const listTopics = createServerFn({ method: "POST" })
   });
 
 export const toggleSaveTopic = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) =>
     z.object({ id: z.string().uuid(), saved: z.boolean() }).parse(input),
   )
@@ -155,7 +155,7 @@ export const toggleSaveTopic = createServerFn({ method: "POST" })
   });
 
 export const deleteTopic = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
@@ -165,7 +165,7 @@ export const deleteTopic = createServerFn({ method: "POST" })
   });
 
 export const deleteTopics = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) =>
     z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(input),
   )
@@ -177,7 +177,7 @@ export const deleteTopics = createServerFn({ method: "POST" })
   });
 
 export const listGenerations = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
     const { data, error } = await supabase
@@ -190,7 +190,7 @@ export const listGenerations = createServerFn({ method: "GET" })
   });
 
 export const exportTopicsDocx = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireClerkAuth])
   .inputValidator((input: unknown) =>
     z.object({ ids: z.array(z.string().uuid()).min(1).max(50) }).parse(input),
   )

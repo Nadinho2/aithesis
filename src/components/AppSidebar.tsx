@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { useClerk } from "@clerk/tanstack-react-start";
 import { adminCheck } from "@/lib/admin.functions";
 import {
   LayoutDashboard,
@@ -50,13 +50,15 @@ export function AppSidebar() {
   });
   const isAdmin = !!roleData?.isAdmin;
 
+  const { signOut: clerkSignOut } = useClerk();
+
   // Close drawer on route change
   useEffect(() => {
     setOpen(false);
   }, [path]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await clerkSignOut();
     navigate({ to: "/auth", replace: true });
   };
 
