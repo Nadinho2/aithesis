@@ -5,7 +5,18 @@ import { verifyToken } from '@clerk/backend'
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   async ({ next, request }) => {
-    const sessionToken = request?.headers?.get?.('x-clerk-session-token')
+    // Try header first (from client-side middleware)
+    let sessionToken = request?.headers?.get?.('x-clerk-session-token')
+
+    // Fallback: try the Clerk __session cookie (automatically sent with requests)
+    if (!sessionToken) {
+      const cookieHeader = request?.headers?.get?.('cookie') ?? ''
+      sessionToken = cookieHeader
+        .split(';')
+        .map((c) => c.trim())
+        .find((c) => c.startsWith('__session='))
+        ?.slice('__session='.length) ?? null
+    }
 
     let userId: string | null = null
 
@@ -16,7 +27,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
         })
         userId = payload.sub ?? null
       } catch {
-        throw new Error('Unauthorized: Invalid session token')
+        // Token invalid — will fall through to error below
       }
     }
 
