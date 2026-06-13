@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { SignIn, useAuth } from "@clerk/tanstack-react-start";
-import { Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { SignIn, useAuth } from "@clerk/clerk-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,

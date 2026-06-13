@@ -1,5 +1,5 @@
 import { createMiddleware } from '@tanstack/react-start'
-import { getToken } from '@clerk/tanstack-react-start'
+import { useAuth } from '@clerk/clerk-react'
 
 /**
  * Client-side middleware that attaches the Clerk session token to server fn requests.
@@ -7,6 +7,7 @@ import { getToken } from '@clerk/tanstack-react-start'
  */
 export const attachClerkAuth = createMiddleware({ type: 'function' }).client(
   async ({ next }) => {
+    const { getToken } = useAuth()
     const token = await getToken()
     return next({
       headers: token ? { 'x-clerk-session-token': token } : {},

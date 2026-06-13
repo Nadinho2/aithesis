@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
-import { useAuth } from "@clerk/tanstack-react-start";
+import { useAuth } from "@clerk/clerk-react";
 import { AppSidebar } from "@/components/AppSidebar";
 
 export const Route = createFileRoute("/_authenticated")({
