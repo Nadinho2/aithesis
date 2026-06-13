@@ -1,7 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
 import {
   adminCheck,
   adminStats,
@@ -30,14 +31,6 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — ThesisPro AI" }, { name: "robots", content: "noindex,nofollow" }] }),
-  beforeLoad: async () => {
-    try {
-      const res = await adminCheck();
-      if (!res.isAdmin) throw redirect({ to: "/dashboard" });
-    } catch (e) {
-      throw redirect({ to: "/dashboard" });
-    }
-  },
   component: AdminPage,
 });
 
@@ -57,6 +50,9 @@ function downloadFromBase64(base64: string, filename: string, mime: string) {
 }
 
 function AdminPage() {
+  const navigate = useNavigate();
+  const { isSignedIn, isLoaded } = useAuth();
+  const adminCheckFn = useServerFn(adminCheck);
   const statsFn = useServerFn(adminStats);
   const usersFn = useServerFn(adminListUsers);
   const gensFn = useServerFn(adminListGenerations);
@@ -68,10 +64,23 @@ function AdminPage() {
   const roleFn = useServerFn(adminSetRole);
   const qc = useQueryClient();
 
-  const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => statsFn() });
-  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => usersFn() });
-  const gens = useQuery({ queryKey: ["admin-gens"], queryFn: () => gensFn() });
-  const proposals = useQuery({ queryKey: ["admin-proposals"], queryFn: () => propsFn() });
+  const { data: adminStatus, isLoading: adminLoading } = useQuery({
+    queryKey: ["admin-check"],
+    queryFn: () => adminCheckFn(),
+    enabled: isLoaded && !!isSignedIn,
+  });
+
+  useEffect(() => {
+    if (adminLoading || !isLoaded) return;
+    if (!isSignedIn || !adminStatus?.isAdmin) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [adminStatus, adminLoading, isSignedIn, isLoaded, navigate]);
+
+  const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => statsFn(), enabled: !!adminStatus?.isAdmin });
+  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => usersFn(), enabled: !!adminStatus?.isAdmin });
+  const gens = useQuery({ queryKey: ["admin-gens"], queryFn: () => gensFn(), enabled: !!adminStatus?.isAdmin });
+  const proposals = useQuery({ queryKey: ["admin-proposals"], queryFn: () => propsFn(), enabled: !!adminStatus?.isAdmin });
 
   const [tab, setTab] = useState<"users" | "proposals" | "generations">("users");
   const [busy, setBusy] = useState<string | null>(null);
@@ -123,6 +132,14 @@ function AdminPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Role update failed"),
   });
+
+  if (adminLoading || !adminStatus?.isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin h-6 w-6 text-ink/40" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
