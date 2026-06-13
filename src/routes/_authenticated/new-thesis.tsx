@@ -78,7 +78,10 @@ function NewThesisPage() {
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
-  const submit = (e: React.FormEvent) => {
+  const checkAccessFn = useServerFn(checkAccess);
+  const [showPayment, setShowPayment] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.problem_statement || !form.research_gap) {
       toast.error("Title, problem statement, and research gap are required.");
@@ -87,6 +90,16 @@ function NewThesisPage() {
     if (form.objectives.filter((o) => o.trim()).length < 1) {
       toast.error("Add at least one objective.");
       return;
+    }
+    // Check if user has paid for this thesis level
+    try {
+      const access = await checkAccessFn({ data: { product: "thesis", level: form.level } });
+      if (!access.allowed) {
+        setShowPayment(true);
+        return;
+      }
+    } catch {
+      // fallback to server-enforced payment check
     }
     mut.mutate();
   };
@@ -237,6 +250,17 @@ function NewThesisPage() {
           )}
         </button>
       </form>
+
+      <PaymentModal
+        open={showPayment}
+        onClose={() => setShowPayment(false)}
+        product="thesis"
+        level={form.level}
+        onPaid={() => {
+          setShowPayment(false);
+          mut.mutate();
+        }}
+      />
     </div>
   );
 }

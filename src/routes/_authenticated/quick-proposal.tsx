@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
+import { checkAccess } from "@/lib/payment.functions";
+import { PaymentModal } from "@/components/PaymentModal";
 import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -54,7 +56,10 @@ function QuickProposalPage() {
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
-  const submit = (e: React.FormEvent) => {
+  const checkAccessFn = useServerFn(checkAccess);
+  const [showPayment, setShowPayment] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.problem_statement || !form.research_gap) {
       toast.error("Title, problem statement, and research gap are required.");
@@ -63,6 +68,16 @@ function QuickProposalPage() {
     if (form.objectives.filter((o) => o.trim()).length < 1) {
       toast.error("Add at least one objective.");
       return;
+    }
+    // Check if user has paid
+    try {
+      const access = await checkAccessFn({ data: { product: "proposal" } });
+      if (!access.allowed) {
+        setShowPayment(true);
+        return;
+      }
+    } catch {
+      // If check fails, still try to generate (server will enforce payment)
     }
     mut.mutate();
   };
@@ -205,6 +220,16 @@ function QuickProposalPage() {
           )}
         </button>
       </form>
+
+      <PaymentModal
+        open={showPayment}
+        onClose={() => setShowPayment(false)}
+        product="proposal"
+        onPaid={() => {
+          setShowPayment(false);
+          mut.mutate();
+        }}
+      />
     </div>
   );
 }

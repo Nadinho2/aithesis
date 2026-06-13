@@ -46,6 +46,17 @@ export const generateThesis = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
+    // Payment check — thesis costs vary by level
+    const { data: paidTx } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("product", "thesis")
+      .eq("level", data.level)
+      .limit(1);
+    if (!paidTx?.length) throw new Error("Payment required. Please purchase a thesis credit before generating.");
+
     let topicCtx: {
       title: string;
       problem_statement: string;

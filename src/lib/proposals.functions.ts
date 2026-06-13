@@ -52,6 +52,16 @@ export const generateProposal = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
+    // Payment check — proposals cost ₦3,000
+    const { data: paidTx } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("product", "proposal")
+      .limit(1);
+    if (!paidTx?.length) throw new Error("Payment required. Please purchase a proposal credit before generating.");
+
     let topicCtx: {
       title: string;
       problem_statement: string;
