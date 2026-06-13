@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/integrations/supabase/types'
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
-  async ({ next, request }) => {
+  async ({ next, request }: any) => {
     // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
     const { verifyToken, createClerkClient } = await import('@clerk/backend')
     const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
