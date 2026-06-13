@@ -1,7 +1,9 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/integrations/supabase/types'
-import { verifyToken } from '@clerk/backend'
+import { verifyToken, createClerkClient } from '@clerk/backend'
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   async ({ next, request }) => {
@@ -33,6 +35,15 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
 
     if (!userId) throw new Error('Unauthorized: No valid session')
 
+    // Fetch admin status from Clerk public metadata instead of Supabase
+    let isAdmin = false
+    try {
+      const clerkUser = await clerkClient.users.getUser(userId)
+      isAdmin = clerkUser.publicMetadata?.is_admin === true
+    } catch {
+      // Clerk unavailable — fall back to non-admin
+    }
+
     const SUPABASE_URL = process.env.SUPABASE_URL
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -55,6 +66,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       context: {
         supabase,
         userId,
+        isAdmin,
       },
     })
   },

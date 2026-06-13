@@ -3,35 +3,20 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { buildProposalDocx, buildTopicsDocx, toBase64 } from "./docx.server";
 
-async function assertAdmin(supabase: any, userId: string) {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Forbidden");
+function assertAdmin(isAdmin: boolean) {
+  if (!isAdmin) throw new Error("Forbidden");
 }
 
 export const adminCheck = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    return { isAdmin: !!data };
+    return { isAdmin: context.isAdmin };
   });
 
 export const adminStats = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [profiles, topics, generations, proposals] = await Promise.all([
       supabaseAdmin.from("profiles").select("id", { count: "exact", head: true }),
@@ -72,8 +57,7 @@ async function loadAuthUsers(): Promise<Map<string, { email: string | null; bann
 export const adminListUsers = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const auth = await loadAuthUsers();
@@ -119,8 +103,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
 export const adminListGenerations = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("topic_generations")
@@ -139,8 +122,7 @@ export const adminListGenerations = createServerFn({ method: "GET" })
 export const adminListProposals = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("proposals")
@@ -156,8 +138,7 @@ export const adminDownloadProposal = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("proposals")
@@ -187,8 +168,7 @@ export const adminDownloadUserTopics = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
       .from("topics")
@@ -227,9 +207,9 @@ export const adminSetBan = createServerFn({ method: "POST" })
     z.object({ user_id: z.string().uuid(), banned: z.boolean() }).parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     if (data.user_id === userId) throw new Error("You cannot ban yourself.");
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
       ban_duration: data.banned ? "876000h" : "none",
@@ -242,9 +222,9 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     if (data.user_id === userId) throw new Error("You cannot delete yourself.");
-    await assertAdmin(supabase, userId);
+    assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
@@ -263,8 +243,8 @@ export const adminSetRole = createServerFn({ method: "POST" })
       .parse(i),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await assertAdmin(supabase, userId);
+    const { userId } = context;
+    assertAdmin(context.isAdmin);
     if (data.user_id === userId && data.role === "admin" && !data.grant) {
       throw new Error("You cannot remove your own admin role.");
     }
