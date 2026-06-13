@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -130,7 +130,7 @@ function RootComponent() {
   const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_Y2hvaWNlLWdvcGhlci0xMC5jbGVyay5hY2NvdW50cy5kZXYk";
   return (
     <QueryClientProvider client={queryClient}>
-      <ClerkProvider publishableKey={publishableKey} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+      <ClerkProvider publishableKey={publishableKey} signInUrl="/auth" signUpUrl="/auth">
         <Outlet />
         <Toaster />
       </ClerkProvider>

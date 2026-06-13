@@ -3,7 +3,7 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
-import { scrubAITells, scrubObject, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
+import { scrubObject, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -53,7 +53,7 @@ export const generateProposal = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
     // Payment check — proposals cost ₦3,000
-    const { data: paidTx } = await supabase
+    const { data: paidTx } = await (supabase as any)
       .from("transactions")
       .select("id")
       .eq("user_id", userId)

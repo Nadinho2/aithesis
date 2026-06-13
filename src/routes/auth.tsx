@@ -24,7 +24,6 @@ function AuthPage() {
           <SignInButton
             mode="redirect"
             forceRedirectUrl="/dashboard"
-            className="w-full"
           >
             <button className="w-full py-2.5 bg-ink text-bone font-medium rounded-sm hover:bg-sage transition-colors text-sm">
               Sign In
@@ -43,7 +42,6 @@ function AuthPage() {
           <SignUpButton
             mode="redirect"
             forceRedirectUrl="/dashboard"
-            className="w-full"
           >
             <button className="w-full py-2.5 border border-ink/10 text-ink font-medium rounded-sm hover:bg-ink/[0.02] transition-colors text-sm">
               Create Account
