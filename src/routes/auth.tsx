@@ -49,15 +49,15 @@ function AuthPage() {
 
           {mode === "signin" ? (
             <SignIn
+              afterSignInUrl="/dashboard"
               appearance={{
                 elements: {
                   rootBox: "w-full",
                   card: "shadow-none p-0",
-                  headerTitle: "hidden",
-                  headerSubtitle: "hidden",
-                  socialButtonsBlockButton: "text-sm border border-ink/10 hover:bg-ink/[0.02]",
+                  header: "hidden",
                   dividerLine: "bg-ink/10",
                   dividerText: "text-ink/40 text-xs",
+                  socialButtonsBlockButton: "text-sm border border-ink/10 hover:bg-ink/[0.02]",
                   formFieldLabel: "text-xs text-ink/60",
                   formFieldInput: "text-sm border-ink/10 rounded-sm",
                   formButtonPrimary: "bg-ink text-bone hover:bg-sage text-sm rounded-sm",
@@ -68,15 +68,15 @@ function AuthPage() {
             />
           ) : (
             <SignUp
+              afterSignUpUrl="/dashboard"
               appearance={{
                 elements: {
                   rootBox: "w-full",
                   card: "shadow-none p-0",
-                  headerTitle: "hidden",
-                  headerSubtitle: "hidden",
-                  socialButtonsBlockButton: "text-sm border border-ink/10 hover:bg-ink/[0.02]",
+                  header: "hidden",
                   dividerLine: "bg-ink/10",
                   dividerText: "text-ink/40 text-xs",
+                  socialButtonsBlockButton: "text-sm border border-ink/10 hover:bg-ink/[0.02]",
                   formFieldLabel: "text-xs text-ink/60",
                   formFieldInput: "text-sm border-ink/10 rounded-sm",
                   formButtonPrimary: "bg-ink text-bone hover:bg-sage text-sm rounded-sm",
