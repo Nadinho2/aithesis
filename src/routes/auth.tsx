@@ -7,7 +7,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const { isSignedIn } = useAuth();
-  const appUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   if (isSignedIn) {
     return <Navigate to="/dashboard" />;
@@ -22,10 +21,7 @@ function AuthPage() {
         </div>
 
         <div className="bg-white rounded-sm border border-ink/10 p-6 shadow-sm space-y-3">
-          <SignInButton
-            mode="redirect"
-            forceRedirectUrl={`${appUrl}/dashboard`}
-          >
+          <SignInButton mode="modal">
             <button className="w-full py-2.5 bg-ink text-bone font-medium rounded-sm hover:bg-sage transition-colors text-sm">
               Sign In
             </button>
@@ -40,10 +36,7 @@ function AuthPage() {
             </div>
           </div>
 
-          <SignUpButton
-            mode="redirect"
-            forceRedirectUrl={`${appUrl}/dashboard`}
-          >
+          <SignUpButton mode="modal">
             <button className="w-full py-2.5 border border-ink/10 text-ink font-medium rounded-sm hover:bg-ink/[0.02] transition-colors text-sm">
               Create Account
             </button>
