@@ -39,7 +39,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     let isAdmin = false
     try {
       const clerkUser = await clerkClient.users.getUser(userId)
-      isAdmin = clerkUser.publicMetadata?.is_admin === true
+      isAdmin = clerkUser.publicMetadata?.role === 'admin'
     } catch {
       // Clerk unavailable — fall back to non-admin
     }
