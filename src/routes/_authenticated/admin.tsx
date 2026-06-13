@@ -1,7 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import {
   adminCheck,
@@ -50,7 +50,6 @@ function downloadFromBase64(base64: string, filename: string, mime: string) {
 }
 
 function AdminPage() {
-  const navigate = useNavigate();
   const { isSignedIn, isLoaded } = useAuth();
   const adminCheckFn = useServerFn(adminCheck);
   const statsFn = useServerFn(adminStats);
@@ -64,18 +63,12 @@ function AdminPage() {
   const roleFn = useServerFn(adminSetRole);
   const qc = useQueryClient();
 
-  const { data: adminStatus, isLoading: adminLoading } = useQuery({
+  const { data: adminStatus, isFetched, isError } = useQuery({
     queryKey: ["admin-check"],
     queryFn: () => adminCheckFn(),
     enabled: isLoaded && !!isSignedIn,
+    retry: false,
   });
-
-  useEffect(() => {
-    if (adminLoading || !isLoaded) return;
-    if (!isSignedIn || !adminStatus?.isAdmin) {
-      navigate({ to: "/dashboard", replace: true });
-    }
-  }, [adminStatus, adminLoading, isSignedIn, isLoaded, navigate]);
 
   const stats = useQuery({ queryKey: ["admin-stats"], queryFn: () => statsFn(), enabled: !!adminStatus?.isAdmin });
   const users = useQuery({ queryKey: ["admin-users"], queryFn: () => usersFn(), enabled: !!adminStatus?.isAdmin });
@@ -133,12 +126,16 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Role update failed"),
   });
 
-  if (adminLoading || !adminStatus?.isAdmin) {
+  if (!isFetched) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="animate-spin h-6 w-6 text-ink/40" />
       </div>
     );
+  }
+
+  if (isError || !adminStatus?.isAdmin) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
