@@ -3,7 +3,7 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
-import { scrubAITells, scrubObject, countWords, countWordsDeep, trimToExactWords, callAI, callAIText } from "./ai-utils.server";
+import { scrubAITells, scrubObject, countWords, countWordsDeep, callAI, callAIText } from "./ai-utils.server";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -229,13 +229,62 @@ Write the abstract now — EXACTLY ${abstractTarget} words.`;
     }
     total += countWords(abstract);
 
+    // Strict word-count enforcement — regenerate short chapters until target is met
+    const maxRetries = 3;
+    let retries = 0;
+    while (total < target && retries < maxRetries) {
+      retries++;
+      const diff = target - total;
+      // Find the shortest chapter to expand
+      const sorted = chapterDefs
+        .map((c) => ({ key: c.key, label: c.label, current: countWords(chapters[c.key] || ""), target: c.target }))
+        .sort((a, b) => a.current - b.current);
+
+      // Pick the 2 shortest chapters that are most below target
+      const toExpand = sorted
+        .filter((c) => c.current < c.target * 1.1)
+        .slice(0, 2);
+
+      if (toExpand.length === 0) {
+        // All chapters are at/above target but total is still low (unlikely) — expand the shortest
+        toExpand.push(sorted[0]);
+      }
+
+      const expandPromises = toExpand.map(async (c) => {
+        const def = chapterDefs.find((d) => d.key === c.key)!;
+        const newTarget = Math.max(def.target, c.current + Math.ceil(diff / toExpand.length));
+        const systemPrompt = `You are a senior academic writing ${def.label} of a ${data.level} thesis.
+
+${baseRules}
+
+You previously wrote a version of this chapter. EXPAND it with substantive additional content — more analysis, more synthesised citations, more concrete detail. Do NOT delete or summarise existing content. Keep all existing arguments and add depth.
+
+Target: AT LEAST ${newTarget} words.
+Current word count: ${c.current} words.
+
+Use sub-headings on their own lines.
+
+Output the FULL updated chapter as plain text — NOT wrapped in JSON.`;
+        const userPrompt = `${topicContext}
+
+Below is your current draft of ${def.label} (${c.current} words). Expand it to AT LEAST ${newTarget} words by adding more analysis, examples, citations, and detail.
+
+CURRENT DRAFT:
+${chapters[c.key]}`;
+        const content = await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+        return { key: c.key, content };
+      });
+
+      const expanded = await Promise.all(expandPromises);
+      for (const e of expanded) {
+        chapters[e.key] = e.content;
+      }
+      total = countWordsDeep({ abstract, chapters } as any);
+    }
+
     let parsed: z.infer<typeof ThesisSchema> = { abstract, chapters } as any;
     parsed = scrubObject(parsed) as typeof parsed;
-
-    if (total > target) {
-      parsed = trimThesisToExact(parsed, target);
-      total = countWordsDeep(parsed);
-    }
+    total = countWordsDeep(parsed);
 
     const referencesList = refs.map((r) => ({ ...r, apa: formatAPA(r) }));
 
@@ -263,35 +312,6 @@ Write the abstract now — EXACTLY ${abstractTarget} words.`;
 
     return { thesis: created };
   });
-
-function trimThesisToExact(t: z.infer<typeof ThesisSchema>, target: number): z.infer<typeof ThesisSchema> {
-  const cloned = JSON.parse(JSON.stringify(t)) as typeof t;
-  let total = countWordsDeep(cloned);
-  const order = [
-    "chapter_5_discussion_conclusion",
-    "chapter_4_results_findings",
-    "chapter_2_literature_review",
-    "chapter_1_introduction",
-    "chapter_3_methodology",
-  ];
-  for (const k of order) {
-    if (total <= target) break;
-    const v = (cloned.chapters as any)[k];
-    if (typeof v !== "string" || !v) continue;
-    const words = v.trim().split(/\s+/);
-    const excess = total - target;
-    if (words.length > excess + 80) {
-      (cloned.chapters as any)[k] = trimToExactWords(v, words.length - excess);
-      total = countWordsDeep(cloned);
-    }
-  }
-  if (total > target && cloned.abstract) {
-    const abs = cloned.abstract.trim().split(/\s+/);
-    const excess = total - target;
-    cloned.abstract = trimToExactWords(cloned.abstract, Math.max(60, abs.length - excess));
-  }
-  return cloned;
-}
 
 export const getThesis = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
