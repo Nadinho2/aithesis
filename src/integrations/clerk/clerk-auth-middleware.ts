@@ -1,12 +1,13 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/integrations/supabase/types'
-import { verifyToken, createClerkClient } from '@clerk/backend'
-
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   async ({ next, request }) => {
+    // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
+    const { verifyToken, createClerkClient } = await import('@clerk/backend')
+    const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
+
     // Try header first (from client-side middleware)
     let sessionToken = request?.headers?.get?.('x-clerk-session-token')
 
@@ -15,8 +16,8 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       const cookieHeader = request?.headers?.get?.('cookie') ?? ''
       sessionToken = cookieHeader
         .split(';')
-        .map((c) => c.trim())
-        .find((c) => c.startsWith('__session='))
+        .map((c: string) => c.trim())
+        .find((c: string) => c.startsWith('__session='))
         ?.slice('__session='.length) ?? null
     }
 
@@ -35,7 +36,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
 
     if (!userId) throw new Error('Unauthorized: No valid session')
 
-    // Fetch admin status from Clerk public metadata instead of Supabase
+    // Fetch admin status from Clerk public metadata
     let isAdmin = false
     try {
       const clerkUser = await clerkClient.users.getUser(userId)
