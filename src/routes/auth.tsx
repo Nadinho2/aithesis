@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { SignIn, useAuth } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton, useAuth } from "@clerk/clerk-react";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -20,27 +20,39 @@ function AuthPage() {
           <p className="mt-2 text-sm text-ink/60">Verified academic writing, powered by AI</p>
         </div>
 
-        <div className="bg-white rounded-sm border border-ink/10 p-6 shadow-sm">
-          <SignIn
-            routing="hash"
-            afterSignInUrl="/dashboard"
-            signUpUrl="/auth"
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-none p-0",
-                header: "hidden",
-                dividerLine: "bg-ink/10",
-                dividerText: "text-ink/40 text-xs",
-                socialButtonsBlockButton: "text-sm border border-ink/10 hover:bg-ink/[0.02]",
-                formFieldLabel: "text-xs text-ink/60",
-                formFieldInput: "text-sm border-ink/10 rounded-sm",
-                formButtonPrimary: "bg-ink text-bone hover:bg-sage text-sm rounded-sm",
-                footerActionText: "text-xs text-ink/40",
-                footerActionLink: "text-xs text-ink underline",
-              },
-            }}
-          />
+        <div className="bg-white rounded-sm border border-ink/10 p-6 shadow-sm space-y-3">
+          <SignInButton
+            mode="redirect"
+            forceRedirectUrl="/dashboard"
+            className="w-full"
+          >
+            <button className="w-full py-2.5 bg-ink text-bone font-medium rounded-sm hover:bg-sage transition-colors text-sm">
+              Sign In
+            </button>
+          </SignInButton>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-ink/10" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-2 text-ink/40">or</span>
+            </div>
+          </div>
+
+          <SignUpButton
+            mode="redirect"
+            forceRedirectUrl="/dashboard"
+            className="w-full"
+          >
+            <button className="w-full py-2.5 border border-ink/10 text-ink font-medium rounded-sm hover:bg-ink/[0.02] transition-colors text-sm">
+              Create Account
+            </button>
+          </SignUpButton>
+
+          <p className="text-xs text-center text-ink/40 pt-2">
+            Secure sign-in powered by Clerk
+          </p>
         </div>
       </div>
     </div>
