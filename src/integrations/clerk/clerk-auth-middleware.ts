@@ -1,14 +1,25 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/integrations/supabase/types'
-import { env } from '@/lib/config.server'
+
+function runtimeEnv(key: string): string | undefined {
+  try {
+    // Use bracket notation + globalThis to prevent bundler static replacement
+    const proc = (globalThis as any).process
+    return proc?.env?.[key]
+  } catch {
+    return undefined
+  }
+}
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   // @ts-expect-error — 'request' exists at runtime but isn't in FunctionMiddlewareServerFn types
   async ({ next, request }) => {
     // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
     const { verifyToken, createClerkClient } = await import('@clerk/backend')
-    const clerkClient = createClerkClient({ secretKey: env('CLERK_SECRET_KEY')! })
+    const clerkSecretKey = runtimeEnv('CLERK_SECRET_KEY')
+    if (!clerkSecretKey) throw new Error('Missing CLERK_SECRET_KEY environment variable')
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
 
     // Try header first (from client-side middleware)
     let sessionToken = request?.headers?.get?.('x-clerk-session-token')
@@ -28,7 +39,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     if (sessionToken) {
       try {
         const payload = await verifyToken(sessionToken, {
-          secretKey: env('CLERK_SECRET_KEY')!,
+          secretKey: clerkSecretKey,
         })
         userId = payload.sub ?? null
       } catch {
@@ -47,11 +58,18 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       // Clerk unavailable — fall back to non-admin
     }
 
-    const supabaseUrl = env('SUPABASE_URL')
-    const supabaseServiceRoleKey = env('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseUrl = runtimeEnv('SUPABASE_URL')
+    const supabaseServiceRoleKey = runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
-      throw new Error('Missing Supabase environment variables')
+      const errMsg = [
+        'Missing Supabase env vars',
+        `SUPABASE_URL: ${supabaseUrl ? 'set' : 'MISSING'}`,
+        `SUPABASE_SERVICE_ROLE_KEY: ${supabaseServiceRoleKey ? 'set' : 'MISSING'}`,
+        `NODE_ENV: ${runtimeEnv('NODE_ENV')}`,
+      ].join(' | ')
+      console.error('[requireClerkAuth]', errMsg)
+      throw new Error(errMsg)
     }
 
     const supabase = createClient<Database>(
