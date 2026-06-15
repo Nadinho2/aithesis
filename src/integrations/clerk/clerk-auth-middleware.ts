@@ -15,6 +15,20 @@ function runtimeEnv(key: string): string | undefined {
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   // @ts-expect-error — 'request' exists at runtime but isn't in FunctionMiddlewareServerFn types
   async ({ next, request }) => {
+    // TEMPORARY: Skip auth when DISABLE_AUTH env var is set
+    if (runtimeEnv('DISABLE_AUTH') === 'true') {
+      const supabaseUrl = runtimeEnv('SUPABASE_URL')
+      const supabaseServiceRoleKey = runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && supabaseServiceRoleKey) {
+        const supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        })
+        return next({
+          context: { supabase, userId: 'dev-user-id', isAdmin: true },
+        })
+      }
+    }
+
     // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
     const { verifyToken, createClerkClient } = await import('@clerk/backend')
     const clerkSecretKey = runtimeEnv('CLERK_SECRET_KEY')
