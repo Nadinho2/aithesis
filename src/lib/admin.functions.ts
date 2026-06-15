@@ -166,7 +166,7 @@ export const adminDownloadProposal = createServerFn({ method: "POST" })
 
 export const adminDownloadUserTopics = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
+  .inputValidator((i: unknown) => z.object({ user_id: z.string().min(1) }).parse(i))
   .handler(async ({ data, context }) => {
     assertAdmin(context.isAdmin);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -204,7 +204,7 @@ export const adminDownloadUserTopics = createServerFn({ method: "POST" })
 export const adminSetBan = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) =>
-    z.object({ user_id: z.string().uuid(), banned: z.boolean() }).parse(i),
+    z.object({ user_id: z.string().min(1), banned: z.boolean() }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
@@ -220,7 +220,7 @@ export const adminSetBan = createServerFn({ method: "POST" })
 
 export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((i: unknown) => z.object({ user_id: z.string().uuid() }).parse(i))
+  .inputValidator((i: unknown) => z.object({ user_id: z.string().min(1) }).parse(i))
   .handler(async ({ data, context }) => {
     const { userId } = context;
     if (data.user_id === userId) throw new Error("You cannot delete yourself.");
@@ -236,7 +236,7 @@ export const adminSetRole = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) =>
     z
       .object({
-        user_id: z.string().uuid(),
+        user_id: z.string().min(1),
         role: z.enum(["admin", "user"]),
         grant: z.boolean(),
       })
