@@ -1,13 +1,14 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/integrations/supabase/types'
+import { env } from '@/lib/config.server'
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
   // @ts-expect-error — 'request' exists at runtime but isn't in FunctionMiddlewareServerFn types
   async ({ next, request }) => {
     // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
     const { verifyToken, createClerkClient } = await import('@clerk/backend')
-    const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! })
+    const clerkClient = createClerkClient({ secretKey: env('CLERK_SECRET_KEY')! })
 
     // Try header first (from client-side middleware)
     let sessionToken = request?.headers?.get?.('x-clerk-session-token')
@@ -27,7 +28,7 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     if (sessionToken) {
       try {
         const payload = await verifyToken(sessionToken, {
-          secretKey: process.env.CLERK_SECRET_KEY!,
+          secretKey: env('CLERK_SECRET_KEY')!,
         })
         userId = payload.sub ?? null
       } catch {
@@ -46,16 +47,16 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       // Clerk unavailable — fall back to non-admin
     }
 
-    const SUPABASE_URL = process.env.SUPABASE_URL
-    const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = env('SUPABASE_URL')
+    const supabaseServiceRoleKey = env('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       throw new Error('Missing Supabase environment variables')
     }
 
     const supabase = createClient<Database>(
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
+      supabaseUrl,
+      supabaseServiceRoleKey,
       {
         auth: {
           persistSession: false,
