@@ -32,10 +32,26 @@ export const generateTopics = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
+    const schemaJson = {
+      topics: [
+        {
+          title: "string (the topic title)",
+          problem_statement: "string (2-3 sentences)",
+          research_gap: "string (1-2 sentences)",
+          objectives: ["objective 1", "objective 2", "objective 3"],
+          novelty_score: "number 1-10",
+          feasibility_score: "number 1-10",
+          category: "string (optional sub-field)",
+        },
+      ],
+    };
     const systemPrompt = `You are a senior academic research advisor. Generate exactly ${data.count} ORIGINAL, specific, and feasible research topics tailored to the inputs.
 Each topic must have a precise problem statement (2-3 sentences), an identified research gap (1-2 sentences), 3 SMART objectives, a novelty score (1-10), and a feasibility score (1-10).
 Avoid generic or vague topics. Prefer specific contexts, populations, methods, or technologies. Do not invent citations — only topic descriptions.
-Return STRICT JSON matching the provided schema. No markdown, no commentary.`;
+Return STRICT JSON matching this schema exactly — with a "topics" root key containing an array of topic objects. No markdown, no commentary.
+
+Schema:
+${JSON.stringify(schemaJson, null, 2)}`;
 
     const userPrompt = `Department: ${data.department}
 Course: ${data.course || "(unspecified)"}
