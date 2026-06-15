@@ -44,9 +44,9 @@ export const adminListLimits = createServerFn({ method: "GET" })
       return {
         user_id: u.id,
         email: u.email,
-        thesis_limit: lim?.thesis_limit ?? 3,
+        thesis_limit: lim?.thesis_limit ?? 0,
         thesis_used: lim?.thesis_used ?? 0,
-        proposal_limit: lim?.proposal_limit ?? 5,
+        proposal_limit: lim?.proposal_limit ?? 0,
         proposal_used: lim?.proposal_used ?? 0,
       };
     });

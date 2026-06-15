@@ -47,11 +47,8 @@ export const generateThesis = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
-    // Check generation limit
-    const canGen = await checkGenerateLimit(supabase, userId, "thesis");
-    if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
-
-    // Payment check — thesis costs vary by level
+    // Payment check — if user has paid, skip limit check
+    let isPaid = false;
     const { data: paidTx } = await (supabase as any)
       .from("transactions")
       .select("id")
@@ -60,7 +57,15 @@ export const generateThesis = createServerFn({ method: "POST" })
       .eq("product", "thesis")
       .eq("level", data.level)
       .limit(1);
-    if (!paidTx?.length) throw new Error("Payment required. Please purchase a thesis credit before generating.");
+    if (paidTx?.length) {
+      isPaid = true;
+    }
+
+    // Check generation limit (only for non-paid users)
+    if (!isPaid) {
+      const canGen = await checkGenerateLimit(supabase, userId, "thesis");
+      if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
+    }
 
     let topicCtx: {
       title: string;

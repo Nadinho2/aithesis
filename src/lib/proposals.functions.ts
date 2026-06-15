@@ -53,11 +53,7 @@ export const generateProposal = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
 
-    // Check generation limit
-    const canGen = await checkGenerateLimit(supabase, userId, "proposal");
-    if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
-
-    // Payment check — proposals cost ₦3,000
+    // Payment check — if user has paid, skip limit check
     const { data: paidTx } = await (supabase as any)
       .from("transactions")
       .select("id")
@@ -65,7 +61,12 @@ export const generateProposal = createServerFn({ method: "POST" })
       .eq("status", "completed")
       .eq("product", "proposal")
       .limit(1);
-    if (!paidTx?.length) throw new Error("Payment required. Please purchase a proposal credit before generating.");
+    const isPaid = paidTx?.length > 0;
+
+    if (!isPaid) {
+      const canGen = await checkGenerateLimit(supabase, userId, "proposal");
+      if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
+    }
 
     let topicCtx: {
       title: string;
