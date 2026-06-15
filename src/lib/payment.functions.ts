@@ -3,6 +3,15 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { getPrice, type ProductType, type ThesisLevel } from "./pricing";
 
+function runtimeEnv(key: string): string | undefined {
+  try {
+    const proc = (globalThis as any).process;
+    return proc?.env?.[key];
+  } catch {
+    return undefined;
+  }
+}
+
 // --- Initialize Paystack Payment ---
 
 const InitPaymentInput = z.object({
@@ -16,7 +25,7 @@ export const initPayment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InitPaymentInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
     if (!secretKey) throw new Error("Payment is not configured.");
 
     const amount = getPrice(data.product, data.level as ThesisLevel);
@@ -27,6 +36,8 @@ export const initPayment = createServerFn({ method: "POST" })
       product: data.product,
       level: data.level ?? null,
     };
+
+    const appUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://aithesis.vercel.app";
 
     const resp = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -39,7 +50,7 @@ export const initPayment = createServerFn({ method: "POST" })
         amount: amount * 100, // Paystack uses kobo (cents)
         currency: "NGN",
         metadata,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://aithesis.vercel.app"}/dashboard?payment=verify`,
+        callback_url: `${appUrl}/dashboard?payment=verify`,
       }),
     });
 
@@ -60,7 +71,7 @@ export const verifyPayment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => VerifyPaymentInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const secretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
     if (!secretKey) throw new Error("Payment is not configured.");
 
     const resp = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(data.reference)}`, {
@@ -76,7 +87,7 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const amount = json.data.amount / 100; // Convert back from kobo
 
     // Save transaction
-    const { error: txError } = await supabase.from("transactions").insert({
+    const { error: txError } = await (supabase as any).from("transactions").insert({
       user_id: userId,
       reference: data.reference,
       amount,
@@ -105,13 +116,10 @@ export const checkAccess = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Topics are always free
-    if (data.product === "topics") return { allowed: true, price: 0 };
-
     const price = getPrice(data.product, data.level as ThesisLevel);
 
     // Check for a completed transaction for this product (+ level)
-    const query = supabase
+    const query = (supabase as any)
       .from("transactions")
       .select("id, created_at")
       .eq("user_id", userId)
@@ -136,7 +144,7 @@ export const getPaymentHistory = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("transactions")
       .select("*")
       .eq("user_id", userId)
