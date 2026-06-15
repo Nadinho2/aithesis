@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWords, countWordsDeep, callAIText } from "./ai-utils.server";
+import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -45,6 +46,10 @@ export const generateThesis = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
+
+    // Check generation limit
+    const canGen = await checkGenerateLimit(supabase, userId, "thesis");
+    if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
 
     // Payment check — thesis costs vary by level
     const { data: paidTx } = await (supabase as any)
@@ -312,6 +317,9 @@ ${chapters[c.key]}`;
       .select()
       .single();
     if (insErr) throw new Error(insErr.message);
+
+    // Increment usage after successful generation
+    await incrementUsage(supabase, userId, "thesis");
 
     return { thesis: created };
   });

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
+import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -51,6 +52,10 @@ export const generateProposal = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek AI is not configured.");
+
+    // Check generation limit
+    const canGen = await checkGenerateLimit(supabase, userId, "proposal");
+    if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
 
     // Payment check — proposals cost ₦3,000
     const { data: paidTx } = await (supabase as any)
@@ -272,6 +277,9 @@ ${JSON.stringify(parsed)}`,
       .select()
       .single();
     if (insErr) throw new Error(insErr.message);
+
+    // Increment usage after successful generation
+    await incrementUsage(supabase, userId, "proposal");
 
     return { proposal: created };
   });
