@@ -2,8 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPaymentHistory } from "@/lib/payment.functions";
-import { PRICING } from "@/lib/pricing";
+import { PaymentModal } from "@/components/PaymentModal";
+import { getPrice } from "@/lib/pricing";
 import { CreditCard, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
+import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({ meta: [{ title: "Billing — ThesisPro AI" }] }),
@@ -17,6 +20,14 @@ function BillingPage() {
     queryFn: () => historyFn(),
   });
 
+  const [payProduct, setPayProduct] = useState<ProductType | null>(null);
+  const [payLevel, setPayLevel] = useState<ThesisLevel | undefined>(undefined);
+
+  const openPay = (product: ProductType, level?: ThesisLevel) => {
+    setPayProduct(product);
+    setPayLevel(level);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
       <div className="mb-8 md:mb-10">
@@ -25,7 +36,7 @@ function BillingPage() {
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Billing</h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          View pricing and your payment history.
+          Choose a plan below or view your payment history.
         </p>
       </div>
 
@@ -33,23 +44,27 @@ function BillingPage() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
         <PricingCard
           product="Proposal"
-          price={`₦${PRICING.proposal.price.toLocaleString()}`}
+          price={`₦${getPrice("proposal").toLocaleString()}`}
           description="Generate a full research proposal with verified references"
+          onClick={() => openPay("proposal")}
         />
         <PricingCard
           product="Undergrad Thesis"
-          price={`₦${PRICING.thesis.undergraduate.price.toLocaleString()}`}
+          price={`₦${getPrice("thesis", "undergraduate").toLocaleString()}`}
           description="Complete undergraduate thesis (5 chapters, 6,000-15,000 words)"
+          onClick={() => openPay("thesis", "undergraduate")}
         />
         <PricingCard
           product="Masters Thesis"
-          price={`₦${PRICING.thesis.masters.price.toLocaleString()}`}
+          price={`₦${getPrice("thesis", "masters").toLocaleString()}`}
           description="Complete masters thesis (5 chapters, 6,000-15,000 words)"
+          onClick={() => openPay("thesis", "masters")}
         />
         <PricingCard
           product="PhD Thesis"
-          price={`₦${PRICING.thesis.phd.price.toLocaleString()}`}
+          price={`₦${getPrice("thesis", "phd").toLocaleString()}`}
           description="Complete PhD thesis (5 chapters, 6,000-15,000 words)"
+          onClick={() => openPay("thesis", "phd")}
         />
       </div>
 
@@ -99,16 +114,37 @@ function BillingPage() {
           </table>
         </div>
       )}
+
+      {payProduct && (
+        <PaymentModal
+          open={!!payProduct}
+          onClose={() => setPayProduct(null)}
+          product={payProduct}
+          level={payLevel}
+          onPaid={() => {
+            setPayProduct(null);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function PricingCard({ product, price, description }: { product: string; price: string; description: string }) {
+function PricingCard({ product, price, description, onClick }: {
+  product: string;
+  price: string;
+  description: string;
+  onClick: () => void;
+}) {
   return (
-    <div className="border border-ink/10 rounded-sm p-5 bg-white">
+    <button
+      onClick={onClick}
+      className="border border-ink/10 rounded-sm p-5 bg-white text-left hover:border-sage hover:shadow-sm transition-all cursor-pointer w-full"
+    >
       <h3 className="font-medium text-sm text-ink/60 mb-1">{product}</h3>
       <p className="font-serif text-3xl mb-2">{price}</p>
       <p className="text-xs text-ink/40">{description}</p>
-    </div>
+    </button>
   );
 }

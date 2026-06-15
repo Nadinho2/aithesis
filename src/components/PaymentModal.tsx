@@ -1,104 +1,107 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { initPayment as initPaymentFn, verifyPayment as verifyPaymentFn } from "@/lib/payment.functions";
 import { useUser } from "@clerk/clerk-react";
-import { initPayment, checkAccess } from "@/lib/payment.functions";
-import { getPrice, getLabel, type ProductType, type ThesisLevel } from "@/lib/pricing";
+import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { getPrice } from "@/lib/pricing";
+import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
-interface PaymentModalProps {
+type Props = {
   open: boolean;
   onClose: () => void;
   product: ProductType;
   level?: ThesisLevel;
   onPaid: () => void;
-}
+};
 
-export function PaymentModal({ open, onClose, product, level, onPaid }: PaymentModalProps) {
+export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
   const { user } = useUser();
-  const [loading, setLoading] = useState(false);
-  const initPaymentFn = useServerFn(initPayment);
-  const checkAccessFn = useServerFn(checkAccess);
+  const email = user?.primaryEmailAddress?.emailAddress ?? "";
+  const price = getPrice(product, level);
+  const [reference, setReference] = useState<string | null>(null);
+
+  const initPay = useServerFn(initPaymentFn);
+  const verifyPay = useServerFn(verifyPaymentFn);
+
+  const initMut = useMutation({
+    mutationFn: () => initPay({ data: { product, level, email } }),
+    onSuccess: (res) => {
+      setReference(res.reference);
+      window.location.href = res.authorization_url;
+    },
+    onError: (e) => {
+      toast.error(String(e instanceof Error ? e.message : e));
+    },
+  });
+
+  const verifyMut = useMutation({
+    mutationFn: (ref: string) => verifyPay({ data: { reference: ref } }),
+    onSuccess: () => {
+      toast.success("Payment successful!");
+      onPaid();
+    },
+    onError: (e) => {
+      toast.error(String(e instanceof Error ? e.message : e));
+    },
+  });
+
+  // Handle Paystack redirect callback (?reference=xxx)
+  const urlRef = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("reference")
+    : null;
+  if (urlRef && !reference) {
+    setReference(urlRef);
+    verifyMut.mutate(urlRef);
+  }
 
   if (!open) return null;
 
-  const price = getPrice(product, level);
-  const label = getLabel(product, level);
-  const email = user?.primaryEmailAddress?.emailAddress ?? "";
-
-  const handlePay = async () => {
-    if (!email) {
-      toast.error("No email found on your account");
-      return;
-    }
-    setLoading(true);
-    try {
-      const result = await initPaymentFn({ data: { product, level, email } });
-      // Redirect to Paystack checkout
-      window.location.href = result.authorization_url;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Payment failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async () => {
-    // Check URL for reference param (from callback)
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("reference");
-    if (!ref) return;
-    try {
-      await checkAccessFn({ data: { product, level } });
-      toast.success("Payment confirmed! You can now generate.");
-      onPaid();
-      onClose();
-    } catch {
-      // if checkAccess still fails, the user hasn't actually paid
-    }
-  };
-
-  // Auto-verify on mount if reference is in URL
-  useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("payment") === "verify") {
-      handleVerify();
-    }
-  });
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-sm shadow-lg max-w-sm w-full p-6">
-        <h3 className="font-serif text-lg text-ink mb-2">Complete Payment</h3>
-        <p className="text-sm text-ink/60 mb-4">
-          You need a {label} credit to continue.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-sm mx-4 p-6 relative">
+        <button onClick={onClose} className="absolute top-3 right-3 text-ink/40 hover:text-ink">
+          <X className="size-5" />
+        </button>
+
+        <h2 className="font-serif text-xl mb-1">Complete Payment</h2>
+        <p className="text-sm text-ink/60 mb-6">
+          {product === "proposal"
+            ? "Unlock proposal generation"
+            : `Unlock ${level} thesis generation`}
         </p>
 
-        <div className="bg-ink/[0.02] border border-ink/10 rounded-sm p-4 mb-6">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-ink/70">{label}</span>
-            <span className="text-lg font-semibold text-ink">
-              ₦{price.toLocaleString()}
-            </span>
+        <div className="border border-ink/10 rounded-sm p-4 mb-6">
+          <p className="text-xs text-ink/40 uppercase tracking-wider mb-1">Amount</p>
+          <p className="font-serif text-3xl">₦{price.toLocaleString()}</p>
+          <p className="text-xs text-ink/40 mt-1">
+            {product === "proposal"
+              ? "Research Proposal"
+              : `${level?.charAt(0).toUpperCase()}${level?.slice(1)} Thesis`}
+          </p>
+        </div>
+
+        {reference ? (
+          <div className="text-center py-4">
+            <Loader2 className="animate-spin mx-auto h-6 w-6 text-ink/40" />
+            <p className="text-sm text-ink/60 mt-2">Verifying payment…</p>
           </div>
-        </div>
-
-        <div className="flex gap-3">
+        ) : (
           <button
-            onClick={onClose}
-            className="flex-1 py-2.5 border border-ink/10 text-sm text-ink/60 rounded-sm hover:bg-ink/[0.02] transition-colors"
+            onClick={() => initMut.mutate()}
+            disabled={initMut.isPending}
+            className="w-full py-3 bg-ink text-bone rounded-sm text-sm font-medium hover:bg-sage transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            Cancel
+            {initMut.isPending ? (
+              <><Loader2 className="size-4 animate-spin" /> Redirecting…</>
+            ) : (
+              "Pay with Paystack"
+            )}
           </button>
-          <button
-            onClick={handlePay}
-            disabled={loading || !email}
-            className="flex-1 py-2.5 bg-ink text-bone text-sm font-medium rounded-sm hover:bg-sage transition-colors disabled:opacity-50"
-          >
-            {loading ? "Processing..." : `Pay ₦${price.toLocaleString()}`}
-          </button>
-        </div>
+        )}
 
-        <p className="text-xs text-ink/40 text-center mt-3">
+        <p className="text-xs text-ink/40 text-center mt-4">
           Secured by Paystack. You will be redirected to complete payment.
         </p>
       </div>

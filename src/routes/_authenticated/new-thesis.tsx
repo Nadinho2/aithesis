@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateThesis } from "@/lib/theses.functions";
+import { checkAccess } from "@/lib/payment.functions";
+import { PaymentModal } from "@/components/PaymentModal";
 import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
