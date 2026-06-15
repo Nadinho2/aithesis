@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ThesisPro AI — Ivory academic editorial design system */
+/* ThesisPro AI — Premium Academic Research Design System */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -32,51 +32,57 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Brand palette */
-  --color-bone: var(--bone);
+  /* Brand palette — warm academic paper */
+  --color-paper: var(--paper);
   --color-ink: var(--ink);
-  --color-sage: var(--sage);
-  --color-parchment: var(--parchment);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-verde: var(--verde);
+  --color-verde-light: var(--verde-light);
+  --color-verde-dark: var(--verde-dark);
+  --color-amber-bg: var(--amber-bg);
+  --color-amber-text: var(--amber-text);
 
-  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-serif: "Source Serif 4", "Lora", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Legacy aliases */
+  --color-bone: var(--color-paper);
+  --color-sage: var(--color-verde);
 }
 
 :root {
   --radius: 0.5rem;
 
-  /* Brand */
-  --bone: oklch(0.971 0.014 85);
-  --ink: oklch(0.18 0.005 270);
-  --sage: oklch(0.62 0.04 120);
-  --parchment: oklch(0.945 0.018 80);
+  /* Warm academic paper palette */
+  --paper: oklch(0.985 0.01 90);       /* #FAF8F3 warm cream */
+  --ink: oklch(0.15 0.003 270);         /* #1A1A1A ink black */
+  --ink-secondary: oklch(0.42 0.008 85);/* #5F5E5A warm gray */
+  --verde: oklch(0.45 0.12 170);        /* #0F6E56 deep green accent */
+  --verde-light: oklch(0.94 0.03 165);  /* #E1F5EE light green bg */
+  --verde-dark: oklch(0.25 0.06 170);   /* #04342C dark green text */
+  --amber-bg: oklch(0.96 0.04 85);      /* #FAEEDA warm gold bg */
+  --amber-text: oklch(0.55 0.12 75);    /* #856305 amber text */
 
-  /* Semantic (mapped to brand) */
-  --background: var(--bone);
+  /* Semantic tokens */
+  --background: var(--paper);
   --foreground: var(--ink);
   --card: oklch(1 0 0);
   --card-foreground: var(--ink);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--ink);
   --primary: var(--ink);
-  --primary-foreground: var(--bone);
-  --secondary: var(--parchment);
+  --primary-foreground: oklch(0.985 0.01 90);
+  --secondary: oklch(0.96 0.01 85);
   --secondary-foreground: var(--ink);
-  --muted: var(--parchment);
-  --muted-foreground: oklch(0.45 0.01 270);
-  --accent: var(--sage);
+  --muted: oklch(0.96 0.01 85);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--verde);
   --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.18 0.005 270 / 0.1);
-  --input: oklch(0.18 0.005 270 / 0.15);
-  --ring: var(--sage);
-}
-
-.dark {
-  /* Keep light-only for this scholarly product */
-  --background: var(--bone);
-  --foreground: var(--ink);
+  --border: oklch(0.15 0.003 270 / 0.08);
+  --input: oklch(0.15 0.003 270 / 0.12);
+  --ring: var(--verde);
 }
 
 @layer base {
@@ -88,9 +94,12 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.7;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-serif);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
   }
 }

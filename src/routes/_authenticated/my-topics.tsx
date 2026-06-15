@@ -143,7 +143,7 @@ function MyTopicsPage() {
 
       {topics.length > 0 && (
         <>
-          <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-3 bg-bone/95 backdrop-blur py-3 border-b border-ink/10">
+          <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-3 bg-paper/95 py-3 border-b border-[#E5E2D8]">
             <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
               <input
                 type="checkbox"
