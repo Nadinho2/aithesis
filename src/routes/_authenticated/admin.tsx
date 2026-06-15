@@ -83,6 +83,14 @@ function AdminPage() {
         </p>
       </div>
 
+      {/* Stats summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Total users" value={users?.length ?? 0} />
+        <StatCard label="Thesis capacity" value={users?.reduce((s: number, u: UserRow) => s + u.thesis_limit, 0) ?? 0} />
+        <StatCard label="Proposal capacity" value={users?.reduce((s: number, u: UserRow) => s + u.proposal_limit, 0) ?? 0} />
+        <StatCard label="Thesis used" value={users?.reduce((s: number, u: UserRow) => s + u.thesis_used, 0) ?? 0} />
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="animate-spin h-6 w-6 text-ink/40" />
@@ -189,6 +197,15 @@ function AdminPage() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-white border border-[#E5E2D8] rounded-lg p-4">
+      <div className="font-serif text-2xl font-bold text-ink">{value}</div>
+      <div className="text-xs text-ink-secondary mt-1">{label}</div>
     </div>
   );
 }
