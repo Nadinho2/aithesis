@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 
+function runtimeEnv(key: string): string | undefined {
+  try {
+    const proc = (globalThis as any).process;
+    return proc?.env?.[key];
+  } catch {
+    return undefined;
+  }
+}
+
 // ─── Require admin (throws if not admin) ───
 export function requireAdmin(isAdmin: boolean): void {
   if (!isAdmin) throw new Error("Forbidden: admin role required");
@@ -14,18 +23,20 @@ export const adminListLimits = createServerFn({ method: "GET" })
     requireAdmin(context.isAdmin);
     const supabase = context.supabase as any;
 
-    // Fetch all auth users via Supabase Admin API (paginated)
+    // Fetch all users from Clerk API (paginated)
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerk = createClerkClient({ secretKey: runtimeEnv("CLERK_SECRET_KEY")! });
     const authUsers: Array<{ id: string; email: string | null }> = [];
-    let page = 1;
+    let offset = 0;
+    const limit = 100;
     for (;;) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
-      if (error) throw new Error(error.message);
-      for (const u of data.users) {
-        authUsers.push({ id: u.id, email: u.email ?? null });
+      const userList = await clerk.users.getUserList({ offset, limit });
+      for (const u of userList.data) {
+        authUsers.push({ id: u.id, email: u.emailAddresses?.[0]?.emailAddress ?? null });
       }
-      if (data.users.length < 200) break;
-      page += 1;
-      if (page > 25) break;
+      if (userList.data.length < limit) break;
+      offset += limit;
+      if (offset > 2000) break;
     }
 
     const ids = authUsers.map((u) => u.id);
