@@ -33,7 +33,7 @@ const baseNav: NavItem[] = [
   { to: "/proposals", label: "My Proposals", icon: Library },
   { to: "/new-thesis", label: "Full Thesis", icon: Sparkles },
   { to: "/theses", label: "My Theses", icon: Library },
-  { to: "/billing", label: "Billing", icon: CreditCard, disabled: true },
+  { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings, disabled: true },
 ];
 
