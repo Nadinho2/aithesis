@@ -131,14 +131,17 @@ export const generateThesis = createServerFn({ method: "POST" })
 - Separate paragraphs with a single blank line. Paragraphs should be 3–6 sentences.
 - Put every subheading on its OWN line with a blank line above and below it.
 
-ORIGINALITY & HUMAN-VOICE RULES (absolute):
-- Compose entirely in your own words. NEVER copy any phrasing from the reference abstracts.
-- Vary sentence length aggressively; mix short declarative sentences with longer analytical ones.
-- Use concrete, specific details: actual numbers, named methods, locations, instruments, dates.
-- Insert occasional hedged claims ("appears to", "suggests that", "remains contested").
-- BANNED PHRASES: "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of".
-- Do NOT begin any paragraph with "In summary", "In conclusion", "Furthermore," or "Moreover,".
+ORIGINALITY & PLAGIARISM PREVENTION (ABSOLUTE REQUIREMENTS):
+- Every sentence must be 100% originally written. NEVER copy, paraphrase, or closely mirror any existing text from the provided references, your training data, or common academic templates.
+- For each sentence, ask yourself: "Could this sentence be found in any existing paper?" If yes, rewrite it completely.
+- Use highly specific context from the research topic (country, population, methods, dates, institutions) that cannot exist in any other paper.
+- Include concrete, field-specific terminology unique to this topic's discipline.
+- Vary sentence structure aggressively — mix short declarative sentences, complex compound sentences, and occasional questions.
+- BANNED PHRASES (zero tolerance): "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of", "in recent years", "over the years", "in the modern era", "in the digital age", "there is a growing need", "there has been an increasing", "this study aims to", "the purpose of this study", "the main objective", "this research seeks to", "it is against this background", "this study therefore", "the findings of this study", "the results indicate", "based on the findings", "in light of the above".
+- Do NOT begin ANY paragraph with: "In summary", "In conclusion", "Furthermore,", "Moreover,", "However,", "Therefore,", "Additionally,", "Consequently,".
 - At most two em-dashes per chapter.
+- If a sentence sounds like something a generic AI would write, delete it and rewrite from scratch.
+- READ your output before finalizing. If any 5-word sequence could appear verbatim in an existing academic paper, change those words.
 
 CITATION RULES — STRICT APA 7th EDITION:
 - Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
