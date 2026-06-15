@@ -1,14 +1,63 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, Bookmark, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { verifyPayment } from "@/lib/payment.functions";
+import { Sparkles, Bookmark, ArrowRight, CheckCircle, Loader2, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — ThesisPro AI" }] }),
   component: DashboardPage,
 });
 
+function PaymentVerifier() {
+  const verifyPay = useServerFn(verifyPayment);
+  const [status, setStatus] = useState<"verifying" | "success" | "failed" | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("reference");
+    const paymentVerify = params.get("payment_verify");
+
+    if (!reference || !paymentVerify) return;
+
+    setStatus("verifying");
+
+    verifyPay({ data: { reference } })
+      .then(() => {
+        setStatus("success");
+        toast.success("Payment successful! You can now generate.");
+        // Clean URL params
+        window.history.replaceState({}, "", "/dashboard");
+      })
+      .catch((e) => {
+        setStatus("failed");
+        toast.error(String(e instanceof Error ? e.message : e));
+      });
+  }, []);
+
+  if (!status) return null;
+
+  const borderColor = status === "success" ? "border-green-200 bg-green-50" : status === "failed" ? "border-red-200 bg-red-50" : "border-ink/10 bg-ink/5";
+
+  return (
+    <div className={`mb-6 p-4 border rounded-sm flex items-center gap-3 text-sm ${borderColor}`}>
+      {status === "verifying" && <Loader2 className="size-5 animate-spin text-ink/40" />}
+      {status === "success" && <CheckCircle className="size-5 text-green-600" />}
+      {status === "failed" && <XCircle className="size-5 text-red-500" />}
+      <span>
+        {status === "verifying" && "Verifying your payment…"}
+        {status === "success" && "Payment verified! Your credit is now active."}
+        {status === "failed" && "Payment verification failed. Please contact support."}
+      </span>
+    </div>
+  );
+}
+
 function DashboardPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
+      <PaymentVerifier />
       <div className="mb-8 md:mb-12">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
           Research Studio

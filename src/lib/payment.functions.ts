@@ -37,7 +37,10 @@ export const initPayment = createServerFn({ method: "POST" })
       level: data.level ?? null,
     };
 
-    const appUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://aithesis.vercel.app";
+    const callbackUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://aithesis.vercel.app";
+    const redirectUrl = data.level
+      ? `${callbackUrl}/dashboard?payment_verify=thesis&level=${data.level}`
+      : `${callbackUrl}/dashboard?payment_verify=proposal`;
 
     const resp = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
@@ -50,7 +53,7 @@ export const initPayment = createServerFn({ method: "POST" })
         amount: amount * 100, // Paystack uses kobo (cents)
         currency: "NGN",
         metadata,
-        callback_url: `${appUrl}/dashboard?payment=verify`,
+        callback_url: redirectUrl,
       }),
     });
 
