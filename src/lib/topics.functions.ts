@@ -142,10 +142,11 @@ export const listTopics = createServerFn({ method: "POST" })
       .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     let q = supabase
       .from("topics")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(500);
     if (data.generation_id) q = q.eq("generation_id", data.generation_id);
@@ -195,10 +196,11 @@ export const deleteTopics = createServerFn({ method: "POST" })
 export const listGenerations = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("topic_generations")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);

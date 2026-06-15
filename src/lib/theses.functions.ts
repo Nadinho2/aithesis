@@ -327,10 +327,11 @@ export const getThesis = createServerFn({ method: "POST" })
 export const listTheses = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("theses")
       .select("id,title,level,word_count,target_words,created_at")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);

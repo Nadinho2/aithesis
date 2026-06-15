@@ -318,10 +318,11 @@ export const getProposal = createServerFn({ method: "POST" })
 export const listProposals = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("proposals")
       .select("id,title,level,word_count,created_at,topic_id")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
