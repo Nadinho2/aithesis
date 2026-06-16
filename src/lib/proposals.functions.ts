@@ -51,7 +51,7 @@ export const generateProposal = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) throw new Error("DeepSeek AI is not configured.");
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
     // Payment check — if user has paid, skip limit check
     const { data: paidTx } = await (supabase as any)

@@ -16,9 +16,9 @@ function PrivacyPage() {
         <div className="prose prose-sm max-w-none text-ink-secondary leading-[1.7] space-y-5">
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Information We Collect</h2>
           <p>
-            When you sign up for ThesisPro AI, we collect your email address and a user profile
+            When you sign up for ThesisPro, we collect your email address and a user profile
             name. We also store the research topics, proposals, theses, and other content you
-            generate or upload while using the platform. Payment information is processed by
+            create or upload while using the platform. Payment information is processed by
             Paystack; we do not store credit card details.
           </p>
 

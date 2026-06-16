@@ -9,7 +9,7 @@ import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/new-thesis")({
-  head: () => ({ meta: [{ title: "Generate Full Thesis — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Draft Thesis — ThesisPro" }] }),
   component: NewThesisPage,
 });
 
@@ -48,7 +48,7 @@ function NewThesisPage() {
         research_type: p.research_type ?? f.research_type,
         level: p.level ?? f.level,
       }));
-      toast.success("Prefilled from your proposal — review and generate.");
+      toast.success("Prefilled from your proposal — review and draft.");
     } catch {
       /* ignore */
     }
@@ -73,7 +73,7 @@ function NewThesisPage() {
         },
       }),
     onSuccess: (res) => {
-      toast.success("Thesis generated");
+      toast.success("Thesis drafted");
       qc.invalidateQueries({ queryKey: ["theses"] });
       navigate({ to: "/thesis/$id", params: { id: res.thesis.id } });
     },
@@ -122,12 +122,12 @@ function NewThesisPage() {
           Full Thesis
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">
-          Generate a complete thesis
+          Draft a complete thesis
         </h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
           Five chapters from Introduction through Discussion, with APA 7 references retrieved live
-          from OpenAlex, Crossref, Semantic Scholar, and arXiv. Original, human-toned prose
-          scrubbed of AI tells. Generation can take 1–3 minutes for longer targets.
+          from OpenAlex, Crossref, Semantic Scholar, and arXiv. Original, human-toned prose.
+          Drafting can take 1–3 minutes for longer targets.
         </p>
       </div>
 
@@ -243,11 +243,11 @@ function NewThesisPage() {
         >
           {mut.isPending ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Generating thesis… (may take 1–3 min)
+              <Loader2 className="size-4 animate-spin" /> Drafting thesis… (may take 1–3 min)
             </>
           ) : (
             <>
-              <BookOpen className="size-4" /> Generate Full Thesis
+              <BookOpen className="size-4" /> Draft Full Thesis
             </>
           )}
         </button>

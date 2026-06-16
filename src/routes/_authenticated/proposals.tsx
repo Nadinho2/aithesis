@@ -7,7 +7,7 @@ import { Loader2, FileText, Trash2, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/proposals")({
-  head: () => ({ meta: [{ title: "My Proposals — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "My Proposals — ThesisPro" }] }),
   component: ProposalsListPage,
 });
 
@@ -46,7 +46,7 @@ function ProposalsListPage() {
       );
       navigate({ to: "/new-thesis" });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not open thesis generator");
+      toast.error(e instanceof Error ? e.message : "Could not open thesis draft");
     } finally {
       setThesisBusy(null);
     }
@@ -100,7 +100,7 @@ function ProposalsListPage() {
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">My Proposals</h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Every generated proposal lives here with its verified scholarly references.
+          Every proposal lives here with its verified scholarly references.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ function ProposalsListPage() {
         <div className="text-center py-16 border border-dashed border-ink/15 rounded-sm">
           <p className="font-serif italic text-ink/50 text-lg">No proposals yet.</p>
           <p className="text-sm text-ink/40 mt-2">
-            Open <Link to="/my-topics" className="underline">My Topics</Link> to generate one.
+            Open <Link to="/my-topics" className="underline">My Topics</Link> to start one.
           </p>
         </div>
       )}
@@ -137,7 +137,7 @@ function ProposalsListPage() {
               onClick={() => goToThesis(p.id)}
               disabled={thesisBusy === p.id}
               className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-sage text-sage rounded-sm hover:bg-sage hover:text-bone transition-colors disabled:opacity-50"
-              title="Generate full thesis from this proposal"
+              title="Draft full thesis from this proposal"
             >
               {thesisBusy === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
               Full Thesis

@@ -98,14 +98,14 @@ export function TopicCard({ topic, onChange }: { topic: TopicCardData; onChange?
           title="Coming soon"
           className="text-[11px] font-medium px-3 py-1.5 bg-ink text-bone rounded-sm flex items-center gap-1.5 opacity-50 cursor-not-allowed"
         >
-          <FileText className="size-3.5" /> Generate Proposal
+          <FileText className="size-3.5" /> Draft Proposal
         </button>
         <button
           disabled
           title="Coming soon"
           className="text-[11px] font-medium px-3 py-1.5 border border-ink/15 rounded-sm flex items-center gap-1.5 opacity-50 cursor-not-allowed"
         >
-          <Sparkles className="size-3.5" /> Generate Thesis
+          <Sparkles className="size-3.5" /> Draft Thesis
         </button>
       </div>
     </div>

@@ -4,11 +4,11 @@ import { useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ThesisPro AI — Scholarly rigor, reimagined by AI" },
+      { title: "ThesisPro — Your research, structured and sourced" },
       {
         name: "description",
         content:
-          "Generate university-grade research topics, proposals, and theses with citations verified against OpenAlex and Crossref. 200M+ peer-reviewed papers indexed.",
+          "Find your research topic, map your sources, and draft well-structured proposals and theses with citations verified against OpenAlex and Crossref. 200M+ peer-reviewed papers indexed.",
       },
     ],
   }),
@@ -94,7 +94,7 @@ function MethodologyPipeline() {
     {
       step: "02",
       title: "Search Databases",
-      desc: "We query 200M+ papers from OpenAlex and Crossref in real time, retrieving peer-reviewed sources.",
+      desc: "We search 200M+ papers from OpenAlex and Crossref in real time, surfacing peer-reviewed sources for your topic.",
     },
     {
       step: "03",
@@ -140,20 +140,20 @@ function MethodologyPipeline() {
 /* ─── Features ─── */
 const features = [
   {
-    title: "Topic Generator",
-    desc: "Enter your department, area of interest, and country. Receive up to 50 candidate topics scored on novelty and feasibility.",
+    title: "Topic Discovery",
+    desc: "Enter your department, area of interest, and country. Find up to 50 candidate topics with novelty and feasibility scores to help you decide.",
   },
   {
     title: "Proposal Drafts",
-    desc: "Chapter One and Chapter Three structured to your university's expectations, with a verified reference list.",
+    desc: "Chapter One and Chapter Three structured to your university's expectations, with a verified reference list you can trust.",
   },
   {
     title: "Full Thesis",
-    desc: "Undergraduate, Master's, or PhD structure — 3,000-8,000 words per chapter with APA / Harvard / MLA citations.",
+    desc: "Undergraduate, Master's, or PhD structure — 3,000-8,000 words per chapter with APA / Harvard / MLA citations verified against real sources.",
   },
   {
     title: "Research Library",
-    desc: "Save topics permanently, resume any project, and track citations across every chapter you produce.",
+    desc: "Save topics permanently, resume any project, and track citations across every chapter you write.",
   },
 ];
 
@@ -167,7 +167,7 @@ function FeaturesSection() {
             From a single idea to a defended thesis.
           </h2>
           <p className="text-ink-secondary leading-[1.7]">
-            ThesisPro structures the entire research lifecycle — generate original topics, shortlist
+            ThesisPro structures the entire research lifecycle — discover original topics, shortlist
             with novelty and feasibility scores, then turn any chosen topic into a formatted proposal
             or complete thesis.
           </p>
@@ -193,7 +193,7 @@ const tiers = [
   {
     tier: "Student Free",
     price: "₦0",
-    features: ["2 topic generations / mo", "1 proposal", "Verified citations", "PDF & DOCX export"],
+    features: ["2 topic discoveries / mo", "1 proposal draft", "Verified citations", "PDF & DOCX export"],
     cta: "Get Started",
     highlight: false,
   },
@@ -201,9 +201,9 @@ const tiers = [
     tier: "Researcher Pro",
     price: "₦19,000",
     features: [
-      "Unlimited topic generations",
+      "Unlimited topic discoveries",
       "Unlimited proposals & theses",
-      "Full thesis structure AI",
+      "Full thesis structure",
       "Priority research queue",
     ],
     cta: "Subscribe",
@@ -288,13 +288,14 @@ function LandingPage() {
         </div>
 
         <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl leading-[1.05] text-balance text-ink mb-6">
-          Scholarly rigor,
+          Your research,
           <br />
-          <span className="italic">reimagined</span> by AI.
+          <span className="italic">structured and sourced</span>.
         </h1>
 
         <p className="max-w-2xl mx-auto text-lg text-ink-secondary leading-[1.7] mb-10">
-          Tap into <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
+          A writing partner that helps you build well-sourced academic work. Tap into{" "}
+          <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
           OpenAlex and Crossref. Every citation carries a{" "}
           <strong className="text-ink font-medium">real DOI</strong> — never a hallucinated source.
         </p>
@@ -386,10 +387,10 @@ function LandingPage() {
       <footer className="bg-ink text-paper py-20 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-12">
           <div className="max-w-sm">
-            <div className="font-serif italic text-2xl font-bold text-paper mb-6">ThesisPro AI</div>
+            <div className="font-serif italic text-2xl font-bold text-paper mb-6">ThesisPro</div>
             <p className="text-paper/50 text-sm leading-relaxed">
-              Restoring academic excellence through responsible artificial intelligence. For the next
-              generation of researchers.
+              A research writing partner for the next generation of scholars. Helping you structure,
+              source, and refine your own academic work.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-16">
@@ -415,7 +416,7 @@ function LandingPage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto mt-16 pt-8 border-t border-paper/10 text-[10px] uppercase tracking-widest text-paper/30 flex flex-col sm:flex-row justify-between gap-2">
-          <span>&copy; 2026 ThesisPro AI</span>
+          <span>&copy; 2026 ThesisPro</span>
           <span>Secure &amp; Encrypted</span>
         </div>
       </footer>

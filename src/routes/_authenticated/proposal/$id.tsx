@@ -7,7 +7,7 @@ import { ArrowLeft, Loader2, BookOpen, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/proposal/$id")({
-  head: () => ({ meta: [{ title: "Proposal — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Proposal — ThesisPro" }] }),
   component: ProposalPage,
 });
 
@@ -110,7 +110,7 @@ function ProposalPage() {
             onClick={handleGenerateThesis}
             className="px-4 py-2 border border-sage text-sage rounded-sm text-sm font-medium hover:bg-sage hover:text-bone transition-colors flex items-center gap-2"
           >
-            <Sparkles className="size-4" /> Generate Full Thesis
+            <Sparkles className="size-4" /> Draft Full Thesis
           </button>
           <button
             onClick={handleDownload}

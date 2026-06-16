@@ -68,8 +68,8 @@ export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
         <h2 className="font-serif text-xl mb-1">Complete Payment</h2>
         <p className="text-sm text-ink/60 mb-6">
           {product === "proposal"
-            ? "Unlock proposal generation"
-            : `Unlock ${level} thesis generation`}
+            ? "Unlock proposal drafting"
+            : `Unlock ${level} thesis drafting`}
         </p>
 
         <div className="border border-ink/10 rounded-sm p-4 mb-6">

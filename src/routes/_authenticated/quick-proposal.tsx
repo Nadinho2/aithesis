@@ -9,7 +9,7 @@ import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/quick-proposal")({
-  head: () => ({ meta: [{ title: "Generate Proposal — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Draft Proposal — ThesisPro" }] }),
   component: QuickProposalPage,
 });
 
@@ -49,7 +49,7 @@ function QuickProposalPage() {
         },
       }),
     onSuccess: (res) => {
-      toast.success("Proposal generated");
+      toast.success("Proposal drafted");
       qc.invalidateQueries({ queryKey: ["proposals"] });
       navigate({ to: "/proposal/$id", params: { id: res.proposal.id } });
     },
@@ -101,8 +101,8 @@ function QuickProposalPage() {
           I already have a topic
         </h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Paste your topic details and generate a full APA 7 proposal with verified scholarly
-          references. Skip the topic generator entirely.
+          Paste your topic details and draft a full APA 7 proposal with verified scholarly
+          references.
         </p>
       </div>
 
@@ -211,11 +211,11 @@ function QuickProposalPage() {
         >
           {mut.isPending ? (
             <>
-              <Loader2 className="size-4 animate-spin" /> Generating proposal…
+              <Loader2 className="size-4 animate-spin" /> Drafting proposal…
             </>
           ) : (
             <>
-              <FileText className="size-4" /> Generate Proposal
+              <FileText className="size-4" /> Draft Proposal
             </>
           )}
         </button>

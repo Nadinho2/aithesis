@@ -85,7 +85,7 @@ Generate exactly ${data.count} topics now.`;
 
     const payload = await resp.json();
     const content = payload?.choices?.[0]?.message?.content;
-    if (!content) throw new Error("AI did not return topics.");
+    if (!content) throw new Error("Could not generate topics.");
     const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
     const args = JSON.parse(json);
     const parsed = TopicsResponse.parse(args);

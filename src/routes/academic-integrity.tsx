@@ -15,51 +15,59 @@ function IntegrityPage() {
 
         <div className="prose prose-sm max-w-none text-ink-secondary leading-[1.7] space-y-5">
           <p>
-            ThesisPro AI is designed as a research assistant — a tool to accelerate literature
-            discovery, topic exploration, and structural drafting. It is not a substitute for
-            independent thought, original analysis, or the scholarly judgment that defines genuine
-            academic work.
+            ThesisPro is a research writing partner — a tool to help you structure your research,
+            discover relevant sources, and organise your arguments. It does not write for you.
+            Every idea, every analysis, every conclusion remains your own. This tool helps you
+            organise research, find sources, and structure arguments. The final work — analysis,
+            conclusions, and writing — is yours.
           </p>
 
-          <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Responsible Use</h2>
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Your Authorship</h2>
           <p>
-            Users are expected to engage critically with every output. AI-generated drafts should
-            be treated as a starting point — reviewed, revised, and refined through the lens of
-            the user&apos;s own expertise and disciplinary standards. Every citation, claim, and
-            argument must be verified before submission.
+            You are the author of every document created using ThesisPro. The tool provides
+            structural suggestions and source discovery, much like a citation manager or a
+            writing centre advisor. All intellectual work — the arguments, interpretations,
+            methodology decisions, and conclusions — must come from you.
           </p>
 
-          <h2 className="font-serif text-xl text-ink mt-8 mb-3">2. Plagiarism and Originality</h2>
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">2. Responsible Use</h2>
           <p>
-            ThesisPro does not copy from existing sources. All generated text is produced by a
+            Users are expected to engage critically with every draft. Suggested text should be
+            treated as a starting point — reviewed, revised, and refined through the lens of
+            your own expertise and disciplinary standards. Every citation, claim, and argument
+            must be verified before submission.
+          </p>
+
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">3. Originality</h2>
+          <p>
+            ThesisPro does not copy from existing sources. All suggested text is produced by a
             language model trained on a broad corpus of academic writing — but the final
-            intellectual work remains the user&apos;s own. We strongly advise running all output
-            through institutional plagiarism detection tools and making substantive modifications
+            intellectual work remains your own. We strongly advise running all output through
+            institutional plagiarism detection tools and making substantive modifications
             to align with your voice and contribution.
           </p>
 
-          <h2 className="font-serif text-xl text-ink mt-8 mb-3">3. Citation Integrity</h2>
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">4. Citation Integrity</h2>
           <p>
             Our citation engine queries OpenAlex and Crossref in real time to surface authentic,
-            peer-reviewed references. However, no automated system is perfect. Users must manually
+            peer-reviewed references. However, no automated system is perfect. You must manually
             confirm that every cited source exists, is accurately attributed, and is relevant to
-            the claim it supports. Fabricated or hallucinated citations are the user&apos;s
-            responsibility to catch.
+            the claim it supports.
           </p>
 
-          <h2 className="font-serif text-xl text-ink mt-8 mb-3">4. Institutional Policies</h2>
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">5. Institutional Policies</h2>
           <p>
-            Different universities have different policies on AI-assisted writing. It is the
-            user&apos;s responsibility to review their institution&apos;s academic integrity
-            guidelines and determine whether and how AI tools may be used in their work.
-            ThesisPro AI disclaims any liability for violations of institutional policies.
+            Different universities have different policies on AI-assisted writing. It is your
+            responsibility to review your institution&apos;s academic integrity guidelines and
+            determine whether and how such tools may be used in your work. ThesisPro disclaims
+            any liability for violations of institutional policies.
           </p>
 
-          <h2 className="font-serif text-xl text-ink mt-8 mb-3">5. Transparency</h2>
+          <h2 className="font-serif text-xl text-ink mt-8 mb-3">6. Transparency</h2>
           <p>
-            We encourage users to disclose their use of AI writing tools in their methodology or
-            acknowledgments section, following evolving norms in academic publishing. Transparency
-            strengthens trust in the research process.
+            We encourage you to disclose your use of research structuring tools in your
+            methodology or acknowledgments section, following evolving norms in academic
+            publishing. Transparency strengthens trust in the research process.
           </p>
 
           <p className="italic mt-8 text-sm">

@@ -79,7 +79,7 @@ function AdminPage() {
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Subscription Management</h1>
         <p className="text-ink-secondary max-w-xl text-sm">
-          Manage generation limits for all users. Each user gets defaults of 3 thesis and 5 proposal generations.
+          Manage draft limits for all users. Each user gets defaults of 0 thesis and 0 proposal drafts — they purchase credits separately.
         </p>
       </div>
 

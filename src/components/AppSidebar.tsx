@@ -27,11 +27,11 @@ type NavItem = {
 
 const baseNav: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/topic-generator", label: "Topic Generator", icon: Sparkles },
+  { to: "/topic-generator", label: "Topic Discovery", icon: Sparkles },
   { to: "/my-topics", label: "My Topics", icon: Bookmark },
   { to: "/quick-proposal", label: "Quick Proposal", icon: FileText },
   { to: "/proposals", label: "My Proposals", icon: Library },
-  { to: "/new-thesis", label: "Full Thesis", icon: Sparkles },
+  { to: "/new-thesis", label: "Draft Thesis", icon: Sparkles },
   { to: "/theses", label: "My Theses", icon: Library },
   { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings, disabled: true },

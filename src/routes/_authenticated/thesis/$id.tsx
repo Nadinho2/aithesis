@@ -7,7 +7,7 @@ import { ArrowLeft, Loader2, BookOpen, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/thesis/$id")({
-  head: () => ({ meta: [{ title: "Thesis — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Thesis — ThesisPro" }] }),
   component: ThesisPage,
 });
 

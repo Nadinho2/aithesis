@@ -7,7 +7,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/topic-generator")({
-  head: () => ({ meta: [{ title: "Topic Generator — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Topic Discovery — ThesisPro" }] }),
   component: TopicGeneratorPage,
 });
 
@@ -27,7 +27,7 @@ function TopicGeneratorPage() {
   const mutation = useMutation({
     mutationFn: (data: typeof form) => fn({ data }),
     onSuccess: (res) => {
-      toast.success(`Generated ${res.topics.length} topics — saved to My Topics`);
+      toast.success(`Found ${res.topics.length} topics — saved to My Topics`);
       qc.invalidateQueries({ queryKey: ["my-topics"] });
       navigate({ to: "/my-topics" });
     },
@@ -49,9 +49,9 @@ function TopicGeneratorPage() {
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
           Research Studio
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Topic Generator</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Topic Discovery</h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Enter your parameters. ThesisPro will generate up to seven original, scored research
+          Enter your parameters. ThesisPro will find up to seven original, scored research
           topics tailored to your field and auto-save them to your library.
         </p>
       </div>
@@ -132,7 +132,7 @@ function TopicGeneratorPage() {
             </>
           ) : (
             <>
-              <Sparkles className="size-4" /> Generate {form.count} Topic{form.count > 1 ? "s" : ""}
+              <Sparkles className="size-4" /> Find {form.count} Topic{form.count > 1 ? "s" : ""}
             </>
           )}
         </button>

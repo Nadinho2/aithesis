@@ -127,7 +127,7 @@ export async function callAI(
   }
   const payload = await resp.json();
   const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI did not return a response.");
+  if (!content) throw new Error("Did not receive a response.");
   // Strip markdown fences if present
   const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
   return JSON.parse(json);
@@ -165,6 +165,6 @@ export async function callAIText(
   }
   const payload = await resp.json();
   const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("AI did not return a response.");
+  if (!content) throw new Error("Did not receive a response.");
   return content.trim();
 }

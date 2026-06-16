@@ -23,7 +23,7 @@ function downloadFromBase64(base64: string, filename: string, mime: string) {
 }
 
 export const Route = createFileRoute("/_authenticated/my-topics")({
-  head: () => ({ meta: [{ title: "My Topics — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "My Topics — ThesisPro" }] }),
   component: MyTopicsPage,
 });
 
@@ -84,11 +84,11 @@ function MyTopicsPage() {
     setGenBusy(topicId);
     try {
       const res = await genFn({ data: { topic_id: topicId, level, target_words } });
-      toast.success("Proposal generated");
+      toast.success("Proposal drafted");
       qc.invalidateQueries({ queryKey: ["proposals"] });
       window.location.assign(`/proposal/${res.proposal.id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Proposal generation failed");
+      toast.error(e instanceof Error ? e.message : "Proposal draft failed");
     } finally {
       setGenBusy(null);
     }
@@ -117,7 +117,7 @@ function MyTopicsPage() {
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">My Topics</h1>
           <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-            Select topics to delete, or generate a full proposal grounded in real citations.
+            Select topics to delete, or draft a full proposal grounded in real citations.
           </p>
         </div>
         <Link
@@ -137,7 +137,7 @@ function MyTopicsPage() {
       {!isLoading && topics.length === 0 && (
         <div className="text-center py-16 sm:py-20 border border-dashed border-ink/15 rounded-sm px-6">
           <p className="font-serif italic text-ink/50 text-lg">Your library is empty.</p>
-          <p className="text-sm text-ink/40 mt-2">Generate topics to populate your library.</p>
+          <p className="text-sm text-ink/40 mt-2">Find topics to populate your library.</p>
         </div>
       )}
 
@@ -263,7 +263,7 @@ function MyTopicsPage() {
                           ) : (
                             <FileText className="size-3.5" />
                           )}
-                          {busy ? "Generating…" : "Generate Proposal"}
+                          {busy ? "Drafting…" : "Draft Proposal"}
                         </button>
                         <button
                           onClick={() => handleDownload([t.id])}

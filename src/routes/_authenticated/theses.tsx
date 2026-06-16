@@ -7,7 +7,7 @@ import { Loader2, BookOpen, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/theses")({
-  head: () => ({ meta: [{ title: "My Theses — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "My Theses — ThesisPro" }] }),
   component: TheseListPage,
 });
 
@@ -69,7 +69,7 @@ function TheseListPage() {
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">My Theses</h1>
           <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-            Full five-chapter theses with APA 7 references. Generate as many as you need.
+            Full five-chapter theses with APA 7 references. Draft as many as you need.
           </p>
         </div>
         <Link
@@ -90,7 +90,7 @@ function TheseListPage() {
         <div className="text-center py-16 border border-dashed border-ink/15 rounded-sm">
           <p className="font-serif italic text-ink/50 text-lg">No theses yet.</p>
           <p className="text-sm text-ink/40 mt-2">
-            <Link to="/new-thesis" className="underline">Generate your first one</Link>.
+            <Link to="/new-thesis" className="underline">Draft your first one</Link>.
           </p>
         </div>
       )}

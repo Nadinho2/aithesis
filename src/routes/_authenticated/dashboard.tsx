@@ -6,7 +6,7 @@ import { Sparkles, Bookmark, ArrowRight, CheckCircle, Loader2, XCircle } from "l
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — ThesisPro" }] }),
   component: DashboardPage,
 });
 
@@ -26,7 +26,7 @@ function PaymentVerifier() {
     verifyPay({ data: { reference } })
       .then(() => {
         setStatus("success");
-        toast.success("Payment successful! You can now generate.");
+        toast.success("Payment successful! You can now draft.");
         // Clean URL params
         window.history.replaceState({}, "", "/dashboard");
       })
@@ -64,8 +64,7 @@ function DashboardPage() {
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Welcome back.</h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Begin by generating original research topics, then turn any saved topic into a structured
-          proposal or full thesis.
+          Discover original research topics, then turn any saved topic into a structured proposal or full thesis.
         </p>
       </div>
 
@@ -74,13 +73,13 @@ function DashboardPage() {
           to="/topic-generator"
           className="group p-6 sm:p-10 bg-card border border-ink/10 rounded-sm hover:border-ink/30 transition-all"
         >
-          <Sparkles className="size-6 text-sage mb-4 sm:mb-6" />
-          <h3 className="font-serif text-xl sm:text-2xl mb-2">Generate Topics</h3>
+          <Sparkles className="size-6 text-verde mb-4 sm:mb-6" />
+          <h3 className="font-serif text-xl sm:text-2xl mb-2">Discover Topics</h3>
           <p className="text-sm text-ink/60 mb-4 sm:mb-6">
             Up to seven original research topics, scored on novelty and feasibility.
           </p>
-          <span className="inline-flex items-center gap-2 text-sm font-medium text-ink group-hover:text-sage transition-colors">
-            Open generator <ArrowRight className="size-4" />
+          <span className="inline-flex items-center gap-2 text-sm font-medium text-ink group-hover:text-verde transition-colors">
+            Open topic finder <ArrowRight className="size-4" />
           </span>
         </Link>
 
@@ -104,10 +103,10 @@ function DashboardPage() {
           Coming next
         </div>
         <h3 className="font-serif text-lg sm:text-xl mb-2">
-          Proposal &amp; Full Thesis Generation
+          Proposal &amp; Full Thesis Drafting
         </h3>
         <p className="text-sm text-ink/60">
-          Once you've shortlisted topics, the proposal and full-thesis generators with verified
+          Once you've shortlisted topics, the proposal and full-thesis drafting tools with verified
           OpenAlex / Crossref citations will appear here.
         </p>
       </div>

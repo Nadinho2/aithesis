@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/billing")({
-  head: () => ({ meta: [{ title: "Billing — ThesisPro AI" }] }),
+  head: () => ({ meta: [{ title: "Billing — ThesisPro" }] }),
   component: BillingPage,
 });
 
@@ -45,7 +45,7 @@ function BillingPage() {
         <PricingCard
           product="Proposal"
           price={`₦${getPrice("proposal").toLocaleString()}`}
-          description="Generate a full research proposal with verified references"
+          description="Draft a full research proposal with verified references"
           onClick={() => openPay("proposal")}
         />
         <PricingCard
