@@ -104,6 +104,7 @@ function NewThesisPage() {
     }
     // Fire mutation and navigate away — it continues in the background
     mut.mutate();
+    sessionStorage.setItem("draft_in_progress", Date.now().toString());
     toast.info("Drafting your thesis in the background…");
     navigate({ to: "/theses" });
   };

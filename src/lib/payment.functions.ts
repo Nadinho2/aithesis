@@ -121,7 +121,7 @@ export const checkAccess = createServerFn({ method: "POST" })
 
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // Check for a completed transaction for this product (+ level)
+    // Check 1: Completed payment transaction
     const query = (supabase as any)
       .from("transactions")
       .select("id, created_at")
@@ -134,11 +134,27 @@ export const checkAccess = createServerFn({ method: "POST" })
     }
 
     const { data: txs } = await query.order("created_at", { ascending: false }).limit(1);
+    if ((txs?.length ?? 0) > 0) {
+      return { allowed: true, price };
+    }
 
-    return {
-      allowed: (txs?.length ?? 0) > 0,
-      price,
-    };
+    // Check 2: Admin-allocated limit from user_limits table
+    const { data: limits } = await (supabase as any)
+      .from("user_limits")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (limits) {
+      if (data.product === "thesis" && limits.thesis_used < limits.thesis_limit) {
+        return { allowed: true, price };
+      }
+      if (data.product === "proposal" && limits.proposal_used < limits.proposal_limit) {
+        return { allowed: true, price };
+      }
+    }
+
+    return { allowed: false, price };
   });
 
 // --- Get payment history ---

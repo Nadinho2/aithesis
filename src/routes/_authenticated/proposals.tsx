@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { listProposals, deleteProposal, exportProposalDocx, getProposal } from "@/lib/proposals.functions";
 import { Loader2, FileText, Trash2, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import WhileYouWait from "@/components/WhileYouWait";
 
 export const Route = createFileRoute("/_authenticated/proposals")({
   head: () => ({ meta: [{ title: "My Proposals — ThesisPro" }] }),
@@ -21,6 +22,19 @@ function ProposalsListPage() {
   const [thesisBusy, setThesisBusy] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["proposals"], queryFn: () => fn() });
+  const [showDrafting, setShowDrafting] = useState(() => sessionStorage.getItem("draft_in_progress") !== null);
+
+  useEffect(() => {
+    if (showDrafting && (data?.length ?? 0) > 0) {
+      const hasNew = (data as any[]).some(
+        (p) => Date.now() - new Date(p.created_at).getTime() < 120_000
+      );
+      if (hasNew) {
+        sessionStorage.removeItem("draft_in_progress");
+        setShowDrafting(false);
+      }
+    }
+  }, [data, showDrafting]);
 
   const goToThesis = async (id: string) => {
     setThesisBusy(id);
@@ -103,6 +117,10 @@ function ProposalsListPage() {
           Every proposal lives here with its verified scholarly references.
         </p>
       </div>
+
+      {showDrafting && (
+        <WhileYouWait onDismiss={() => { sessionStorage.removeItem("draft_in_progress"); setShowDrafting(false); }} />
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-ink/50">

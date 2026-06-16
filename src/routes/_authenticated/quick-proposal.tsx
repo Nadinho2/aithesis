@@ -80,6 +80,7 @@ function QuickProposalPage() {
     }
     // Fire mutation and navigate away — it continues in the background
     mut.mutate();
+    sessionStorage.setItem("draft_in_progress", Date.now().toString());
     toast.info("Drafting your proposal in the background…");
     navigate({ to: "/proposals" });
   };

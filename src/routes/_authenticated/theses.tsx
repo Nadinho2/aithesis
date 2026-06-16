@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { listTheses, deleteThesis, exportThesisDocx } from "@/lib/theses.functions";
 import { Loader2, BookOpen, Trash2, Download } from "lucide-react";
 import { toast } from "sonner";
+import WhileYouWait from "@/components/WhileYouWait";
 
 export const Route = createFileRoute("/_authenticated/theses")({
   head: () => ({ meta: [{ title: "My Theses — ThesisPro" }] }),
@@ -18,6 +19,19 @@ function TheseListPage() {
   const [dlBusy, setDlBusy] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["theses"], queryFn: () => fn() });
+  const [showDrafting, setShowDrafting] = useState(() => sessionStorage.getItem("draft_in_progress") !== null);
+
+  useEffect(() => {
+    if (showDrafting && (data?.length ?? 0) > 0) {
+      const hasNew = (data as any[]).some(
+        (t) => Date.now() - new Date(t.created_at).getTime() < 120_000
+      );
+      if (hasNew) {
+        sessionStorage.removeItem("draft_in_progress");
+        setShowDrafting(false);
+      }
+    }
+  }, [data, showDrafting]);
 
   const del = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
@@ -79,6 +93,10 @@ function TheseListPage() {
           New Thesis
         </Link>
       </div>
+
+      {showDrafting && (
+        <WhileYouWait onDismiss={() => { sessionStorage.removeItem("draft_in_progress"); setShowDrafting(false); }} />
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-ink/50">
