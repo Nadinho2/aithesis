@@ -11,7 +11,6 @@ import {
   FileText,
   Library,
   CreditCard,
-  Settings,
   LogOut,
   Shield,
   Menu,
@@ -22,7 +21,6 @@ type NavItem = {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
-  disabled?: boolean;
 };
 
 const baseNav: NavItem[] = [
@@ -34,7 +32,6 @@ const baseNav: NavItem[] = [
   { to: "/new-thesis", label: "Draft Thesis", icon: Sparkles },
   { to: "/theses", label: "My Theses", icon: Library },
   { to: "/billing", label: "Billing", icon: CreditCard },
-  { to: "/settings", label: "Settings", icon: Settings, disabled: true },
 ];
 
 export function AppSidebar() {
@@ -82,19 +79,6 @@ export function AppSidebar() {
         {nav.map((item) => {
           const Icon = item.icon;
           const active = path === item.to;
-          if (item.disabled) {
-            return (
-              <div
-                key={item.to}
-                className="flex items-center gap-3 px-3 py-2 text-sm text-ink/30 cursor-not-allowed"
-                title="Coming soon"
-              >
-                <Icon className="size-4" />
-                {item.label}
-                <span className="ml-auto text-[9px] uppercase tracking-widest">soon</span>
-              </div>
-            );
-          }
           return (
             <Link
               key={item.to}
