@@ -82,11 +82,12 @@ function MyTopicsPage() {
     const level = (genLevel[topicId] ?? "undergraduate") as "undergraduate" | "masters" | "phd";
     const target_words = Math.min(3000, Math.max(2500, genWords[topicId] ?? 2800));
     setGenBusy(topicId);
+    toast.info("Drafting your proposal in the background…");
+    // Navigate immediately — generation continues server-side
+    window.location.assign("/proposals");
     try {
-      const res = await genFn({ data: { topic_id: topicId, level, target_words } });
-      toast.success("Proposal drafted");
+      await genFn({ data: { topic_id: topicId, level, target_words } });
       qc.invalidateQueries({ queryKey: ["proposals"] });
-      window.location.assign(`/proposal/${res.proposal.id}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Proposal draft failed");
     } finally {

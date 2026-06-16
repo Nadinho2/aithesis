@@ -72,10 +72,9 @@ function NewThesisPage() {
           target_words: form.target_words,
         },
       }),
-    onSuccess: (res) => {
-      toast.success("Thesis drafted");
+    onSuccess: () => {
+      toast.success("Thesis draft complete — check your theses.");
       qc.invalidateQueries({ queryKey: ["theses"] });
-      navigate({ to: "/thesis/$id", params: { id: res.thesis.id } });
     },
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
@@ -103,7 +102,10 @@ function NewThesisPage() {
     } catch {
       // fallback to server-enforced payment check
     }
+    // Fire mutation and navigate away — it continues in the background
     mut.mutate();
+    toast.info("Drafting your thesis in the background…");
+    navigate({ to: "/theses" });
   };
 
   const updateObj = (i: number, v: string) => {

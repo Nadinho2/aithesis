@@ -48,10 +48,9 @@ function QuickProposalPage() {
           target_words: form.target_words,
         },
       }),
-    onSuccess: (res) => {
-      toast.success("Proposal drafted");
+    onSuccess: () => {
+      toast.success("Proposal draft complete — check your proposals.");
       qc.invalidateQueries({ queryKey: ["proposals"] });
-      navigate({ to: "/proposal/$id", params: { id: res.proposal.id } });
     },
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
@@ -79,7 +78,10 @@ function QuickProposalPage() {
     } catch {
       // If check fails, still try to generate (server will enforce payment)
     }
+    // Fire mutation and navigate away — it continues in the background
     mut.mutate();
+    toast.info("Drafting your proposal in the background…");
+    navigate({ to: "/proposals" });
   };
 
   const updateObj = (i: number, v: string) => {
