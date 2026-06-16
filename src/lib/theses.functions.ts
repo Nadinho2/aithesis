@@ -188,11 +188,71 @@ VERIFIED SCHOLARLY REFERENCES (cite these only):
 ${refContext}`;
 
     const chapterDefs: { key: string; label: string; instructions: string; target: number }[] = [
-      { key: "chapter_1_introduction", label: "Chapter 1: Introduction", instructions: "Background to the study, statement of the problem, research questions, objectives, scope and delimitations, significance, and definition of terms.", target: chapterTargets.chapter_1_introduction },
-      { key: "chapter_2_literature_review", label: "Chapter 2: Literature Review", instructions: "Thematic synthesis of related literature, theoretical/conceptual framework, and identification of the research gap. Synthesise at least 8 references, arguing themes rather than summarising one-by-one.", target: chapterTargets.chapter_2_literature_review },
-      { key: "chapter_3_methodology", label: "Chapter 3: Methodology", instructions: "Research design, population and sample, sampling technique, instruments, data collection procedure, data analysis techniques, validity/reliability, and ethical considerations.", target: chapterTargets.chapter_3_methodology },
-      { key: "chapter_4_results_findings", label: "Chapter 4: Results / Findings", instructions: "Presented as if data were collected. Include realistic-sounding tables described in prose, descriptive and inferential analysis results.", target: chapterTargets.chapter_4_results_findings },
-      { key: "chapter_5_discussion_conclusion", label: "Chapter 5: Discussion, Conclusion & Recommendations", instructions: "Interpret findings against literature, implications, limitations, recommendations, and suggestions for further research.", target: chapterTargets.chapter_5_discussion_conclusion },
+      {
+        key: "chapter_1_introduction",
+        label: "Chapter 1: Introduction",
+        instructions: `Write Chapter 1 with these exact sub-sections, each on its own line as a heading:
+1.1 Background to the Study
+1.2 Statement of Problem
+1.3 Objective of the Study
+1.4 Research Questions
+1.5 Research Hypothesis
+1.6 Significant of the Study
+1.7 Scope of the Study
+1.8 Definition of Terms`,
+        target: chapterTargets.chapter_1_introduction,
+      },
+      {
+        key: "chapter_2_literature_review",
+        label: "Chapter 2: Literature Review",
+        instructions: `Write Chapter 2 with these exact sub-sections, each on its own line as a heading:
+2.1 Conceptual Review
+2.2 Empirical Review
+2.3 Theoretical Review
+2.4 Theoretical Framework
+2.5 Summary of Reviews
+2.6 Gap in Literature
+
+Synthesise at least 8 references, arguing themes rather than summarising one-by-one.`,
+        target: chapterTargets.chapter_2_literature_review,
+      },
+      {
+        key: "chapter_3_methodology",
+        label: "Chapter 3: Methodology",
+        instructions: `Write Chapter 3 with these exact sub-sections, each on its own line as a heading:
+3.1 Research Design
+3.2 Area of the Study
+3.3 Population of the Study
+3.4 Sample Size
+3.5 Sampling Techniques
+3.6 Instrument for Data Collection
+3.7 Validity of Instrument
+3.8 Reliability of Instrument
+3.9 Method of Administering Data
+3.10 Method of Presentation and Data Analysis`,
+        target: chapterTargets.chapter_3_methodology,
+      },
+      {
+        key: "chapter_4_results_findings",
+        label: "Chapter 4: Results and Findings",
+        instructions: `Write Chapter 4 with these exact sub-sections, each on its own line as a heading:
+4.1 Introduction
+4.2 Data Analysis and Presentation
+4.3 Discussion of Findings
+
+Present results as if data were collected. Include realistic-sounding tables described in prose.`,
+        target: chapterTargets.chapter_4_results_findings,
+      },
+      {
+        key: "chapter_5_discussion_conclusion",
+        label: "Chapter 5: Summary, Conclusion and Recommendations",
+        instructions: `Write Chapter 5 with these exact sub-sections, each on its own line as a heading:
+5.1 Summary of Findings
+5.2 Conclusion
+5.3 Limitations of the Study
+5.4 Recommendations`,
+        target: chapterTargets.chapter_5_discussion_conclusion,
+      },
     ];
 
     // Generate abstract and all 5 chapters in parallel.

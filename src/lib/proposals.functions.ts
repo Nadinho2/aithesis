@@ -168,7 +168,8 @@ CITATION RULES — STRICT APA 7th EDITION:
 DOCUMENT REQUIREMENTS:
 - TOTAL TARGET: EXACTLY ${target} words across all sections combined (abstract + every section).
 - Distribute words deliberately. Literature review and background should be the longest.
-- Methodology must specify: research design, population and sample, sampling technique, instruments, data collection, data analysis, validity/reliability, ethical considerations.
+- Use the numbered sub-section headings from the schema (e.g. "1.1 Background to the Study", "3.1 Research Design") on their own lines.
+- Methodology must include: research design, area of study, population, sample size, sampling technique, instrumentation, validity, reliability, data collection, data analysis.
 - ${timelineRule}
 
 Return STRICT JSON matching this exact schema:
@@ -176,17 +177,30 @@ Return STRICT JSON matching this exact schema:
 {
   "abstract": "full abstract text",
   "sections": {
-    "introduction": "full introduction text",
-    "background": "full background text",
-    "problem_statement": "full problem statement text",
-    "research_questions": ["RQ1", "RQ2"],
+    "background_to_the_study": "full background text",
+    "statement_of_the_problem": "full problem statement text",
     "objectives": ["Obj1", "Obj2"],
+    "research_questions": ["RQ1", "RQ2"],
+    "research_hypotheses": ["Hypothesis 1", "Hypothesis 2"],
     "significance": "full significance text",
-    "scope_and_limitations": "full scope text",
-    "literature_review": "full literature review text",
-    "methodology": "full methodology text",
-    "expected_outcomes": "full outcomes text",
-    "timeline": "timeline text or empty string if undergraduate"
+    "scope_of_the_study": "full scope text",
+    "definition_of_terms": "definition of key terms",
+    "conceptual_review": "conceptual review text",
+    "empirical_review": "empirical review text",
+    "theoretical_review": "theoretical review text",
+    "theoretical_framework": "theoretical framework text",
+    "summary_of_reviews": "summary text",
+    "gap_in_literature": "gap identification text",
+    "research_design": "research design text",
+    "area_of_the_study": "area description",
+    "population_of_the_study": "population description",
+    "sample_size": "sample size justification",
+    "sampling_technique": "sampling technique description",
+    "instrumentation": "instrument description",
+    "validity_of_instrument": "validity text",
+    "reliability_of_instrument": "reliability text",
+    "method_of_collecting_data": "data collection procedure",
+    "method_of_data_analysis": "data analysis plan"
   }
 }
 

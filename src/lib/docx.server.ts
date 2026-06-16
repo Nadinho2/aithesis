@@ -80,7 +80,7 @@ const pageSection = {
 
 // Detects scholarly subheading lines, e.g. "1.7 Definition of Terms",
 // "3.2.1 Sampling", "Chapter 1", "Abstract", "Introduction" on a line of their own.
-const SUBHEADING_RE = /^(?:\d+(?:\.\d+){0,3}\s+[A-Z][^.!?]{2,90}|(?:Abstract|Introduction|Background|Problem Statement|Research Questions?|Research Objectives?|Significance|Scope and Limitations|Literature Review|Methodology|Expected Outcomes|Timeline|Findings|Discussion|Conclusion|Recommendations|References|Definition of Terms)\s*)$/;
+const SUBHEADING_RE = /^(?:\d+(?:\.\d+){0,3}\s+[A-Z][^.!?]{2,90}|(?:Abstract|Introduction|Background to the Study|Statement of Problem|Objective of the Study|Research Questions?|Research Hypothesis|Significant of the Study|Scope of the Study|Definition of Terms|Conceptual Review|Empirical Review|Theoretical Review|Theoretical Framework|Summary of Reviews|Gap in Literature|Research Design|Area of the Study|Population of the Study|Sample Size|Sampling Techniques?|Instrument for Data Collection|Validity of Instrument|Reliability of Instrument|Method of Administering Data|Method of Presentation and Data Analysis|Data Analysis and Presentation|Discussion of Findings|Summary of Findings|Conclusion|Limitations of the Study|Recommendations|References|Appendix|Appendices)\s*)$/;
 
 function looksLikeBullet(line: string): boolean {
   return /^(?:[•\-*]\s+|\(?\d+[.)]\s+|[a-z]\)\s+)/.test(line);
@@ -348,25 +348,62 @@ export async function buildProposalDocx(p: {
 
   const s = p.sections;
   const ordered: Array<[string, string, "text" | "list"]> = [
-    ["1. Introduction", "introduction", "text"],
-    ["2. Background of the Study", "background", "text"],
-    ["3. Problem Statement", "problem_statement", "text"],
-    ["4. Research Questions", "research_questions", "list"],
-    ["5. Research Objectives", "objectives", "list"],
-    ["6. Significance of the Study", "significance", "text"],
-    ["7. Scope and Limitations", "scope_and_limitations", "text"],
-    ["8. Literature Review", "literature_review", "text"],
-    ["9. Methodology", "methodology", "text"],
-    ["10. Expected Outcomes", "expected_outcomes", "text"],
-    ["11. Timeline", "timeline", "text"],
+    // Chapter 1: Introduction
+    ["1.1 Background to the Study", "background_to_the_study", "text"],
+    ["1.2 Statement of Problem", "statement_of_the_problem", "text"],
+    ["1.3 Objective of the Study", "objectives", "list"],
+    ["1.4 Research Questions", "research_questions", "list"],
+    ["1.5 Research Hypothesis", "research_hypotheses", "list"],
+    ["1.6 Significant of the Study", "significance", "text"],
+    ["1.7 Scope of the Study", "scope_of_the_study", "text"],
+    ["1.8 Definition of Terms", "definition_of_terms", "text"],
+    // Chapter 2: Literature Review
+    ["2.1 Conceptual Review", "conceptual_review", "text"],
+    ["2.2 Empirical Review", "empirical_review", "text"],
+    ["2.3 Theoretical Review", "theoretical_review", "text"],
+    ["2.4 Theoretical Framework", "theoretical_framework", "text"],
+    ["2.5 Summary of Reviews", "summary_of_reviews", "text"],
+    ["2.6 Gap in Literature", "gap_in_literature", "text"],
+    // Chapter 3: Methodology
+    ["3.1 Research Design", "research_design", "text"],
+    ["3.2 Area of the Study", "area_of_the_study", "text"],
+    ["3.3 Population of the Study", "population_of_the_study", "text"],
+    ["3.4 Sample Size", "sample_size", "text"],
+    ["3.5 Sampling Techniques", "sampling_technique", "text"],
+    ["3.6 Instrument for Data Collection", "instrumentation", "text"],
+    ["3.7 Validity of Instrument", "validity_of_instrument", "text"],
+    ["3.8 Reliability of Instrument", "reliability_of_instrument", "text"],
+    ["3.9 Method of Administering Data", "method_of_collecting_data", "text"],
+    ["3.10 Method of Presentation and Data Analysis", "method_of_data_analysis", "text"],
   ];
-  for (const [title, key, kind] of ordered) {
+  children.push(heading("Chapter 1: Introduction", 1));
+  for (const [title, key, kind] of ordered.slice(0, 8)) {
     const v = s?.[key];
     if (!v) continue;
-    children.push(heading(title, 1));
+    children.push(heading(title, 2));
     if (kind === "list" && Array.isArray(v)) {
       children.push(...bullets(v, true));
     } else if (typeof v === "string") {
+      children.push(...paragraphs(v));
+    }
+  }
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(heading("Chapter 2: Literature Review", 1));
+  for (const [title, key, kind] of ordered.slice(8, 14)) {
+    const v = s?.[key];
+    if (!v) continue;
+    children.push(heading(title, 2));
+    if (typeof v === "string") {
+      children.push(...paragraphs(v));
+    }
+  }
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(heading("Chapter 3: Methodology", 1));
+  for (const [title, key, kind] of ordered.slice(14)) {
+    const v = s?.[key];
+    if (!v) continue;
+    children.push(heading(title, 2));
+    if (typeof v === "string") {
       children.push(...paragraphs(v));
     }
   }
@@ -484,7 +521,7 @@ export async function buildThesisDocx(p: {
     ["Chapter 2 — Literature Review", "chapter_2_literature_review"],
     ["Chapter 3 — Methodology", "chapter_3_methodology"],
     ["Chapter 4 — Results and Findings", "chapter_4_results_findings"],
-    ["Chapter 5 — Discussion, Conclusion and Recommendations", "chapter_5_discussion_conclusion"],
+    ["Chapter 5 — Summary, Conclusion and Recommendations", "chapter_5_discussion_conclusion"],
   ];
   for (let i = 0; i < ordered.length; i++) {
     const [title, key] = ordered[i];
@@ -492,18 +529,10 @@ export async function buildThesisDocx(p: {
     if (!v) continue;
     children.push(heading(title, 1));
     children.push(...parseRichText(v));
-    if (i < ordered.length - 1) children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(new Paragraph({ children: [new PageBreak()] }));
   }
-
-  // References — APA 7
-  children.push(new Paragraph({ children: [new PageBreak()] }));
-  children.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: "References", bold: true, size: 32 })],
-      spacing: { after: 300 },
-    }),
-  );
+  // References
+  children.push(heading("References", 1));
   for (const ref of p.references_list ?? []) {
     const parts = formatAPAParts(ref);
     const runs: any[] = [
@@ -530,6 +559,12 @@ export async function buildThesisDocx(p: {
       }),
     );
   }
+  // Appendices
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(heading("Appendix", 1));
+  children.push(
+    ...paragraphs("Appendix to be inserted after data collection and analysis."),
+  );
 
   const doc = new Document({
     numbering,
