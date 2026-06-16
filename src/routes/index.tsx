@@ -191,29 +191,29 @@ function FeaturesSection() {
 /* ─── Pricing ─── */
 const tiers = [
   {
-    tier: "Student Free",
-    price: "₦0",
-    features: ["2 topic discoveries / mo", "1 proposal draft", "Verified citations", "PDF & DOCX export"],
+    tier: "Topic Discovery",
+    price: "Free",
+    features: ["Unlimited topic discoveries", "Novelty & feasibility scores", "Save to your research library", "PDF & DOCX export"],
     cta: "Get Started",
     highlight: false,
   },
   {
-    tier: "Researcher Pro",
-    price: "₦19,000",
+    tier: "Proposal",
+    price: "₦3,000",
     features: [
-      "Unlimited topic discoveries",
-      "Unlimited proposals & theses",
-      "Full thesis structure",
-      "Priority research queue",
+      "Full research proposal draft",
+      "Verified OpenAlex & Crossref citations",
+      "APA 7th edition formatting",
+      "Chapter 1 & Chapter 3 structure",
     ],
-    cta: "Subscribe",
+    cta: "Start your proposal",
     highlight: true,
   },
   {
-    tier: "Institution",
-    price: "Custom",
-    features: ["Multi-user access", "Department dashboard", "SSO & admin controls", "Dedicated support"],
-    cta: "Contact Sales",
+    tier: "Full Thesis",
+    price: "₦25,000",
+    features: ["5-chapter thesis draft", "Undergraduate / Masters / PhD levels", "Verified citations throughout", "Download as DOCX or PDF"],
+    cta: "Start your thesis",
     highlight: false,
   },
 ];
@@ -356,8 +356,8 @@ function LandingPage() {
               </div>
               <div className="text-4xl font-serif text-ink mb-6">
                 {p.price}
-                {p.price.startsWith("₦") && p.tier !== "Institution" && (
-                  <span className="text-sm text-ink-secondary font-sans font-normal">/mo</span>
+                {p.price.startsWith("₦") && (
+                  <span className="text-sm text-ink-secondary font-sans font-normal ml-1">one-time</span>
                 )}
               </div>
               <ul className="space-y-4 mb-10 flex-1">

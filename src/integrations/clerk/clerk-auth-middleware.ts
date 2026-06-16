@@ -19,12 +19,20 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     if (runtimeEnv('DISABLE_AUTH') === 'true') {
       const supabaseUrl = runtimeEnv('SUPABASE_URL')
       const supabaseServiceRoleKey = runtimeEnv('SUPABASE_SERVICE_ROLE_KEY')
+      const devUserId = runtimeEnv('DISABLE_AUTH_USER_ID') || 'dev-user-id'
       if (supabaseUrl && supabaseServiceRoleKey) {
         const supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
           auth: { persistSession: false, autoRefreshToken: false },
         })
+        // Check if dev user has admin role in user_roles table
+        const { data: roleRow } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", devUserId)
+          .eq("role", "admin")
+          .maybeSingle()
         return next({
-          context: { supabase, userId: 'dev-user-id', isAdmin: true },
+          context: { supabase, userId: devUserId, isAdmin: !!roleRow },
         })
       }
     }

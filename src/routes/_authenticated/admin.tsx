@@ -1,14 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { adminListLimits, updateUserLimits, requireAdmin } from "@/lib/admin-limits.functions";
+import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
 import { adminCheck } from "@/lib/admin.functions";
 import { Loader2, Shield, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { Navigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/admin")({
+  beforeLoad: async () => {
+    // Server-side admin check will happen in the query;
+    // this component handles the redirect client-side via useQuery
+  },
   component: AdminPage,
 });
 

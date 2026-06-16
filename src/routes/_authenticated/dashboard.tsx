@@ -96,19 +96,34 @@ function DashboardPage() {
             View library <ArrowRight className="size-4" />
           </span>
         </Link>
-      </div>
 
-      <div className="mt-10 md:mt-16 p-6 sm:p-8 bg-parchment/60 border border-ink/10 rounded-sm">
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 mb-2">
-          Coming next
-        </div>
-        <h3 className="font-serif text-lg sm:text-xl mb-2">
-          Proposal &amp; Full Thesis Drafting
-        </h3>
-        <p className="text-sm text-ink/60">
-          Once you've shortlisted topics, the proposal and full-thesis drafting tools with verified
-          OpenAlex / Crossref citations will appear here.
-        </p>
+        <Link
+          to="/quick-proposal"
+          className="group p-6 sm:p-10 bg-card border border-ink/10 rounded-sm hover:border-ink/30 transition-all"
+        >
+          <Sparkles className="size-6 text-verde mb-4 sm:mb-6" />
+          <h3 className="font-serif text-xl sm:text-2xl mb-2">Draft Proposal</h3>
+          <p className="text-sm text-ink/60 mb-4 sm:mb-6">
+            Paste your topic and draft a full APA 7 proposal with verified references.
+          </p>
+          <span className="inline-flex items-center gap-2 text-sm font-medium text-ink group-hover:text-verde transition-colors">
+            Start a proposal <ArrowRight className="size-4" />
+          </span>
+        </Link>
+
+        <Link
+          to="/new-thesis"
+          className="group p-6 sm:p-10 bg-card border border-ink/10 rounded-sm hover:border-ink/30 transition-all"
+        >
+          <Sparkles className="size-6 text-verde mb-4 sm:mb-6" />
+          <h3 className="font-serif text-xl sm:text-2xl mb-2">Draft Thesis</h3>
+          <p className="text-sm text-ink/60 mb-4 sm:mb-6">
+            Full 5-chapter thesis with verified APA 7 references from OpenAlex and Crossref.
+          </p>
+          <span className="inline-flex items-center gap-2 text-sm font-medium text-ink group-hover:text-verde transition-colors">
+            Start a thesis <ArrowRight className="size-4" />
+          </span>
+        </Link>
       </div>
     </div>
   );
