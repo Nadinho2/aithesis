@@ -48,7 +48,7 @@ function ProposalsListPage() {
         "thesis_prefill",
         JSON.stringify({
           title: p.title ?? "",
-          problem_statement: (s.statement_of_the_problem as string) ?? "",
+          problem_statement: (s.statement_of_the_problem as string) ?? (s.problem_statement as string) ?? "",
           research_gap: (s.gap_in_literature as string)?.slice(0, 800) ?? (s.literature_review as string)?.slice(0, 800) ?? "",
           objectives,
           department: p.department ?? "",
