@@ -53,17 +53,10 @@ export const adminListLimits = createServerFn({ method: "GET" })
       return {
         user_id: u.id,
         email: u.email,
-        // Legacy combined (backward compat)
-        thesis_limit: lim?.thesis_limit ?? 0,
-        thesis_used: lim?.thesis_used ?? 0,
-        // Per-level thesis
-        thesis_limit_ug: lim?.thesis_limit_ug ?? 0,
-        thesis_used_ug: lim?.thesis_used_ug ?? 0,
-        thesis_limit_masters: lim?.thesis_limit_masters ?? 0,
-        thesis_used_masters: lim?.thesis_used_masters ?? 0,
-        thesis_limit_phd: lim?.thesis_limit_phd ?? 0,
-        thesis_used_phd: lim?.thesis_used_phd ?? 0,
-        // Proposal
+        thesis_available_ug: lim?.thesis_available_ug ?? 0,
+        thesis_available_masters: lim?.thesis_available_masters ?? 0,
+        thesis_available_phd: lim?.thesis_available_phd ?? 0,
+        proposal_available: (lim?.proposal_limit ?? 0) - (lim?.proposal_used ?? 0),
         proposal_limit: lim?.proposal_limit ?? 0,
         proposal_used: lim?.proposal_used ?? 0,
       };
@@ -77,9 +70,9 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     z
       .object({
         user_id: z.string().min(1),
-        thesis_limit_ug: z.number().int().min(0).max(999),
-        thesis_limit_masters: z.number().int().min(0).max(999),
-        thesis_limit_phd: z.number().int().min(0).max(999),
+        thesis_available_ug: z.number().int().min(0).max(999),
+        thesis_available_masters: z.number().int().min(0).max(999),
+        thesis_available_phd: z.number().int().min(0).max(999),
         proposal_limit: z.number().int().min(0).max(999),
       })
       .parse(i),
@@ -91,12 +84,10 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     const { error } = await supabase.from("user_limits").upsert(
       {
         user_id: data.user_id,
-        thesis_limit_ug: data.thesis_limit_ug,
-        thesis_limit_masters: data.thesis_limit_masters,
-        thesis_limit_phd: data.thesis_limit_phd,
+        thesis_available_ug: data.thesis_available_ug,
+        thesis_available_masters: data.thesis_available_masters,
+        thesis_available_phd: data.thesis_available_phd,
         proposal_limit: data.proposal_limit,
-        // Keep old combined in sync (sum of per-level)
-        thesis_limit: data.thesis_limit_ug + data.thesis_limit_masters + data.thesis_limit_phd,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },

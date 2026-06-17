@@ -148,16 +148,17 @@ export const checkAccess = createServerFn({ method: "POST" })
     if (limits) {
       if (data.product === "thesis") {
         const level = data.level ?? "undergraduate";
-        const limitField = `thesis_limit_${level}`;
-        const usedField = `thesis_used_${level}`;
-        const levelLimit = limits[limitField] ?? limits.thesis_limit ?? 0;
-        const levelUsed = limits[usedField] ?? limits.thesis_used ?? 0;
-        if (levelUsed < levelLimit) {
+        const field = `thesis_available_${level}`;
+        const available = (limits as any)[field] ?? 0;
+        if (available > 0) {
           return { allowed: true, price };
         }
       }
-      if (data.product === "proposal" && limits.proposal_used < limits.proposal_limit) {
-        return { allowed: true, price };
+      if (data.product === "proposal") {
+        const available = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0);
+        if (available > 0) {
+          return { allowed: true, price };
+        }
       }
     }
 

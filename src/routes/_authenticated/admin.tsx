@@ -22,9 +22,9 @@ function AdminPage() {
   const mut = useMutation({
     mutationFn: (v: {
       user_id: string;
-      thesis_limit_ug: number;
-      thesis_limit_masters: number;
-      thesis_limit_phd: number;
+      thesis_available_ug: number;
+      thesis_available_masters: number;
+      thesis_available_phd: number;
       proposal_limit: number;
     }) => up({ data: v }),
     onSuccess: () => {
@@ -36,18 +36,18 @@ function AdminPage() {
 
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
-    thesis_limit_ug: 0,
-    thesis_limit_masters: 0,
-    thesis_limit_phd: 0,
+    thesis_available_ug: 0,
+    thesis_available_masters: 0,
+    thesis_available_phd: 0,
     proposal_limit: 0,
   });
 
   function startEdit(user: NonNullable<typeof data>[number]) {
     setEditId(user.user_id);
     setForm({
-      thesis_limit_ug: user.thesis_limit_ug,
-      thesis_limit_masters: user.thesis_limit_masters,
-      thesis_limit_phd: user.thesis_limit_phd,
+      thesis_available_ug: user.thesis_available_ug,
+      thesis_available_masters: user.thesis_available_masters,
+      thesis_available_phd: user.thesis_available_phd,
       proposal_limit: user.proposal_limit,
     });
   }
@@ -95,9 +95,9 @@ function AdminPage() {
               <thead>
                 <tr className="border-b border-ink/10">
                   <th className="text-left py-3 pr-4 font-medium">User</th>
-                  <th className="text-center py-3 px-2 font-medium">Thesis UG</th>
-                  <th className="text-center py-3 px-2 font-medium">Thesis Masters</th>
-                  <th className="text-center py-3 px-2 font-medium">Thesis PhD</th>
+                  <th className="text-center py-3 px-2 font-medium">UG</th>
+                  <th className="text-center py-3 px-2 font-medium">Masters</th>
+                  <th className="text-center py-3 px-2 font-medium">PhD</th>
                   <th className="text-center py-3 px-2 font-medium">Proposals</th>
                   <th className="text-right py-3 pl-4 font-medium">Actions</th>
                 </tr>
@@ -113,37 +113,31 @@ function AdminPage() {
                       <td className="py-3 px-2 text-center">
                         {isEditing ? (
                           <Input
-                            value={form.thesis_limit_ug}
-                            onChange={(v) => setForm({ ...form, thesis_limit_ug: v })}
+                            value={form.thesis_available_ug}
+                            onChange={(v) => setForm({ ...form, thesis_available_ug: v })}
                           />
                         ) : (
-                          <span>
-                            {user.thesis_used_ug}/{user.thesis_limit_ug}
-                          </span>
+                          <span>{user.thesis_available_ug}</span>
                         )}
                       </td>
                       <td className="py-3 px-2 text-center">
                         {isEditing ? (
                           <Input
-                            value={form.thesis_limit_masters}
-                            onChange={(v) => setForm({ ...form, thesis_limit_masters: v })}
+                            value={form.thesis_available_masters}
+                            onChange={(v) => setForm({ ...form, thesis_available_masters: v })}
                           />
                         ) : (
-                          <span>
-                            {user.thesis_used_masters}/{user.thesis_limit_masters}
-                          </span>
+                          <span>{user.thesis_available_masters}</span>
                         )}
                       </td>
                       <td className="py-3 px-2 text-center">
                         {isEditing ? (
                           <Input
-                            value={form.thesis_limit_phd}
-                            onChange={(v) => setForm({ ...form, thesis_limit_phd: v })}
+                            value={form.thesis_available_phd}
+                            onChange={(v) => setForm({ ...form, thesis_available_phd: v })}
                           />
                         ) : (
-                          <span>
-                            {user.thesis_used_phd}/{user.thesis_limit_phd}
-                          </span>
+                          <span>{user.thesis_available_phd}</span>
                         )}
                       </td>
                       <td className="py-3 px-2 text-center">
@@ -153,9 +147,7 @@ function AdminPage() {
                             onChange={(v) => setForm({ ...form, proposal_limit: v })}
                           />
                         ) : (
-                          <span>
-                            {user.proposal_used}/{user.proposal_limit}
-                          </span>
+                          <span>{user.proposal_available ?? user.proposal_limit - user.proposal_used}</span>
                         )}
                       </td>
                       <td className="py-3 pl-4 text-right">
