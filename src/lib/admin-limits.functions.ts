@@ -23,7 +23,6 @@ export const adminListLimits = createServerFn({ method: "GET" })
     requireAdmin(context.isAdmin);
     const supabase = context.supabase as any;
 
-    // Fetch all users from Clerk API (paginated)
     const { createClerkClient } = await import("@clerk/backend");
     const clerk = createClerkClient({ secretKey: runtimeEnv("CLERK_SECRET_KEY")! });
     const authUsers: Array<{ id: string; email: string | null }> = [];
@@ -42,7 +41,6 @@ export const adminListLimits = createServerFn({ method: "GET" })
     const ids = authUsers.map((u) => u.id);
     if (ids.length === 0) return [];
 
-    // Fetch user_limits for all users
     const { data: limits } = await (supabase as any)
       .from("user_limits")
       .select("*")
@@ -55,8 +53,17 @@ export const adminListLimits = createServerFn({ method: "GET" })
       return {
         user_id: u.id,
         email: u.email,
+        // Legacy combined (backward compat)
         thesis_limit: lim?.thesis_limit ?? 0,
         thesis_used: lim?.thesis_used ?? 0,
+        // Per-level thesis
+        thesis_limit_ug: lim?.thesis_limit_ug ?? 0,
+        thesis_used_ug: lim?.thesis_used_ug ?? 0,
+        thesis_limit_masters: lim?.thesis_limit_masters ?? 0,
+        thesis_used_masters: lim?.thesis_used_masters ?? 0,
+        thesis_limit_phd: lim?.thesis_limit_phd ?? 0,
+        thesis_used_phd: lim?.thesis_used_phd ?? 0,
+        // Proposal
         proposal_limit: lim?.proposal_limit ?? 0,
         proposal_used: lim?.proposal_used ?? 0,
       };
@@ -70,7 +77,9 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     z
       .object({
         user_id: z.string().min(1),
-        thesis_limit: z.number().int().min(0).max(999),
+        thesis_limit_ug: z.number().int().min(0).max(999),
+        thesis_limit_masters: z.number().int().min(0).max(999),
+        thesis_limit_phd: z.number().int().min(0).max(999),
         proposal_limit: z.number().int().min(0).max(999),
       })
       .parse(i),
@@ -82,8 +91,12 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     const { error } = await supabase.from("user_limits").upsert(
       {
         user_id: data.user_id,
-        thesis_limit: data.thesis_limit,
+        thesis_limit_ug: data.thesis_limit_ug,
+        thesis_limit_masters: data.thesis_limit_masters,
+        thesis_limit_phd: data.thesis_limit_phd,
         proposal_limit: data.proposal_limit,
+        // Keep old combined in sync (sum of per-level)
+        thesis_limit: data.thesis_limit_ug + data.thesis_limit_masters + data.thesis_limit_phd,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -98,10 +111,12 @@ export async function checkGenerateLimit(
   supabase: any,
   userId: string,
   type: "thesis" | "proposal",
+  level?: string,
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc("can_generate", {
     p_user_id: userId,
     p_type: type,
+    p_level: level ?? "undergraduate",
   });
   if (error) throw new Error(error.message);
   return !!data;
@@ -112,10 +127,12 @@ export async function incrementUsage(
   supabase: any,
   userId: string,
   type: "thesis" | "proposal",
+  level?: string,
 ): Promise<void> {
   const { error } = await supabase.rpc("increment_usage", {
     p_user_id: userId,
     p_type: type,
+    p_level: level ?? "undergraduate",
   });
   if (error) throw new Error(error.message);
 }

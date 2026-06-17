@@ -138,7 +138,7 @@ export const checkAccess = createServerFn({ method: "POST" })
       return { allowed: true, price };
     }
 
-    // Check 2: Admin-allocated limit from user_limits table
+    // Check 2: Admin-allocated limit from user_limits table (per-level for thesis)
     const { data: limits } = await (supabase as any)
       .from("user_limits")
       .select("*")
@@ -146,8 +146,15 @@ export const checkAccess = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (limits) {
-      if (data.product === "thesis" && limits.thesis_used < limits.thesis_limit) {
-        return { allowed: true, price };
+      if (data.product === "thesis") {
+        const level = data.level ?? "undergraduate";
+        const limitField = `thesis_limit_${level}`;
+        const usedField = `thesis_used_${level}`;
+        const levelLimit = limits[limitField] ?? limits.thesis_limit ?? 0;
+        const levelUsed = limits[usedField] ?? limits.thesis_used ?? 0;
+        if (levelUsed < levelLimit) {
+          return { allowed: true, price };
+        }
       }
       if (data.product === "proposal" && limits.proposal_used < limits.proposal_limit) {
         return { allowed: true, price };

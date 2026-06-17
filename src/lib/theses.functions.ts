@@ -63,7 +63,7 @@ export const generateThesis = createServerFn({ method: "POST" })
 
     // Check generation limit (only for non-paid users)
     if (!isPaid) {
-      const canGen = await checkGenerateLimit(supabase, userId, "thesis");
+      const canGen = await checkGenerateLimit(supabase, userId, "thesis", data.level);
       if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
     }
 

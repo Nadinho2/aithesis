@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -45,6 +45,7 @@ function MyTopicsPage() {
   const genFn = useServerFn(generateProposal);
   const exportFn = useServerFn(exportTopicsDocx);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [genLevel, setGenLevel] = useState<Record<string, string>>({});
   const [genWords, setGenWords] = useState<Record<string, number>>({});
@@ -83,17 +84,12 @@ function MyTopicsPage() {
     const target_words = Math.min(3000, Math.max(2500, genWords[topicId] ?? 2800));
     setGenBusy(topicId);
     sessionStorage.setItem("draft_in_progress", Date.now().toString());
+    // Fire the mutation (fire-and-forget) and navigate immediately
+    genFn({ data: { topic_id: topicId, level, target_words } }).catch((e) => {
+      console.error("Proposal generation failed:", e);
+    });
     toast.info("Drafting your proposal in the background…");
-    // Navigate immediately — generation continues server-side
-    window.location.assign("/proposals");
-    try {
-      await genFn({ data: { topic_id: topicId, level, target_words } });
-      qc.invalidateQueries({ queryKey: ["proposals"] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Proposal draft failed");
-    } finally {
-      setGenBusy(null);
-    }
+    navigate({ to: "/proposals" });
   };
 
   const handleDownload = async (ids: string[]) => {

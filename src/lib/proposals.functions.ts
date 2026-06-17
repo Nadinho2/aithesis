@@ -236,16 +236,16 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
 
     let parsed: any;
     try {
-      parsed = ProposalSchema.parse(
-        await callAI(apiKey, {
-          model: "deepseek-v4-pro",
-          system: systemPrompt,
-          user: userPrompt,
-        }),
-      );
+      const raw = await callAI(apiKey, {
+        model: "deepseek-v4-pro",
+        system: systemPrompt,
+        user: userPrompt,
+      });
+      parsed = ProposalSchema.parse(raw);
     } catch (e) {
-      console.error("Proposal AI generation failed:", e);
-      throw new Error("AI generation failed. Please try again.");
+      console.error("Proposal AI generation failed:", e instanceof Error ? e.message : String(e));
+      console.error("User prompt length:", userPrompt.length, "target:", target);
+      throw new Error("Proposal generation failed. Please try again.");
     }
 
     // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
