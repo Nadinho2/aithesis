@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Find your research topic, map your sources, and draft well-structured proposals and theses with citations verified against OpenAlex and Crossref. 200M+ peer-reviewed papers indexed.",
+          "Find your research topic, map your sources, and draft well-structured proposals and theses with citations verified against Google Scholar, OpenAlex and Crossref. 200M+ peer-reviewed papers indexed.",
       },
     ],
   }),
@@ -94,7 +94,7 @@ function MethodologyPipeline() {
     {
       step: "02",
       title: "Search Databases",
-      desc: "We search 200M+ papers from OpenAlex and Crossref in real time, surfacing peer-reviewed sources for your topic.",
+      desc: "We search 200M+ papers from Google Scholar, OpenAlex and Crossref in real time, surfacing peer-reviewed sources for your topic.",
     },
     {
       step: "03",
@@ -199,10 +199,10 @@ const tiers = [
   },
   {
     tier: "Proposal",
-    price: "₦3,000",
+    price: "₦2,000",
     features: [
       "Full research proposal draft",
-      "Verified OpenAlex & Crossref citations",
+      "Verified Google Scholar, OpenAlex & Crossref citations",
       "APA 7th edition formatting",
       "Chapter 1 & Chapter 3 structure",
     ],
@@ -211,8 +211,13 @@ const tiers = [
   },
   {
     tier: "Full Thesis",
-    price: "₦25,000",
-    features: ["5-chapter thesis draft", "Undergraduate / Masters / PhD levels", "Verified citations throughout", "Download as DOCX or PDF"],
+    price: "From ₦20,000",
+    features: [
+      "Undergraduate ₦20,000 / Masters ₦40,000 / PhD ₦50,000",
+      "5-chapter thesis draft",
+      "Verified citations throughout",
+      "Download as DOCX or PDF",
+    ],
     cta: "Start your thesis",
     highlight: false,
   },
@@ -284,7 +289,7 @@ function LandingPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Verified against OpenAlex &amp; Crossref
+          Verified against Google Scholar, OpenAlex &amp; Crossref
         </div>
 
         <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl leading-[1.05] text-balance text-ink mb-6">
@@ -296,7 +301,7 @@ function LandingPage() {
         <p className="max-w-2xl mx-auto text-lg text-ink-secondary leading-[1.7] mb-10">
           A writing partner that helps you build well-sourced academic work. Tap into{" "}
           <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
-          OpenAlex and Crossref. Every citation carries a{" "}
+          Google Scholar, OpenAlex and Crossref. Every citation carries a{" "}
           <strong className="text-ink font-medium">real DOI</strong> — never a hallucinated source.
         </p>
 

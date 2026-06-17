@@ -92,6 +92,25 @@ function MyTopicsPage() {
     navigate({ to: "/proposals" });
   };
 
+  const handleGenerateThesis = (topic: Topic) => {
+    const level = (genLevel[topic.id] ?? "undergraduate") as "undergraduate" | "masters" | "phd";
+    sessionStorage.setItem(
+      "thesis_prefill",
+      JSON.stringify({
+        title: topic.title ?? "",
+        problem_statement: topic.problem_statement ?? "",
+        research_gap: topic.research_gap ?? "",
+        objectives: topic.objectives ?? [],
+        department: topic.department ?? "",
+        area_of_interest: topic.category ?? "",
+        country: "",
+        research_type: "",
+        level,
+      }),
+    );
+    navigate({ to: "/new-thesis" });
+  };
+
   const handleDownload = async (ids: string[]) => {
     setDlBusy(true);
     try {
@@ -272,9 +291,8 @@ function MyTopicsPage() {
                           <Download className="size-3.5" /> .docx
                         </button>
                         <button
-                          disabled
-                          title="Coming soon"
-                          className="text-xs font-medium px-3 py-1.5 border border-ink/15 rounded-sm flex items-center gap-1.5 opacity-50 cursor-not-allowed"
+                          onClick={() => handleGenerateThesis(t)}
+                          className="text-xs font-medium px-3 py-1.5 bg-ink text-bone rounded-sm hover:bg-sage transition-colors flex items-center gap-1.5"
                         >
                           <Sparkles className="size-3.5" /> Full Thesis
                         </button>

@@ -1,10 +1,10 @@
 export const PRICING = {
-  topics: { label: "Topic Generation", price: 0, currency: "NGN" },
-  proposal: { label: "Research Proposal", price: 3000, currency: "NGN" },
+  topics: { label: "Topic Discovery", price: 0, currency: "NGN" },
+  proposal: { label: "Research Proposal", price: 2000, currency: "NGN" },
   thesis: {
-    undergraduate: { label: "Undergraduate Thesis", price: 25000, currency: "NGN" },
+    undergraduate: { label: "Undergraduate Thesis", price: 20000, currency: "NGN" },
     masters: { label: "Masters Thesis", price: 40000, currency: "NGN" },
-    phd: { label: "PhD Thesis", price: 60000, currency: "NGN" },
+    phd: { label: "PhD Thesis", price: 50000, currency: "NGN" },
   },
 } as const;
 

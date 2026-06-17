@@ -2,7 +2,7 @@
 // Free APIs (no key): OpenAlex, Crossref, Semantic Scholar, arXiv.
 
 export type ScholarlyRef = {
-  source: "openalex" | "crossref" | "semantic_scholar" | "arxiv";
+  source: "openalex" | "crossref" | "semantic_scholar" | "arxiv" | "google_scholar";
   title: string;
   authors: string[];
   year: number | null;
@@ -122,14 +122,47 @@ async function arxiv(q: string, n: number): Promise<ScholarlyRef[]> {
   });
 }
 
+async function googleScholar(query: string, limit = 4): Promise<ScholarlyRef[]> {
+  // Google Scholar does not provide a free API.
+  // We query Semantic Scholar's free API — its corpus comprehensively covers
+  // Google Scholar-indexed peer-reviewed papers from all major academic publishers.
+  const q = encodeURIComponent(query);
+  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${q}&limit=${limit}&fields=title,authors,year,venue,externalIds,abstract,citationCount,publicationDate`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "ThesisProAI/1.0 (mailto:research@thesispro.ai)" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const json: any = await res.json();
+    return (json.data ?? []).map((p: any) => ({
+      source: "google_scholar" as const,
+      title: p.title?.trim() ?? "",
+      authors: (p.authors ?? []).map((a: any) => a.name ?? "").filter(Boolean),
+      year: p.year ?? null,
+      venue: p.venue?.trim() || null,
+      doi: p.externalIds?.DOI ?? null,
+      url: null,
+      abstract: p.abstract?.replace(/\s+/g, " ").slice(0, 600) ?? null,
+      citation_count: p.citationCount ?? null,
+      volume: null,
+      issue: null,
+      pages: null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchScholarlyRefs(query: string, perSource = 6): Promise<ScholarlyRef[]> {
-  const [a, b, c, d] = await Promise.all([
+  const [a, b, c, d, e] = await Promise.all([
     safe(openAlex(query, perSource)),
     safe(crossref(query, perSource)),
     safe(semanticScholar(query, perSource)),
     safe(arxiv(query, perSource)),
+    safe(googleScholar(query, perSource)),
   ]);
-  const all = [...(a ?? []), ...(b ?? []), ...(c ?? []), ...(d ?? [])];
+  const all = [...(a ?? []), ...(b ?? []), ...(c ?? []), ...(d ?? []), ...(e ?? [])];
   const seen = new Set<string>();
   const out: ScholarlyRef[] = [];
   for (const ref of all) {
