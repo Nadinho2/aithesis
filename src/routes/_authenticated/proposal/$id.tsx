@@ -30,8 +30,8 @@ function ProposalPage() {
       : ["Investigate the central problem identified in the proposal."];
     const prefill = {
       title: data.title ?? "",
-      problem_statement: (s.problem_statement as string) ?? "",
-      research_gap: (s.literature_review as string)?.slice(0, 800) ?? "",
+      problem_statement: (s.statement_of_the_problem as string) ?? (s.problem_statement as string) ?? "",
+      research_gap: (s.gap_in_literature as string)?.slice(0, 800) ?? (s.literature_review as string)?.slice(0, 800) ?? "",
       objectives,
       department: data.department ?? "",
       area_of_interest: data.area_of_interest ?? "",
@@ -104,6 +104,19 @@ function ProposalPage() {
           <div className="text-xs text-ink/50">
             {data.department} · {data.area_of_interest}
           </div>
+          <div className="text-[11px] text-ink/40 mt-2">
+            Generated{" "}
+            {new Date(data.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}{" "}
+            at{" "}
+            {new Date(data.created_at).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -124,19 +137,30 @@ function ProposalPage() {
       </div>
 
       <Section title="Abstract" body={data.abstract ?? undefined} />
-      <Section title="1. Introduction" body={s.introduction} />
-      <Section title="2. Background of the Study" body={s.background} />
-      <Section title="3. Problem Statement" body={s.problem_statement} />
-      <ListSection title="4. Research Questions" items={s.research_questions} ordered />
-      <ListSection title="5. Research Objectives" items={s.objectives} ordered />
-      <Section title="6. Significance of the Study" body={s.significance} />
-      <Section title="7. Scope and Limitations" body={s.scope_and_limitations} />
-      <Section title="8. Literature Review" body={s.literature_review} />
-      <Section title="9. Methodology" body={s.methodology} />
-      <Section title="10. Expected Outcomes" body={s.expected_outcomes} />
-      {data.level !== "undergraduate" && s.timeline ? (
-        <Section title="11. Timeline" body={s.timeline} />
-      ) : null}
+      <Section title="1.1 Background to the Study" body={s.background_to_the_study} />
+      <Section title="1.2 Statement of Problem" body={s.statement_of_the_problem} />
+      <ListSection title="1.3 Objective of the Study" items={s.objectives} ordered />
+      <ListSection title="1.4 Research Questions" items={s.research_questions} ordered />
+      <ListSection title="1.5 Research Hypothesis" items={s.research_hypotheses} ordered />
+      <Section title="1.6 Significant of the Study" body={s.significance} />
+      <Section title="1.7 Scope of the Study" body={s.scope_of_the_study} />
+      <Section title="1.8 Definition of Terms" body={s.definition_of_terms} />
+      <Section title="2.1 Conceptual Review" body={s.conceptual_review} />
+      <Section title="2.2 Empirical Review" body={s.empirical_review} />
+      <Section title="2.3 Theoretical Review" body={s.theoretical_review} />
+      <Section title="2.4 Theoretical Framework" body={s.theoretical_framework} />
+      <Section title="2.5 Summary of Reviews" body={s.summary_of_reviews} />
+      <Section title="2.6 Gap in Literature" body={s.gap_in_literature} />
+      <Section title="3.1 Research Design" body={s.research_design} />
+      <Section title="3.2 Area of the Study" body={s.area_of_the_study} />
+      <Section title="3.3 Population of the Study" body={s.population_of_the_study} />
+      <Section title="3.4 Sample Size" body={s.sample_size} />
+      <Section title="3.5 Sampling Techniques" body={s.sampling_technique} />
+      <Section title="3.6 Instrument for Data Collection" body={s.instrumentation} />
+      <Section title="3.7 Validity of Instrument" body={s.validity_of_instrument} />
+      <Section title="3.8 Reliability of Instrument" body={s.reliability_of_instrument} />
+      <Section title="3.9 Method of Administering Data" body={s.method_of_collecting_data} />
+      <Section title="3.10 Method of Presentation and Data Analysis" body={s.method_of_data_analysis} />
 
       <div className="mt-12 pt-6 border-t border-ink/10">
         <h2 className="font-serif text-2xl mb-4 flex items-center gap-2">

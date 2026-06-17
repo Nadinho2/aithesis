@@ -81,6 +81,19 @@ function ThesisPage() {
           <div className="text-xs text-ink/50">
             {data.department} · {data.area_of_interest}
           </div>
+          <div className="text-[11px] text-ink/40 mt-2">
+            Generated{" "}
+            {new Date(data.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}{" "}
+            at{" "}
+            {new Date(data.created_at).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })}
+          </div>
         </div>
         <button
           onClick={handleDownload}
