@@ -82,6 +82,7 @@ function MyTopicsPage() {
     const level = (genLevel[topicId] ?? "undergraduate") as "undergraduate" | "masters" | "phd";
     const target_words = Math.min(3000, Math.max(2500, genWords[topicId] ?? 2800));
     setGenBusy(topicId);
+    sessionStorage.setItem("draft_in_progress", Date.now().toString());
     toast.info("Drafting your proposal in the background…");
     // Navigate immediately — generation continues server-side
     window.location.assign("/proposals");

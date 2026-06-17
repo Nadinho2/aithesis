@@ -263,7 +263,10 @@ function NewThesisPage() {
         level={form.level}
         onPaid={() => {
           setShowPayment(false);
+          sessionStorage.setItem("draft_in_progress", Date.now().toString());
           mut.mutate();
+          toast.info("Drafting your thesis in the background…");
+          navigate({ to: "/theses" });
         }}
       />
     </div>

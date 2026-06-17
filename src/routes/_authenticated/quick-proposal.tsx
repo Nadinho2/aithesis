@@ -79,8 +79,8 @@ function QuickProposalPage() {
       // If check fails, still try to generate (server will enforce payment)
     }
     // Fire mutation and navigate away — it continues in the background
-    mut.mutate();
     sessionStorage.setItem("draft_in_progress", Date.now().toString());
+    mut.mutate();
     toast.info("Drafting your proposal in the background…");
     navigate({ to: "/proposals" });
   };
@@ -230,7 +230,10 @@ function QuickProposalPage() {
         product="proposal"
         onPaid={() => {
           setShowPayment(false);
+          sessionStorage.setItem("draft_in_progress", Date.now().toString());
           mut.mutate();
+          toast.info("Drafting your proposal in the background…");
+          navigate({ to: "/proposals" });
         }}
       />
     </div>
