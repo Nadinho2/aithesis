@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Lightbulb, Sparkles, BookOpen, GraduationCap, Globe, Microscope } from "lucide-react";
+import { Lightbulb, Sparkles, BookOpen, GraduationCap, Globe, Microscope, Loader2 } from "lucide-react";
 
 const facts = [
   {
@@ -61,11 +61,10 @@ export default function WhileYouWait({ onDismiss }: { onDismiss: () => void }) {
   }, []);
 
   useEffect(() => {
-    // Auto-dismiss after 60 seconds
     const timeout = setTimeout(() => {
       setVisible(false);
       onDismiss();
-    }, 60000);
+    }, 120000);
     return () => clearTimeout(timeout);
   }, [onDismiss]);
 
@@ -76,10 +75,19 @@ export default function WhileYouWait({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <div className="bg-gradient-to-br from-[#FAF8F3] to-[#F5F0E6] border border-[#E5E2D8] rounded-sm p-5 mb-8 animate-in fade-in slide-in-from-top-2 duration-500">
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 mt-0.5">
-          <Icon className="size-5 text-verde" />
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        {/* Loading spinner section */}
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="relative flex size-8 items-center justify-center">
+            <Loader2 className="size-5 text-verde animate-spin" />
+            <span className="absolute inset-0 size-8 rounded-full border-2 border-verde/20 animate-ping" />
+          </span>
+          <span className="text-xs font-medium text-verde whitespace-nowrap">
+            Drafting…
+          </span>
         </div>
+
+        {/* Trivia section */}
         <div className="flex-1 min-w-0">
           <p className="text-sm text-ink/80 leading-relaxed">{fact.text}</p>
           <div className="flex items-center gap-3 mt-3">
@@ -108,6 +116,12 @@ export default function WhileYouWait({ onDismiss }: { onDismiss: () => void }) {
           </div>
         </div>
       </div>
+
+      {/* Progress bar */}
+      <div className="mt-3 h-1 bg-ink/5 rounded-full overflow-hidden">
+        <div className="h-full bg-verde/40 rounded-full animate-[progress_120s_linear]" />
+      </div>
+      <style>{`@keyframes progress { from { width: 100%; } to { width: 0%; } }`}</style>
     </div>
   );
 }

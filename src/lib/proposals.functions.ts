@@ -27,17 +27,30 @@ const GenerateInput = z
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
 
 const SectionSchema = z.object({
-  introduction: z.string(),
-  background: z.string(),
-  problem_statement: z.string(),
-  research_questions: z.array(z.string()),
+  background_to_the_study: z.string(),
+  statement_of_the_problem: z.string(),
   objectives: z.array(z.string()),
+  research_questions: z.array(z.string()),
+  research_hypotheses: z.array(z.string()),
   significance: z.string(),
-  scope_and_limitations: z.string(),
-  literature_review: z.string(),
-  methodology: z.string(),
-  expected_outcomes: z.string(),
-  timeline: z.string().optional().default(""),
+  scope_of_the_study: z.string(),
+  definition_of_terms: z.string(),
+  conceptual_review: z.string(),
+  empirical_review: z.string(),
+  theoretical_review: z.string(),
+  theoretical_framework: z.string(),
+  summary_of_reviews: z.string(),
+  gap_in_literature: z.string(),
+  research_design: z.string(),
+  area_of_the_study: z.string(),
+  population_of_the_study: z.string(),
+  sample_size: z.string(),
+  sampling_technique: z.string(),
+  instrumentation: z.string(),
+  validity_of_instrument: z.string(),
+  reliability_of_instrument: z.string(),
+  method_of_collecting_data: z.string(),
+  method_of_data_analysis: z.string(),
 });
 
 const ProposalSchema = z.object({
@@ -221,18 +234,19 @@ ${refContext}
 
 Write the proposal now — TOTAL EXACTLY ${target} words.`;
 
-    let parsed = ProposalSchema.parse(
-      await callAI(apiKey, {
-        model: "deepseek-v4-pro",
-        system: systemPrompt,
-        user: userPrompt,
-      }),
-    );
-
-    // Undergraduate: drop timeline entirely
-    if (isUndergrad) parsed.sections.timeline = "";
-
-    parsed = scrubObject(parsed) as typeof parsed;
+    let parsed: any;
+    try {
+      parsed = ProposalSchema.parse(
+        await callAI(apiKey, {
+          model: "deepseek-v4-pro",
+          system: systemPrompt,
+          user: userPrompt,
+        }),
+      );
+    } catch (e) {
+      console.error("Proposal AI generation failed:", e);
+      throw new Error("AI generation failed. Please try again.");
+    }
 
     // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
     let total = countWordsDeep(parsed);
@@ -245,13 +259,12 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
           model: "deepseek-v4-pro",
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
-Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across literature_review, background, and methodology. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal.
+Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across conceptual_review, empirical_review, theoretical_review, and background_to_the_study. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal.
 
 PREVIOUS DRAFT (JSON):
 ${JSON.stringify(parsed)}`,
         });
         const refined = ProposalSchema.parse(refine);
-        if (isUndergrad) refined.sections.timeline = "";
         const scrubbed = scrubObject(refined) as typeof parsed;
         const newTotal = countWordsDeep(scrubbed);
         if (newTotal > total) {
@@ -260,7 +273,8 @@ ${JSON.stringify(parsed)}`,
         } else {
           break; // no progress; stop looping
         }
-      } catch {
+      } catch (e) {
+        console.error("Proposal refinement failed:", e);
         break;
       }
     }
@@ -304,12 +318,16 @@ function trimProposalToExact(p: z.infer<typeof ProposalSchema>, target: number):
   const cloned = JSON.parse(JSON.stringify(p)) as typeof p;
   let total = countWordsDeep(cloned);
   const trimOrder = [
-    "timeline",
-    "expected_outcomes",
-    "scope_and_limitations",
+    "conceptual_review",
+    "empirical_review",
+    "theoretical_review",
+    "background_to_the_study",
+    "statement_of_the_problem",
+    "definition_of_terms",
+    "research_design",
+    "theoretical_framework",
     "significance",
-    "background",
-    "literature_review",
+    "scope_of_the_study",
   ];
   for (const key of trimOrder) {
     if (total <= target) break;
