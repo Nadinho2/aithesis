@@ -222,7 +222,7 @@ function ProposalPage() {
       {editMode ? (
         <EditableSection title="Abstract" value={editAbstract} onChange={(v) => setEditAbstract(v)} />
       ) : (
-        <Section title="Abstract" body={data.abstract} />
+        <Section title="Abstract" body={data.abstract ?? undefined} />
       )}
 
       {/* Sections */}

@@ -59,6 +59,10 @@ export const adminListLimits = createServerFn({ method: "GET" })
         proposal_available: (lim?.proposal_limit ?? 0) - (lim?.proposal_used ?? 0),
         proposal_limit: lim?.proposal_limit ?? 0,
         proposal_used: lim?.proposal_used ?? 0,
+        assignment_available: lim?.assignment_available ?? 0,
+        exam_available: lim?.exam_available ?? 0,
+        presentation_available: lim?.presentation_available ?? 0,
+        cv_available: lim?.cv_available ?? 0,
       };
     });
   });
