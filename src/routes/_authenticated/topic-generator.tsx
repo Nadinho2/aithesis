@@ -51,8 +51,8 @@ function TopicGeneratorPage() {
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Topic Discovery</h1>
         <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Enter your parameters. ThesisPro will find up to seven original, scored research
-          topics tailored to your field and auto-save them to your library.
+          Enter your parameters to discover up to seven original, scored research
+          topics tailored to your field — auto-saved to your library.
         </p>
       </div>
 

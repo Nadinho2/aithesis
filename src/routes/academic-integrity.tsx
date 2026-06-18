@@ -15,11 +15,11 @@ function IntegrityPage() {
 
         <div className="prose prose-sm max-w-none text-ink-secondary leading-[1.7] space-y-5">
           <p>
-            ThesisPro is a research writing partner — a tool to help you structure your research,
-            discover relevant sources, and organise your arguments. It does not write for you.
-            Every idea, every analysis, every conclusion remains your own. This tool helps you
-            organise research, find sources, and structure arguments. The final work — analysis,
-            conclusions, and writing — is yours.
+            ThesisPro is an all-in-one education ecosystem — a platform to help you conduct research,
+            draft assignments, prepare for exams, build presentations, and create professional CVs.
+            It does not replace your own intellectual work. Every idea, every analysis, every
+            conclusion remains your own. ThesisPro helps you organise, structure, and source your
+            work, but the final output — analysis, conclusions, and writing — is yours.
           </p>
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Your Authorship</h2>

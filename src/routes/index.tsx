@@ -4,11 +4,11 @@ import { useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ThesisPro — Your research, structured and sourced" },
+      { title: "ThesisPro — Your complete education ecosystem" },
       {
         name: "description",
         content:
-          "Find your research topic, map your sources, and draft well-structured proposals and theses with citations verified against Google Scholar, OpenAlex and Crossref. 200M+ peer-reviewed papers indexed.",
+          "Topics, proposals, theses, assignments, exam prep, presentations, and CVs — all in one platform powered by 200M+ verified scholarly sources.",
       },
     ],
   }),
@@ -178,14 +178,14 @@ function FeaturesSection() {
     <section id="features" className="border-y border-[#E5E2D8] bg-white/40 py-24">
       <div className="max-w-6xl mx-auto px-6">
         <div className="max-w-2xl mb-14">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-verde font-bold mb-4">The workflow</div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-verde font-bold mb-4">The ecosystem</div>
           <h2 className="font-serif text-4xl md:text-5xl text-ink mb-5">
-            From a single idea to a defended thesis.
+            Everything you need to excel, from first assignment to final defence.
           </h2>
           <p className="text-ink-secondary leading-[1.7]">
-            ThesisPro structures the entire research lifecycle — discover original topics, shortlist
-            with novelty and feasibility scores, then turn any chosen topic into a formatted proposal
-            or complete thesis.
+            ThesisPro is an all-in-one education ecosystem — discover research topics, draft
+            proposals and theses, tackle assignments, prepare for exams, build presentations,
+            and create a professional CV. All backed by verified citations.
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-5">
@@ -357,15 +357,15 @@ function LandingPage() {
         </div>
 
         <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl leading-[1.05] text-balance text-ink mb-6">
-          Your research,
+          Your complete
           <br />
-          <span className="italic">structured and sourced</span>.
+          <span className="italic">education ecosystem</span>.
         </h1>
 
         <p className="max-w-2xl mx-auto text-lg text-ink-secondary leading-[1.7] mb-10">
-          An academic toolkit for students. Generate topics, proposals, and full theses with verified
-          citations. Create assignments with scholarly sources, prepare for exams with custom question
-          papers, build presentations with speaker notes, and craft a professional CV — all powered
+          One platform for everything in your academic journey. Research topics, proposals, and
+          full theses with verified citations. Assignments with scholarly sources. Exam prep with
+          custom question papers. Presentations with speaker notes. A professional CV — all powered
           by <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
           Google Scholar, OpenAlex and Crossref. Every citation carries a{" "}
           <strong className="text-ink font-medium">real DOI</strong> — never a hallucinated source.
@@ -460,8 +460,8 @@ function LandingPage() {
           <div className="max-w-sm">
             <div className="font-serif italic text-2xl font-bold text-paper mb-6">ThesisPro</div>
             <p className="text-paper/50 text-sm leading-relaxed">
-              A research writing partner for the next generation of scholars. Helping you structure,
-              source, and refine your own academic work.
+              An all-in-one education ecosystem for the next generation of scholars. Research tools,
+              study aids, and career resources — all backed by verified citations.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-16">

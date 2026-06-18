@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ThesisPro AI — Premium Academic Research Design System */
+/* ThesisPro — Premium Education Ecosystem Design System */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

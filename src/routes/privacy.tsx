@@ -17,9 +17,9 @@ function PrivacyPage() {
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Information We Collect</h2>
           <p>
             When you sign up for ThesisPro, we collect your email address and a user profile
-            name. We also store the research topics, proposals, theses, and other content you
-            create or upload while using the platform. Payment information is processed by
-            Paystack; we do not store credit card details.
+            name. We also store the topics, proposals, theses, assignments, exam materials,
+            presentations, CVs, and other content you create or upload while using the platform.
+            Payment information is processed by Paystack; we do not store credit card details.
           </p>
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">2. How We Use Your Data</h2>

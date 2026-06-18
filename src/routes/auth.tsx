@@ -28,7 +28,7 @@ function AuthPage() {
 
         <div className="mb-8 text-center">
           <h1 className="font-serif text-3xl text-ink">ThesisPro</h1>
-          <p className="mt-2 text-sm text-ink-secondary">A research writing partner for well-sourced academic work</p>
+          <p className="mt-2 text-sm text-ink-secondary">Your all-in-one education ecosystem for research, study, and career tools</p>
         </div>
 
         <div className="bg-white border border-[#E5E2D8] rounded-lg p-6 shadow-sm space-y-3">

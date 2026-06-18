@@ -23,9 +23,10 @@ function TermsPage() {
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">2. Description of Service</h2>
           <p>
-            ThesisPro provides research drafting tools, including topic discovery, proposal
-            drafting, thesis structuring, and citation verification. The service is offered on both
-            free and paid subscription tiers. Features and pricing may change with notice.
+            ThesisPro provides an education ecosystem, including research topic discovery, proposal
+            drafting, thesis structuring, assignment assistance, exam preparation, presentation
+            building, and CV creation — all with citation verification. The service is offered on
+            both free and paid subscription tiers. Features and pricing may change with notice.
           </p>
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">3. User Responsibilities</h2>
