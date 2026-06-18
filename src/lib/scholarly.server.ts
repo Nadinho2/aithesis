@@ -189,6 +189,36 @@ function sentenceCase(t: string): string {
   return s[0].toUpperCase() + s.slice(1).toLowerCase().replace(/(:\s+|\?\s+|\.\s+)([a-z])/g, (_, p, c) => p + c.toUpperCase());
 }
 
+// Harvard style uses year in parentheses after authors, title in italics, no DOI URL.
+function formatAuthorHarvard(full: string): string {
+  const cleaned = full.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  if (cleaned.includes(",")) {
+    const [last, rest] = cleaned.split(",").map((s) => s.trim());
+    const initials = rest
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((p) => p[0]?.toUpperCase() + ".")
+      .join(" ");
+    return `${last}, ${initials}`;
+  }
+  const parts = cleaned.split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const last = parts[parts.length - 1];
+  const initials = parts.slice(0, -1).map((p) => p[0]?.toUpperCase() + ".").join(" ");
+  return `${last}, ${initials}`;
+}
+
+function authorsHarvard(authors: string[]): string {
+  const cleaned = authors.map(formatAuthorHarvard).filter(Boolean);
+  if (cleaned.length === 0) return "";
+  if (cleaned.length === 1) return cleaned[0];
+  if (cleaned.length <= 20) {
+    return cleaned.slice(0, -1).join(", ") + " and " + cleaned[cleaned.length - 1];
+  }
+  return cleaned.slice(0, 19).join(", ") + " … " + cleaned[cleaned.length - 1];
+}
+
 export function formatAPA(ref: ScholarlyRef): string {
   const authors = authorsAPA(ref.authors) || "Unknown Author";
   const year = ref.year ? `(${ref.year})` : "(n.d.)";
@@ -231,4 +261,52 @@ export function formatAPAParts(ref: ScholarlyRef): {
   }
   const url = ref.doi ? `https://doi.org/${ref.doi}` : ref.url ?? "";
   return { authorsYear: `${authors} ${year}.`, title, venueItalic, venueTail, url };
+}
+
+export function formatHarvard(ref: ScholarlyRef): string {
+  // Harvard: Author, I. (Year). Title. Journal, Volume(Issue), Pages.
+  const authors = authorsHarvard(ref.authors) || "Unknown Author";
+  const year = ref.year ? `(${ref.year})` : "(n.d.)";
+  const title = ref.title ? ref.title.replace(/\.$/, "") + "." : "";
+  let venue = "";
+  if (ref.venue) {
+    venue = ` ${ref.venue}`;
+    if (ref.volume) venue += `, ${ref.volume}`;
+    if (ref.issue) venue += `(${ref.issue})`;
+    if (ref.pages) venue += `, ${ref.pages}`;
+  }
+  return [`${authors} ${year}.`, title, venue + "."].filter(Boolean).join(" ");
+}
+
+export function formatAPAPartsHarvard(ref: ScholarlyRef) {
+  const authors = authorsHarvard(ref.authors) || "Unknown Author";
+  const year = ref.year ? `(${ref.year})` : "(n.d.)";
+  const title = ref.title ? ref.title.replace(/\.$/, "") + "." : "";
+  let venueItalic = "", venueTail = "";
+  if (ref.venue) {
+    venueItalic = ref.venue.trim();
+    if (ref.volume) venueItalic += `, ${ref.volume}`;
+    if (ref.issue) venueTail += `(${ref.issue})`;
+    if (ref.pages) venueTail += `, ${ref.pages}`;
+    venueTail += ".";
+  }
+  return { authorsYear: `${authors} ${year}.`, title, venueItalic, venueTail, url: "" };
+}
+
+export function formatByStyle(ref: ScholarlyRef, style: "apa_7" | "harvard"): string {
+  return style === "harvard" ? formatHarvard(ref) : formatAPA(ref);
+}
+
+export function formatPartsByStyle(ref: ScholarlyRef, style: "apa_7" | "harvard") {
+  return style === "harvard" ? formatAPAPartsHarvard(ref) : formatAPAParts(ref);
+}
+
+export function sortReferences(refs: ScholarlyRef[]): ScholarlyRef[] {
+  return [...refs].sort((a, b) => {
+    const aLast = a.authors[0] ?? "";
+    const bLast = b.authors[0] ?? "";
+    const cmp = aLast.localeCompare(bLast);
+    if (cmp !== 0) return cmp;
+    return (a.year ?? 0) - (b.year ?? 0);
+  });
 }

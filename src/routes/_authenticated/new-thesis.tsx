@@ -28,6 +28,7 @@ function NewThesisPage() {
     research_type: "",
     level: "undergraduate" as "undergraduate" | "masters" | "phd",
     target_words: 8000,
+    citation_style: "apa_7" as "apa_7" | "harvard",
   });
 
   useEffect(() => {
@@ -70,6 +71,7 @@ function NewThesisPage() {
           },
           level: form.level,
           target_words: form.target_words,
+          citation_style: form.citation_style,
         },
       }),
     onSuccess: () => {
@@ -221,6 +223,19 @@ function NewThesisPage() {
               <option value="undergraduate">Undergraduate</option>
               <option value="masters">Master's</option>
               <option value="phd">PhD</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
+              Citation Style
+            </label>
+            <select
+              value={form.citation_style}
+              onChange={(e) => setForm({ ...form, citation_style: e.target.value as any })}
+              className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage"
+            >
+              <option value="apa_7">APA 7th</option>
+              <option value="harvard">Harvard</option>
             </select>
           </div>
           <div>

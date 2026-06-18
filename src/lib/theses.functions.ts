@@ -23,6 +23,7 @@ const GenerateInput = z
     manual: ManualTopic.optional(),
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
     target_words: z.number().int().min(6000).max(15000).default(8000),
+    citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
 
@@ -135,6 +136,17 @@ export const generateThesis = createServerFn({ method: "POST" })
       chapter_5_discussion_conclusion: Math.round(target * 0.15),
     };
 
+    const citationRulesStr = data.citation_style === "harvard"
+      ? `CITATION RULES — STRICT HARVARD STYLE:
+- Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
+- Inline parenthetical: (Author, Year); (Author and Author, Year); for 4+ authors use (First et al., Year) after first use.
+- For narrative citations: Author (Year)...
+- Reference list is rendered programmatically; do NOT output a bibliography.`
+      : `CITATION RULES — STRICT APA 7th EDITION:
+- Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
+- Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
+- Reference list is rendered programmatically; do NOT output a bibliography.`;
+
     const baseRules = `OUTPUT FORMAT — STRICT:
 - Plain text only. NEVER use markdown syntax. NO asterisks (* or **), NO underscores for emphasis, NO backticks, NO hashes (#) for headings, NO hyphen bullets at line starts.
 - Do NOT bold, italicise, or otherwise emphasise words.
@@ -153,10 +165,7 @@ ORIGINALITY & PLAGIARISM PREVENTION (ABSOLUTE REQUIREMENTS):
 - If a sentence sounds like something a generic AI would write, delete it and rewrite from scratch.
 - READ your output before finalizing. If any 5-word sequence could appear verbatim in an existing academic paper, change those words.
 
-CITATION RULES — STRICT APA 7th EDITION:
-- Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
-- Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
-- Reference list is rendered programmatically; do NOT output a bibliography.
+${citationRulesStr}
 
 TABLES & FIGURES:
 When you present tabular data, embed it as:
@@ -377,8 +386,9 @@ ${chapters[c.key]}`;
         references_list: referencesList,
         word_count: total,
         target_words: target,
+        citation_style: data.citation_style,
         status: "draft",
-      })
+      } as any)
       .select()
       .single();
     if (insErr) throw new Error(insErr.message);
@@ -441,6 +451,7 @@ export const exportThesisDocx = createServerFn({ method: "POST" })
       word_count: row.word_count,
       chapters: row.chapters as any,
       references_list: (row.references_list as any) ?? [],
+      citation_style: ((row as any).citation_style as "apa_7" | "harvard") ?? "apa_7",
     });
     const filename = sanitize(`${row.title}-thesis.docx`);
     return { base64: toBase64(bytes), filename, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };

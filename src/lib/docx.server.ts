@@ -16,7 +16,7 @@ import {
   ShadingType,
   BorderStyle,
 } from "docx";
-import { formatAPAParts, type ScholarlyRef } from "./scholarly.server";
+import { formatAPAParts, formatAPAPartsHarvard, formatPartsByStyle, sortReferences, type ScholarlyRef } from "./scholarly.server";
 
 const numbering = {
   config: [
@@ -306,6 +306,7 @@ export async function buildProposalDocx(p: {
   word_count: number;
   sections: Record<string, any>;
   references_list: ScholarlyRef[];
+  citation_style?: "apa_7" | "harvard";
 }): Promise<Uint8Array> {
   const children: Paragraph[] = [];
 
@@ -417,8 +418,9 @@ export async function buildProposalDocx(p: {
       spacing: { after: 300 },
     }),
   );
-  for (const ref of p.references_list ?? []) {
-    const parts = formatAPAParts(ref);
+  const citationStyle = p.citation_style ?? "apa_7";
+  for (const ref of sortReferences(p.references_list ?? [])) {
+    const parts = formatPartsByStyle(ref, citationStyle);
     const runs: any[] = [
       new TextRun({ text: parts.authorsYear + " " }),
       new TextRun({ text: parts.title + " " }),
@@ -427,7 +429,7 @@ export async function buildProposalDocx(p: {
       runs.push(new TextRun({ text: parts.venueItalic, italics: true }));
       runs.push(new TextRun({ text: parts.venueTail + " " }));
     }
-    if (parts.url) {
+    if (parts.url && citationStyle === "apa_7") {
       runs.push(
         new ExternalHyperlink({
           link: parts.url,
@@ -463,6 +465,7 @@ export async function buildThesisDocx(p: {
   word_count: number;
   chapters: Record<string, string>;
   references_list: ScholarlyRef[];
+  citation_style?: "apa_7" | "harvard";
 }): Promise<Uint8Array> {
   const children: (Paragraph | Table)[] = [];
 
@@ -532,9 +535,10 @@ export async function buildThesisDocx(p: {
     children.push(new Paragraph({ children: [new PageBreak()] }));
   }
   // References
+  const citationStyle = p.citation_style ?? "apa_7";
   children.push(heading("References", 1));
-  for (const ref of p.references_list ?? []) {
-    const parts = formatAPAParts(ref);
+  for (const ref of sortReferences(p.references_list ?? [])) {
+    const parts = formatPartsByStyle(ref, citationStyle);
     const runs: any[] = [
       new TextRun({ text: parts.authorsYear + " " }),
       new TextRun({ text: parts.title + " " }),
@@ -543,7 +547,7 @@ export async function buildThesisDocx(p: {
       runs.push(new TextRun({ text: parts.venueItalic, italics: true }));
       runs.push(new TextRun({ text: parts.venueTail + " " }));
     }
-    if (parts.url) {
+    if (parts.url && citationStyle === "apa_7") {
       runs.push(
         new ExternalHyperlink({
           link: parts.url,

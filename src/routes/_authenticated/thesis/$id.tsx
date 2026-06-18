@@ -99,7 +99,10 @@ function ThesisPage() {
             {new Date(data.created_at).toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
-            })}
+            })} ·{" "}
+            <span className="font-medium">
+              {(data as any).citation_style === "harvard" ? "Harvard" : "APA 7th"}
+            </span>
           </div>
         </div>
         <button

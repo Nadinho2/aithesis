@@ -107,6 +107,7 @@ function MyTopicsPage() {
         country: "",
         research_type: "",
         level,
+        citation_style: "apa_7",
       }),
     );
     navigate({ to: "/new-thesis" });

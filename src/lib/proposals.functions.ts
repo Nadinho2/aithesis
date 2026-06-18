@@ -23,6 +23,7 @@ const GenerateInput = z
     manual: ManualTopic.optional(),
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
     target_words: z.number().int().min(2500).max(3000).default(2800),
+    citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
 
@@ -147,7 +148,21 @@ export const generateProposal = createServerFn({ method: "POST" })
       ? "DO NOT include a Timeline section. Return an empty string for the timeline field."
       : "Include a realistic Timeline section organised by months or quarters covering the full study.";
 
-    const systemPrompt = `You are a senior academic writing a graduate-level research proposal. Write in clear, natural academic English with varied sentence structure.
+    const citationRules = data.citation_style === "harvard"
+      ? `CITATION RULES (Harvard style):
+- Only cite the references provided below. Never invent sources.
+- Inline parenthetical format: (Author, Year); (Author and Author, Year); for 4+ authors use (First et al., Year) after first use.
+- For narrative citations: Author (Year)...
+- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
+- Reference list is rendered separately — do NOT output a bibliography.`
+      : `CITATION RULES (APA 7th):
+- Only cite the references provided below. Never invent sources.
+- Inline format: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+.
+- For narrative citations: Author (Year)...
+- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
+- Reference list is rendered separately — do NOT output a bibliography.`;
+
+    const systemPrompt = `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style. Write in clear, natural academic English with varied sentence structure.
 
 RULES:
 - Plain text only — NO markdown syntax (no *,**,#,>, -, backticks).
@@ -156,11 +171,7 @@ RULES:
 - Do not copy phrasing from the provided references — write originally.
 - Each paragraph should be 3-6 sentences.
 
-CITATION RULES (APA 7th):
-- Only cite the references provided below. Never invent sources.
-- Inline format: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+.
-- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
-- Reference list is rendered separately — do NOT output a bibliography.
+${citationRules}
 
 OUTPUT: Return ONLY valid JSON matching the schema below. No preamble, no commentary, no markdown.
 
@@ -298,8 +309,9 @@ ${JSON.stringify(parsed)}`,
         sections: parsed.sections,
         references_list: referencesList,
         word_count: total,
+        citation_style: data.citation_style,
         status: "draft",
-      })
+      } as any)
       .select()
       .single();
     if (insErr) throw new Error(insErr.message);
@@ -406,6 +418,7 @@ export const exportProposalDocx = createServerFn({ method: "POST" })
       word_count: row.word_count,
       sections: row.sections as any,
       references_list: (row.references_list as any) ?? [],
+      citation_style: ((row as any).citation_style as "apa_7" | "harvard") ?? "apa_7",
     });
     const filename = sanitizeFilename(`${row.title}-proposal.docx`);
     return { base64: toBase64(bytes), filename, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
