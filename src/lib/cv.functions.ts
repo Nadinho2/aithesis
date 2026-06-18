@@ -32,23 +32,22 @@ export const generateCv = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => CvInput.parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
     let cvInfo: any = {};
 
     // Parse uploaded CV document to auto-fill
     if (data.file_base64 && data.file_mime) {
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
-      const raw = await callAI(undefined as any, {
+      const raw = await callAI(apiKey, {
         model: "deepseek-v4-pro",
         system:
           "Extract the following fields from this CV document and return ONLY valid JSON (no markdown, no code fences): { full_name, email, phone, address, summary, education, experience, skills, certifications, languages }",
         user: parsed.text,
       });
-      try {
-        cvInfo = JSON.parse(raw.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
-      } catch {
-        cvInfo = { summary: parsed.text.slice(0, 1000) };
-      }
+      // callAI already returns a parsed object
+      cvInfo = raw;
     } else if (data.manual) {
       cvInfo = data.manual;
     }
@@ -56,7 +55,7 @@ export const generateCv = createServerFn({ method: "POST" })
     const headshot = data.headshot_base64 ?? null;
 
     // Enhance with AI — improve wording, format professionally
-    const enhanced = await callAI(undefined as any, {
+    const enhanced = await callAI(apiKey, {
       model: "deepseek-v4-pro",
       system:
         "You are a professional CV writer. Improve the wording of this CV information. Make it concise, professional, and achievement-oriented. Return ONLY the improved text in the same format. No markdown.",

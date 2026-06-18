@@ -145,11 +145,27 @@ const features = [
   },
   {
     title: "Proposal Drafts",
-    desc: "Chapter One and Chapter Three structured to your university's expectations, with a verified reference list you can trust.",
+    desc: "Chapter One and Chapter Three structured to your university's expectations, with a verified reference list you can trust. APA 7th or Harvard citation style.",
   },
   {
     title: "Full Thesis",
-    desc: "Undergraduate, Master's, or PhD structure — 3,000-8,000 words per chapter with APA / Harvard / MLA citations verified against real sources.",
+    desc: "Undergraduate, Master's, or PhD structure — 3,000-8,000 words per chapter with APA 7th or Harvard citations verified against real sources.",
+  },
+  {
+    title: "Assignment Assistant",
+    desc: "Upload your assignment question or a document. Get a well-structured answer with verified scholarly sources — or no references if you choose.",
+  },
+  {
+    title: "Exam Preparation",
+    desc: "Upload your notes, documents, and images. Generate practice questions — objectives, theory, or both with a custom split.",
+  },
+  {
+    title: "Presentation Assistant",
+    desc: "Upload your content and images. Generate slides with speaker notes. Download as PowerPoint (PPTX) or DOCX.",
+  },
+  {
+    title: "CV Maker",
+    desc: "Upload your existing CV (PDF/DOCX) to auto-fill all fields, or use the manual form. Add a headshot. Get a professionally formatted CV.",
   },
   {
     title: "Research Library",

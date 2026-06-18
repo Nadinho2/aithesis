@@ -29,7 +29,7 @@ export const generatePresentation = createServerFn({ method: "POST" })
       fullContent += "\n\n--- Uploaded content ---\n\n" + parsed.text;
     }
 
-    const raw = await callAI(undefined as any, {
+    const raw = await callAI(apiKey, {
       model: "deepseek-v4-pro",
       system: `You are a presentation designer. Generate ${data.slide_count} slides for a presentation on "${data.topic}".
 Each slide has: title, bullets (max 6), and speaker notes.
@@ -39,8 +39,8 @@ Keep bullets concise — presentation style.`,
       user: fullContent,
     });
 
-    let cleaned = raw.trim().replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    const parsed = JSON.parse(cleaned);
+    // callAI already returns a parsed object
+    const parsed = raw;
 
     // Store in DB
     if (supabase) {
