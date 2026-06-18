@@ -579,6 +579,94 @@ export async function buildThesisDocx(p: {
   return new Uint8Array(buf);
 }
 
+export async function buildAssignmentDocx(p: {
+  title: string;
+  answer: string;
+  references: any[];
+}): Promise<Uint8Array> {
+  const children: any[] = [
+    new Paragraph({ text: p.title, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
+    new Paragraph({ spacing: { after: 200 } }),
+  ];
+  for (const para of p.answer.split(/\n\n+/)) {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: para.trim(), size: 22 })],
+        spacing: { after: 120 },
+      }),
+    );
+  }
+  if (p.references?.length > 0) {
+    children.push(new Paragraph({ spacing: { before: 400 }, text: "References", heading: HeadingLevel.HEADING_1 }));
+    for (const ref of p.references) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: ref.apa ?? ref.title ?? "", size: 20 })],
+          spacing: { after: 100 },
+          indent: { left: 720, hanging: 720 },
+        }),
+      );
+    }
+  }
+  const doc = new Document({ sections: [{ children }] });
+  return Packer.toBuffer(doc);
+}
+
+export async function buildPresentationDocx(p: {
+  topic: string;
+  slides: { title: string; bullets: string[]; speaker_notes?: string }[];
+}): Promise<Uint8Array> {
+  const children: any[] = [
+    new Paragraph({ text: p.topic, heading: HeadingLevel.TITLE }),
+    new Paragraph({ spacing: { after: 200 } }),
+  ];
+  for (const [i, slide] of p.slides.entries()) {
+    children.push(new Paragraph({ text: `Slide ${i + 1}: ${slide.title}`, heading: HeadingLevel.HEADING_1 }));
+    for (const b of slide.bullets ?? []) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: `• ${b}`, size: 22 })],
+          spacing: { after: 60 },
+          indent: { left: 400 },
+        }),
+      );
+    }
+    if (slide.speaker_notes) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: slide.speaker_notes, size: 18, italics: true, color: "888888" })],
+          spacing: { before: 100, after: 200 },
+        }),
+      );
+    }
+  }
+  return Packer.toBuffer(new Document({ sections: [{ children }] }));
+}
+
+export async function buildCvDocx(p: {
+  info: any;
+  enhanced: string;
+  headshot?: string;
+}): Promise<Uint8Array> {
+  const children: any[] = [];
+  if (p.info?.full_name) {
+    children.push(new Paragraph({ text: p.info.full_name, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));
+  }
+  const contact = [p.info?.email, p.info?.phone, p.info?.address].filter(Boolean).join(" · ");
+  if (contact) {
+    children.push(new Paragraph({ text: contact, alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+  }
+  for (const para of p.enhanced.split(/\n\n+/)) {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: para.trim(), size: 22 })],
+        spacing: { after: 120 },
+      }),
+    );
+  }
+  return Packer.toBuffer(new Document({ sections: [{ children }] }));
+}
+
 export function toBase64(u8: Uint8Array): string {
   let binary = "";
   const chunk = 0x8000;

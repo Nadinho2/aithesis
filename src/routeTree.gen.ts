@@ -25,6 +25,11 @@ import { Route as AuthenticatedMyTopicsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedToolsPresentationRouteImport } from './routes/_authenticated/tools/presentation'
+import { Route as AuthenticatedToolsExamRouteImport } from './routes/_authenticated/tools/exam'
+import { Route as AuthenticatedToolsDashboardRouteImport } from './routes/_authenticated/tools/dashboard'
+import { Route as AuthenticatedToolsCvRouteImport } from './routes/_authenticated/tools/cv'
+import { Route as AuthenticatedToolsAssignmentRouteImport } from './routes/_authenticated/tools/assignment'
 import { Route as AuthenticatedThesisIdRouteImport } from './routes/_authenticated/thesis/$id'
 import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authenticated/proposal/$id'
 
@@ -109,6 +114,34 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedToolsPresentationRoute =
+  AuthenticatedToolsPresentationRouteImport.update({
+    id: '/tools/presentation',
+    path: '/tools/presentation',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedToolsExamRoute = AuthenticatedToolsExamRouteImport.update({
+  id: '/tools/exam',
+  path: '/tools/exam',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsDashboardRoute =
+  AuthenticatedToolsDashboardRouteImport.update({
+    id: '/tools/dashboard',
+    path: '/tools/dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedToolsCvRoute = AuthenticatedToolsCvRouteImport.update({
+  id: '/tools/cv',
+  path: '/tools/cv',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsAssignmentRoute =
+  AuthenticatedToolsAssignmentRouteImport.update({
+    id: '/tools/assignment',
+    path: '/tools/assignment',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedThesisIdRoute = AuthenticatedThesisIdRouteImport.update({
   id: '/thesis/$id',
   path: '/thesis/$id',
@@ -138,6 +171,11 @@ export interface FileRoutesByFullPath {
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
+  '/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
+  '/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
+  '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -157,6 +195,11 @@ export interface FileRoutesByTo {
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
+  '/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
+  '/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
+  '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,6 +221,11 @@ export interface FileRoutesById {
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/_authenticated/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/_authenticated/thesis/$id': typeof AuthenticatedThesisIdRoute
+  '/_authenticated/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
+  '/_authenticated/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/_authenticated/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
+  '/_authenticated/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/_authenticated/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -199,6 +247,11 @@ export interface FileRouteTypes {
     | '/topic-generator'
     | '/proposal/$id'
     | '/thesis/$id'
+    | '/tools/assignment'
+    | '/tools/cv'
+    | '/tools/dashboard'
+    | '/tools/exam'
+    | '/tools/presentation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -218,6 +271,11 @@ export interface FileRouteTypes {
     | '/topic-generator'
     | '/proposal/$id'
     | '/thesis/$id'
+    | '/tools/assignment'
+    | '/tools/cv'
+    | '/tools/dashboard'
+    | '/tools/exam'
+    | '/tools/presentation'
   id:
     | '__root__'
     | '/'
@@ -238,6 +296,11 @@ export interface FileRouteTypes {
     | '/_authenticated/topic-generator'
     | '/_authenticated/proposal/$id'
     | '/_authenticated/thesis/$id'
+    | '/_authenticated/tools/assignment'
+    | '/_authenticated/tools/cv'
+    | '/_authenticated/tools/dashboard'
+    | '/_authenticated/tools/exam'
+    | '/_authenticated/tools/presentation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -364,6 +427,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools/presentation': {
+      id: '/_authenticated/tools/presentation'
+      path: '/tools/presentation'
+      fullPath: '/tools/presentation'
+      preLoaderRoute: typeof AuthenticatedToolsPresentationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools/exam': {
+      id: '/_authenticated/tools/exam'
+      path: '/tools/exam'
+      fullPath: '/tools/exam'
+      preLoaderRoute: typeof AuthenticatedToolsExamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools/dashboard': {
+      id: '/_authenticated/tools/dashboard'
+      path: '/tools/dashboard'
+      fullPath: '/tools/dashboard'
+      preLoaderRoute: typeof AuthenticatedToolsDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools/cv': {
+      id: '/_authenticated/tools/cv'
+      path: '/tools/cv'
+      fullPath: '/tools/cv'
+      preLoaderRoute: typeof AuthenticatedToolsCvRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools/assignment': {
+      id: '/_authenticated/tools/assignment'
+      path: '/tools/assignment'
+      fullPath: '/tools/assignment'
+      preLoaderRoute: typeof AuthenticatedToolsAssignmentRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/thesis/$id': {
       id: '/_authenticated/thesis/$id'
       path: '/thesis/$id'
@@ -393,6 +491,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedProposalIdRoute: typeof AuthenticatedProposalIdRoute
   AuthenticatedThesisIdRoute: typeof AuthenticatedThesisIdRoute
+  AuthenticatedToolsAssignmentRoute: typeof AuthenticatedToolsAssignmentRoute
+  AuthenticatedToolsCvRoute: typeof AuthenticatedToolsCvRoute
+  AuthenticatedToolsDashboardRoute: typeof AuthenticatedToolsDashboardRoute
+  AuthenticatedToolsExamRoute: typeof AuthenticatedToolsExamRoute
+  AuthenticatedToolsPresentationRoute: typeof AuthenticatedToolsPresentationRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -407,6 +510,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedProposalIdRoute: AuthenticatedProposalIdRoute,
   AuthenticatedThesisIdRoute: AuthenticatedThesisIdRoute,
+  AuthenticatedToolsAssignmentRoute: AuthenticatedToolsAssignmentRoute,
+  AuthenticatedToolsCvRoute: AuthenticatedToolsCvRoute,
+  AuthenticatedToolsDashboardRoute: AuthenticatedToolsDashboardRoute,
+  AuthenticatedToolsExamRoute: AuthenticatedToolsExamRoute,
+  AuthenticatedToolsPresentationRoute: AuthenticatedToolsPresentationRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

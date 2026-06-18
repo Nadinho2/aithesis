@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useClerk } from "@clerk/clerk-react";
 import { adminCheck } from "@/lib/admin.functions";
 import {
+  ChevronDown,
   LayoutDashboard,
   Sparkles,
   Bookmark,
@@ -13,6 +14,10 @@ import {
   CreditCard,
   LogOut,
   Shield,
+  FileEdit,
+  GraduationCap,
+  Presentation,
+  UserSquare2,
   Menu,
   X,
 } from "lucide-react";
@@ -34,10 +39,18 @@ const baseNav: NavItem[] = [
   { to: "/billing", label: "Billing", icon: CreditCard },
 ];
 
+const toolsNav: NavItem[] = [
+  { to: "/tools/assignment", label: "Assignment", icon: FileEdit },
+  { to: "/tools/exam", label: "Exam Prep", icon: GraduationCap },
+  { to: "/tools/presentation", label: "Presentation", icon: Presentation },
+  { to: "/tools/cv", label: "CV Maker", icon: UserSquare2 },
+];
+
 export function AppSidebar() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(true);
 
   const adminFn = useServerFn(adminCheck);
   const { data: roleData } = useQuery({
@@ -49,7 +62,6 @@ export function AppSidebar() {
 
   const { signOut: clerkSignOut } = useClerk();
 
-  // Close drawer on route change
   useEffect(() => {
     setOpen(false);
   }, [path]);
@@ -94,6 +106,37 @@ export function AppSidebar() {
             </Link>
           );
         })}
+
+        <div className="pt-3">
+          <button
+            onClick={() => setToolsOpen(!toolsOpen)}
+            className="flex items-center justify-between w-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 hover:text-ink transition-colors"
+          >
+            Tools
+            <ChevronDown
+              className={`size-3 transition-transform ${toolsOpen ? "rotate-0" : "-rotate-90"}`}
+            />
+          </button>
+          {toolsOpen &&
+            toolsNav.map((item) => {
+              const Icon = item.icon;
+              const active = path === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 px-3 py-1.5 rounded-sm text-sm transition-colors ${
+                    active
+                      ? "bg-ink/10 text-ink font-medium"
+                      : "text-ink/60 hover:bg-ink/5 hover:text-ink"
+                  }`}
+                >
+                  <Icon className="size-3.5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+        </div>
       </nav>
 
       <div className="p-4 border-t border-ink/5">
@@ -109,7 +152,6 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile top bar */}
       <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-bone border-b border-ink/10">
         <Link to="/dashboard" className="flex items-center gap-2">
           <span className="size-7 bg-ink rounded-sm flex items-center justify-center">
@@ -126,12 +168,10 @@ export function AppSidebar() {
         </button>
       </div>
 
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 bg-parchment/60 border-r border-ink/10 flex-col">
         {sidebarBody}
       </aside>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div

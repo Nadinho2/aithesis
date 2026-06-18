@@ -15,7 +15,7 @@ function runtimeEnv(key: string): string | undefined {
 // --- Initialize Paystack Payment ---
 
 const InitPaymentInput = z.object({
-  product: z.enum(["proposal", "thesis"]),
+  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
   email: z.string().email(),
 });

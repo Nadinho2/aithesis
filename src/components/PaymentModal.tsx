@@ -16,6 +16,13 @@ type Props = {
   onPaid: () => void;
 };
 
+const toolLabels: Record<string, string> = {
+  assignment: "Assignment Assistant",
+  exam: "Exam Preparation",
+  presentation: "Presentation Assistant",
+  cv: "CV Maker",
+};
+
 export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -69,7 +76,9 @@ export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
         <p className="text-sm text-ink/60 mb-6">
           {product === "proposal"
             ? "Unlock proposal drafting"
-            : `Unlock ${level} thesis drafting`}
+            : product === "thesis"
+              ? `Unlock ${level} thesis drafting`
+              : "Unlock this tool"}
         </p>
 
         <div className="border border-ink/10 rounded-sm p-4 mb-6">
@@ -78,7 +87,9 @@ export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
           <p className="text-xs text-ink/40 mt-1">
             {product === "proposal"
               ? "Research Proposal"
-              : `${level?.charAt(0).toUpperCase()}${level?.slice(1)} Thesis`}
+              : product === "thesis"
+                ? `${level?.charAt(0).toUpperCase()}${level?.slice(1)} Thesis`
+                : toolLabels[product] ?? product}
           </p>
         </div>
 
