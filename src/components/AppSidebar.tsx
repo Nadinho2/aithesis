@@ -44,6 +44,7 @@ const toolsNav: NavItem[] = [
   { to: "/tools/exam", label: "Exam Prep", icon: GraduationCap },
   { to: "/tools/presentation", label: "Presentation", icon: Presentation },
   { to: "/tools/cv", label: "CV Maker", icon: UserSquare2 },
+  { to: "/tools/history", label: "My History", icon: Bookmark },
 ];
 
 export function AppSidebar() {

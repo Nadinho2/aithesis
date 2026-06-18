@@ -26,6 +26,10 @@ function AdminPage() {
       thesis_available_masters: number;
       thesis_available_phd: number;
       proposal_limit: number;
+      assignment_available: number;
+      exam_available: number;
+      presentation_available: number;
+      cv_available: number;
     }) => up({ data: v }),
     onSuccess: () => {
       toast.success("Limits saved");
@@ -40,6 +44,10 @@ function AdminPage() {
     thesis_available_masters: 0,
     thesis_available_phd: 0,
     proposal_limit: 0,
+    assignment_available: 0,
+    exam_available: 0,
+    presentation_available: 0,
+    cv_available: 0,
   });
 
   function startEdit(user: NonNullable<typeof data>[number]) {
@@ -49,6 +57,10 @@ function AdminPage() {
       thesis_available_masters: user.thesis_available_masters,
       thesis_available_phd: user.thesis_available_phd,
       proposal_limit: user.proposal_limit,
+      assignment_available: user.assignment_available ?? 0,
+      exam_available: user.exam_available ?? 0,
+      presentation_available: user.presentation_available ?? 0,
+      cv_available: user.cv_available ?? 0,
     });
   }
 
@@ -95,10 +107,14 @@ function AdminPage() {
               <thead>
                 <tr className="border-b border-ink/10">
                   <th className="text-left py-3 pr-4 font-medium">User</th>
-                  <th className="text-center py-3 px-2 font-medium">UG</th>
-                  <th className="text-center py-3 px-2 font-medium">Masters</th>
-                  <th className="text-center py-3 px-2 font-medium">PhD</th>
-                  <th className="text-center py-3 px-2 font-medium">Proposals</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">UG</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">Masters</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">PhD</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">Proposal</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">Assgn</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">Exam</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">Pres</th>
+                  <th className="text-center py-3 px-1 font-medium text-[11px]">CV</th>
                   <th className="text-right py-3 pl-4 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -148,6 +164,34 @@ function AdminPage() {
                           />
                         ) : (
                           <span>{user.proposal_available ?? user.proposal_limit - user.proposal_used}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-1 text-center">
+                        {isEditing ? (
+                          <Input value={form.assignment_available} onChange={(v) => setForm({ ...form, assignment_available: v })} />
+                        ) : (
+                          <span>{user.assignment_available ?? 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-1 text-center">
+                        {isEditing ? (
+                          <Input value={form.exam_available} onChange={(v) => setForm({ ...form, exam_available: v })} />
+                        ) : (
+                          <span>{user.exam_available ?? 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-1 text-center">
+                        {isEditing ? (
+                          <Input value={form.presentation_available} onChange={(v) => setForm({ ...form, presentation_available: v })} />
+                        ) : (
+                          <span>{user.presentation_available ?? 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-1 text-center">
+                        {isEditing ? (
+                          <Input value={form.cv_available} onChange={(v) => setForm({ ...form, cv_available: v })} />
+                        ) : (
+                          <span>{user.cv_available ?? 0}</span>
                         )}
                       </td>
                       <td className="py-3 pl-4 text-right">

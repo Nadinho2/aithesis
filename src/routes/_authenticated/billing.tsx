@@ -66,6 +66,30 @@ function BillingPage() {
           description="Complete PhD thesis (5 chapters, 6,000-15,000 words)"
           onClick={() => openPay("thesis", "phd")}
         />
+        <PricingCard
+          product="Assignment"
+          price={`₦${getPrice("assignment").toLocaleString()}`}
+          description="Get well-researched answers with verified scholarly sources"
+          onClick={() => openPay("assignment")}
+        />
+        <PricingCard
+          product="Exam Prep"
+          price={`₦${getPrice("exam").toLocaleString()}`}
+          description="Generate practice questions from your notes and documents"
+          onClick={() => openPay("exam")}
+        />
+        <PricingCard
+          product="Presentation"
+          price={`₦${getPrice("presentation").toLocaleString()}`}
+          description="Create slides with speaker notes, download as PPTX or DOCX"
+          onClick={() => openPay("presentation")}
+        />
+        <PricingCard
+          product="CV Maker"
+          price={`₦${getPrice("cv").toLocaleString()}`}
+          description="Upload or fill in your details, get a professionally formatted CV"
+          onClick={() => openPay("cv")}
+        />
       </div>
 
       {/* Payment history */}
