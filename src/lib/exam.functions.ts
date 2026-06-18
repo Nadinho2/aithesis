@@ -23,6 +23,8 @@ export const generateExam = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => ExamInput.parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
     let notes = data.subject_notes;
     if (data.file_base64 && data.file_mime) {
@@ -58,14 +60,14 @@ ${theoryCount > 0 ? `Generate ${theoryCount} theory questions.` : ""}
 Return ONLY valid JSON (no markdown, no code fences):
 { objectives: [{ question, options: [A,B,C,D], answer: "A" }], theory: [{ question, marks: number }] }`;
 
-    const raw = await callAI(undefined as any, {
+    const raw = await callAI(apiKey, {
       model: "deepseek-v4-pro",
       system: systemPrompt,
       user: notes,
     });
 
-    let cleaned = raw.trim().replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    const parsed = JSON.parse(cleaned);
+    // callAI already returns a parsed object
+    const parsed = raw;
 
     // Store in DB
     if (supabase) {

@@ -63,7 +63,7 @@ export const generateCv = createServerFn({ method: "POST" })
       user: JSON.stringify(cvInfo),
     });
 
-    const cleanedEnhanced = enhanced.replace(/^```|```$/g, "").trim();
+    const cleanedEnhanced = typeof enhanced === "string" ? enhanced.trim() : JSON.stringify(enhanced);
 
     // Store in DB
     if (supabase) {

@@ -198,30 +198,78 @@ const tiers = [
     highlight: false,
   },
   {
-    tier: "Proposal",
-    price: "₦2,000",
-    features: [
-      "Full research proposal draft",
-      "Verified Google Scholar, OpenAlex & Crossref citations",
-      "APA 7th edition formatting",
-      "Chapter 1 & Chapter 3 structure",
-    ],
-    cta: "Start your proposal",
-    highlight: true,
-  },
-  {
-    tier: "Full Thesis",
-    price: "From ₦20,000",
-    features: [
-      "Undergraduate ₦20,000 / Masters ₦40,000 / PhD ₦50,000",
-      "5-chapter thesis draft",
-      "Verified citations throughout",
-      "Download as DOCX or PDF",
-    ],
-    cta: "Start your thesis",
-    highlight: false,
-  },
-];
+      tier: "Proposal",
+      price: "₦2,000",
+      features: [
+        "Full research proposal draft",
+        "Verified Google Scholar, OpenAlex & Crossref citations",
+        "APA 7th / Harvard citation style",
+        "Chapter 1 & Chapter 3 structure",
+      ],
+      cta: "Start your proposal",
+      highlight: true,
+    },
+    {
+      tier: "Full Thesis",
+      price: "From ₦20,000",
+      features: [
+        "Undergraduate ₦20,000 / Masters ₦40,000 / PhD ₦50,000",
+        "5-chapter thesis draft",
+        "Verified citations throughout",
+        "Download as DOCX or PDF",
+      ],
+      cta: "Start your thesis",
+      highlight: false,
+    },
+    {
+      tier: "Assignment",
+      price: "₦1,000",
+      features: [
+        "Upload question text or PDF/DOCX",
+        "Answer with verified sources",
+        "Toggle references on/off",
+        "APA 7th or Harvard style",
+      ],
+      cta: "Get help",
+      highlight: false,
+    },
+    {
+      tier: "Exam Prep",
+      price: "₦1,000",
+      features: [
+        "Upload notes, docs, and images",
+        "Objectives, theory, or both question types",
+        "Custom question count & split",
+        "Multiple-choice with answer keys",
+      ],
+      cta: "Practice now",
+      highlight: false,
+    },
+    {
+      tier: "Presentation",
+      price: "₦3,000",
+      features: [
+        "Upload content and images",
+        "Speaker notes included",
+        "Download PPTX or DOCX",
+        "Custom slide count (5–30)",
+      ],
+      cta: "Create slides",
+      highlight: false,
+    },
+    {
+      tier: "CV Maker",
+      price: "₦3,000",
+      features: [
+        "Upload existing CV to auto-fill",
+        "Manual form entry available",
+        "Add professional headshot",
+        "Download formatted DOCX",
+      ],
+      cta: "Build your CV",
+      highlight: false,
+    },
+  ];
 
 /* ─── Landing Page ─── */
 function LandingPage() {
@@ -299,8 +347,10 @@ function LandingPage() {
         </h1>
 
         <p className="max-w-2xl mx-auto text-lg text-ink-secondary leading-[1.7] mb-10">
-          A writing partner that helps you build well-sourced academic work. Tap into{" "}
-          <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
+          An academic toolkit for students. Generate topics, proposals, and full theses with verified
+          citations. Create assignments with scholarly sources, prepare for exams with custom question
+          papers, build presentations with speaker notes, and craft a professional CV — all powered
+          by <strong className="text-ink font-medium">200M+ peer-reviewed papers</strong> from
           Google Scholar, OpenAlex and Crossref. Every citation carries a{" "}
           <strong className="text-ink font-medium">real DOI</strong> — never a hallucinated source.
         </p>

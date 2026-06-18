@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { callAI } from "./ai-utils.server";
+import { callAIText } from "./ai-utils.server";
 import { fetchScholarlyRefs, formatByStyle, sortReferences } from "./scholarly.server";
 import { parseUploadedFile } from "./upload.server";
 import { buildAssignmentDocx, toBase64 } from "./docx.server";
@@ -20,6 +20,8 @@ export const generateAssignment = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => AssignmentInput.parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
     // Parse uploaded file if provided
     let fileText = "";
@@ -62,7 +64,7 @@ RULES:
 
     const userPrompt = `Assignment question:\n${fullQuestion}\n\n${refContext ? `Scholarly references:\n${refContext}` : ""}`;
 
-    const raw = await callAI(undefined as any, {
+    const raw = await callAIText(apiKey, {
       model: "deepseek-v4-pro",
       system: systemPrompt,
       user: userPrompt,

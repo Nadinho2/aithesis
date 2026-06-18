@@ -20,6 +20,8 @@ export const generatePresentation = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => PresentationInput.parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
     let fullContent = data.content;
     if (data.file_base64 && data.file_mime) {
