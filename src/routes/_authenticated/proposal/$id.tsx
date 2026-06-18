@@ -6,6 +6,13 @@ import { getProposal, exportProposalDocx } from "@/lib/proposals.functions";
 import { ArrowLeft, Loader2, BookOpen, Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+const SOURCE_LABELS: Record<string, string> = {
+  openalex: "OpenAlex",
+  crossref: "Crossref",
+  google_scholar: "Google Scholar",
+  arxiv: "arXiv",
+};
+
 export const Route = createFileRoute("/_authenticated/proposal/$id")({
   head: () => ({ meta: [{ title: "Proposal — ThesisPro" }] }),
   component: ProposalPage,
@@ -187,7 +194,7 @@ function ProposalPage() {
                 r.apa
               )}
               <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40">
-                {r.source.replace("_", " ")}
+                {SOURCE_LABELS[r.source] ?? r.source}
               </span>
             </li>
           ))}

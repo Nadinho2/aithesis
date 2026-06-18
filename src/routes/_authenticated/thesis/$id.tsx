@@ -6,6 +6,13 @@ import { getThesis, exportThesisDocx } from "@/lib/theses.functions";
 import { ArrowLeft, Loader2, BookOpen, Download } from "lucide-react";
 import { toast } from "sonner";
 
+const SOURCE_LABELS: Record<string, string> = {
+  openalex: "OpenAlex",
+  crossref: "Crossref",
+  google_scholar: "Google Scholar",
+  arxiv: "arXiv",
+};
+
 export const Route = createFileRoute("/_authenticated/thesis/$id")({
   head: () => ({ meta: [{ title: "Thesis — ThesisPro" }] }),
   component: ThesisPage,
@@ -131,7 +138,7 @@ function ThesisPage() {
                 r.apa
               )}
               <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40">
-                {r.source.replace("_", " ")}
+                {SOURCE_LABELS[r.source] ?? r.source}
               </span>
             </li>
           ))}
