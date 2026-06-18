@@ -153,9 +153,8 @@ function AssignmentPage() {
       <div className="mb-5 flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-sm text-sm text-blue-800">
         <Info className="size-4 mt-0.5 shrink-0" />
         <p>
-          <strong>Save API tokens:</strong> Use <strong>one input method at a time</strong> —
-          either type / upload a document <em>or</em> upload an image. This reduces processing
-          overhead and speeds up your results.
+          Choose <strong>one input method at a time</strong> — either type / upload a document
+          <em>or</em> upload an image. This keeps processing focused and delivers faster results.
         </p>
       </div>
 
