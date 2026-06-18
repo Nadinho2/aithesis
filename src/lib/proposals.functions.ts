@@ -230,30 +230,22 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
         system: systemPrompt,
         user: userPrompt,
       });
-      // Strip markdown code fences if present
-      let cleaned = raw.trim();
-      if (cleaned.startsWith("```")) {
-        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-      }
+      // callAI already returns a parsed JSON object
+      parsed = ProposalSchema.parse(raw);
+    } catch {
+      // Retry once with a simpler prompt
       try {
-        parsed = ProposalSchema.parse(JSON.parse(cleaned));
-      } catch {
-        // Retry once with a simpler prompt focused on valid JSON
         const retryRaw = await callAI(apiKey, {
           model: "deepseek-v4-pro",
           system: "You are an academic proposal writer. Output ONLY valid JSON matching the exact schema provided. No markdown, no code fences, no commentary.",
           user: `Write a research proposal in JSON for this topic: ${topicCtx.title}\nLevel: ${data.level}\nTarget: ${target} words.\n\nProblem: ${topicCtx.problem_statement}\nGap: ${topicCtx.research_gap}\n\nReferences:\n${refContext}\n\nUse this exact JSON schema:\n{\n  "abstract": "...",\n  "sections": {\n    "background_to_the_study": "...",\n    "statement_of_the_problem": "...",\n    "objectives": ["Obj1"],\n    "research_questions": ["RQ1"],\n    "research_hypotheses": ["H1"],\n    "significance": "...",\n    "scope_of_the_study": "...",\n    "definition_of_terms": "...",\n    "conceptual_review": "...",\n    "empirical_review": "...",\n    "theoretical_review": "...",\n    "theoretical_framework": "...",\n    "summary_of_reviews": "...",\n    "gap_in_literature": "...",\n    "research_design": "...",\n    "area_of_the_study": "...",\n    "population_of_the_study": "...",\n    "sample_size": "...",\n    "sampling_technique": "...",\n    "instrumentation": "...",\n    "validity_of_instrument": "...",\n    "reliability_of_instrument": "...",\n    "method_of_collecting_data": "...",\n    "method_of_data_analysis": "..."\n  }\n}`,
         });
-        let r = retryRaw.trim();
-        if (r.startsWith("```")) {
-          r = r.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-        }
-        parsed = ProposalSchema.parse(JSON.parse(r));
+        parsed = ProposalSchema.parse(retryRaw);
+      } catch (e) {
+        console.error("Proposal AI generation failed:", e instanceof Error ? e.message : String(e));
+        console.error("User prompt length:", userPrompt.length, "target:", target);
+        throw new Error("Proposal generation failed. Please try again.");
       }
-    } catch (e) {
-      console.error("Proposal AI generation failed:", e instanceof Error ? e.message : String(e));
-      console.error("User prompt length:", userPrompt.length, "target:", target);
-      throw new Error("Proposal generation failed. Please try again.");
     }
 
     // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
