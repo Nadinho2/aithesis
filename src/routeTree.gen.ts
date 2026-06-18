@@ -26,6 +26,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedToolsPresentationRouteImport } from './routes/_authenticated/tools/presentation'
+import { Route as AuthenticatedToolsHistoryRouteImport } from './routes/_authenticated/tools/history'
 import { Route as AuthenticatedToolsExamRouteImport } from './routes/_authenticated/tools/exam'
 import { Route as AuthenticatedToolsDashboardRouteImport } from './routes/_authenticated/tools/dashboard'
 import { Route as AuthenticatedToolsCvRouteImport } from './routes/_authenticated/tools/cv'
@@ -120,6 +121,12 @@ const AuthenticatedToolsPresentationRoute =
     path: '/tools/presentation',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedToolsHistoryRoute =
+  AuthenticatedToolsHistoryRouteImport.update({
+    id: '/tools/history',
+    path: '/tools/history',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedToolsExamRoute = AuthenticatedToolsExamRouteImport.update({
   id: '/tools/exam',
   path: '/tools/exam',
@@ -175,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/tools/cv': typeof AuthenticatedToolsCvRoute
   '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
   '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRoutesByTo {
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   '/tools/cv': typeof AuthenticatedToolsCvRoute
   '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
   '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRoutesById {
@@ -225,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/tools/cv': typeof AuthenticatedToolsCvRoute
   '/_authenticated/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
   '/_authenticated/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/_authenticated/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/_authenticated/tools/presentation': typeof AuthenticatedToolsPresentationRoute
 }
 export interface FileRouteTypes {
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/tools/cv'
     | '/tools/dashboard'
     | '/tools/exam'
+    | '/tools/history'
     | '/tools/presentation'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/tools/cv'
     | '/tools/dashboard'
     | '/tools/exam'
+    | '/tools/history'
     | '/tools/presentation'
   id:
     | '__root__'
@@ -300,6 +312,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/cv'
     | '/_authenticated/tools/dashboard'
     | '/_authenticated/tools/exam'
+    | '/_authenticated/tools/history'
     | '/_authenticated/tools/presentation'
   fileRoutesById: FileRoutesById
 }
@@ -434,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedToolsPresentationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools/history': {
+      id: '/_authenticated/tools/history'
+      path: '/tools/history'
+      fullPath: '/tools/history'
+      preLoaderRoute: typeof AuthenticatedToolsHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tools/exam': {
       id: '/_authenticated/tools/exam'
       path: '/tools/exam'
@@ -495,6 +515,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedToolsCvRoute: typeof AuthenticatedToolsCvRoute
   AuthenticatedToolsDashboardRoute: typeof AuthenticatedToolsDashboardRoute
   AuthenticatedToolsExamRoute: typeof AuthenticatedToolsExamRoute
+  AuthenticatedToolsHistoryRoute: typeof AuthenticatedToolsHistoryRoute
   AuthenticatedToolsPresentationRoute: typeof AuthenticatedToolsPresentationRoute
 }
 
@@ -514,6 +535,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedToolsCvRoute: AuthenticatedToolsCvRoute,
   AuthenticatedToolsDashboardRoute: AuthenticatedToolsDashboardRoute,
   AuthenticatedToolsExamRoute: AuthenticatedToolsExamRoute,
+  AuthenticatedToolsHistoryRoute: AuthenticatedToolsHistoryRoute,
   AuthenticatedToolsPresentationRoute: AuthenticatedToolsPresentationRoute,
 }
 
