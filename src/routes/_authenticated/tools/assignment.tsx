@@ -6,7 +6,7 @@ import { generateAssignment, exportAssignmentDocx } from "@/lib/assignments.func
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import {
-  Loader2, Upload, Download, BookOpen, X, Sparkles,
+  Loader2, Upload, Download, BookOpen, X, Sparkles, ImageIcon, FileText, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,8 +21,11 @@ function AssignmentPage() {
   const [question, setQuestion] = useState("");
   const [includeRefs, setIncludeRefs] = useState(true);
   const [citationStyle, setCitationStyle] = useState<"apa_7" | "harvard">("apa_7");
-  const [file, setFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [inputMode, setInputMode] = useState<"text" | "image">("text");
+  const [docFile, setDocFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
+  const [imageFile, setImageFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
+  const docRef = useRef<HTMLInputElement>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{ answer: string; references: any[] } | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -32,17 +35,28 @@ function AssignmentPage() {
     mutationFn: () =>
       genFn({
         data: {
-          question,
+          question: inputMode === "text" ? question : "",
           include_references: includeRefs,
           citation_style: citationStyle,
-          ...(file ? { file_base64: file.base64, file_mime: file.mime, file_name: file.name } : {}),
+          ...(docFile ? { file_base64: docFile.base64, file_mime: docFile.mime, file_name: docFile.name } : {}),
+          ...(imageFile ? { file_base64: imageFile.base64, file_mime: imageFile.mime, file_name: imageFile.name } : {}),
         },
       }),
     onSuccess: (data) => setResult(data),
     onError: (e) => toast.error(String(e)),
   });
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const switchMode = (mode: "text" | "image") => {
+    setInputMode(mode);
+    if (mode === "image") {
+      setQuestion("");
+      setDocFile(null);
+    } else {
+      setImageFile(null);
+    }
+  };
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     const allowed = [
@@ -51,8 +65,8 @@ function AssignmentPage() {
       "application/msword",
       "text/plain",
     ];
-    if (!allowed.includes(f.type) && !f.type.startsWith("image/")) {
-      toast.error("Only PDF, DOCX, TXT, and image files are supported.");
+    if (!allowed.includes(f.type)) {
+      toast.error("Only PDF, DOCX, and TXT files are supported.");
       return;
     }
     const b64 = await new Promise<string>((resolve) => {
@@ -60,13 +74,35 @@ function AssignmentPage() {
       reader.onload = () => resolve((reader.result as string).split(",")[1]);
       reader.readAsDataURL(f);
     });
-    setFile({ base64: b64, mime: f.type, name: f.name });
+    setDocFile({ base64: b64, mime: f.type, name: f.name });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Only image files are supported.");
+      return;
+    }
+    const b64 = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string).split(",")[1]);
+      reader.readAsDataURL(f);
+    });
+    setImageFile({ base64: b64, mime: f.type, name: f.name });
   };
 
   const submit = async () => {
-    if (question.trim().length < 10) {
-      toast.error("Please enter your assignment question (at least 10 characters).");
-      return;
+    if (inputMode === "text") {
+      if (!question.trim() && !docFile) {
+        toast.error("Please enter your question or upload a document.");
+        return;
+      }
+    } else {
+      if (!imageFile) {
+        toast.error("Please upload an image of your assignment question.");
+        return;
+      }
     }
     try {
       const access = await checkAccessFn({ data: { product: "assignment" } });
@@ -113,41 +149,125 @@ function AssignmentPage() {
         </p>
       </div>
 
+      {/* ─── Input Mode Announcement ─── */}
+      <div className="mb-5 flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-sm text-sm text-blue-800">
+        <Info className="size-4 mt-0.5 shrink-0" />
+        <p>
+          <strong>Save API tokens:</strong> Use <strong>one input method at a time</strong> —
+          either type / upload a document <em>or</em> upload an image. This reduces processing
+          overhead and speeds up your results.
+        </p>
+      </div>
+
       {!result ? (
         <div className="space-y-5">
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Paste your assignment question here…"
-            rows={5}
-            className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-sage resize-y"
-          />
-
-          <div className="flex flex-wrap items-center gap-3">
+          {/* ─── Mode Toggle ─── */}
+          <div className="flex items-center gap-2">
             <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="flex items-center gap-2 text-xs px-4 py-2 border border-ink/15 rounded-sm hover:bg-ink/5 transition-colors"
+              onClick={() => switchMode("text")}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm border transition-colors ${
+                inputMode === "text"
+                  ? "bg-ink text-bone border-ink"
+                  : "border-ink/15 text-ink/60 hover:bg-ink/5"
+              }`}
             >
-              <Upload className="size-3.5" />
-              {file ? file.name : "Upload PDF, DOCX or image"}
+              <FileText className="size-3.5" />
+              Text / Document
             </button>
-            {file && (
-              <button
-                onClick={() => setFile(null)}
-                className="p-1.5 text-red-500 hover:bg-red-50 rounded-sm"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".pdf,.docx,.doc,.txt,image/*"
-              onChange={handleFile}
-              className="hidden"
-            />
+            <button
+              onClick={() => switchMode("image")}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm border transition-colors ${
+                inputMode === "image"
+                  ? "bg-ink text-bone border-ink"
+                  : "border-ink/15 text-ink/60 hover:bg-ink/5"
+              }`}
+            >
+              <ImageIcon className="size-3.5" />
+              Upload Image
+            </button>
           </div>
+
+          {/* ─── Text Mode ─── */}
+          {inputMode === "text" && (
+            <>
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Paste your assignment question here…"
+                rows={5}
+                className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-sage resize-y"
+              />
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => docRef.current?.click()}
+                  className="flex items-center gap-2 text-xs px-4 py-2 border border-ink/15 rounded-sm hover:bg-ink/5 transition-colors"
+                >
+                  <Upload className="size-3.5" />
+                  {docFile ? docFile.name : "Upload PDF, DOCX or TXT"}
+                </button>
+                {docFile && (
+                  <button
+                    onClick={() => setDocFile(null)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-sm"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+                <input
+                  ref={docRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt"
+                  onChange={handleDocUpload}
+                  className="hidden"
+                />
+              </div>
+            </>
+          )}
+
+          {/* ─── Image Mode ─── */}
+          {inputMode === "image" && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => imageRef.current?.click()}
+                  className="flex items-center gap-2 text-xs px-4 py-2 border border-ink/15 rounded-sm hover:bg-ink/5 transition-colors"
+                >
+                  <Upload className="size-3.5" />
+                  {imageFile ? "Change image" : "Upload image (screenshot of question)"}
+                </button>
+                {imageFile && (
+                  <button
+                    onClick={() => setImageFile(null)}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-sm"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
+                <input
+                  ref={imageRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </div>
+              {imageFile && (
+                <div className="border border-ink/10 rounded-sm overflow-hidden max-w-md">
+                  <img
+                    src={`data:${imageFile.mime};base64,${imageFile.base64}`}
+                    alt="Uploaded preview"
+                    className="w-full h-auto max-h-64 object-contain bg-white"
+                  />
+                  <p className="text-[10px] text-ink/40 px-2 py-1 border-t border-ink/5 truncate">
+                    {imageFile.name}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm">
