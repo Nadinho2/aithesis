@@ -74,6 +74,10 @@ export const updateUserLimits = createServerFn({ method: "POST" })
         thesis_available_masters: z.number().int().min(0).max(999),
         thesis_available_phd: z.number().int().min(0).max(999),
         proposal_limit: z.number().int().min(0).max(999),
+        assignment_available: z.number().int().min(0).max(999).default(0),
+        exam_available: z.number().int().min(0).max(999).default(0),
+        presentation_available: z.number().int().min(0).max(999).default(0),
+        cv_available: z.number().int().min(0).max(999).default(0),
       })
       .parse(i),
   )
@@ -81,23 +85,38 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     requireAdmin(context.isAdmin);
     const supabase = context.supabase as any;
 
-    const { error } = await supabase.from("user_limits").upsert(
-      {
-        user_id: data.user_id,
-        thesis_available_ug: data.thesis_available_ug,
-        thesis_available_masters: data.thesis_available_masters,
-        thesis_available_phd: data.thesis_available_phd,
-        proposal_limit: data.proposal_limit,
-        assignment_available: data.assignment_available ?? 0,
-        exam_available: data.exam_available ?? 0,
-        presentation_available: data.presentation_available ?? 0,
-        cv_available: data.cv_available ?? 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
+    const payload = {
+      thesis_available_ug: data.thesis_available_ug,
+      thesis_available_masters: data.thesis_available_masters,
+      thesis_available_phd: data.thesis_available_phd,
+      proposal_limit: data.proposal_limit,
+      assignment_available: data.assignment_available ?? 0,
+      exam_available: data.exam_available ?? 0,
+      presentation_available: data.presentation_available ?? 0,
+      cv_available: data.cv_available ?? 0,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (error) throw new Error(error.message);
+    // Check if a row exists for this user
+    const { data: existing } = await supabase
+      .from("user_limits")
+      .select("user_id")
+      .eq("user_id", data.user_id)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      const { error } = await supabase
+        .from("user_limits")
+        .update(payload)
+        .eq("user_id", data.user_id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabase
+        .from("user_limits")
+        .insert({ user_id: data.user_id, ...payload });
+      if (error) throw new Error(error.message);
+    }
+
     return { ok: true };
   });
 
