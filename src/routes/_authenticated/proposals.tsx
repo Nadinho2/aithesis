@@ -25,6 +25,14 @@ function ProposalsListPage() {
   const [showDrafting, setShowDrafting] = useState(() => sessionStorage.getItem("draft_in_progress") !== null);
 
   useEffect(() => {
+    const err = sessionStorage.getItem("draft_error");
+    if (err) {
+      sessionStorage.removeItem("draft_error");
+      toast.error(err);
+    }
+  }, []);
+
+  useEffect(() => {
     if (showDrafting && (data?.length ?? 0) > 0) {
       const hasNew = (data as any[]).some(
         (p) => Date.now() - new Date(p.created_at).getTime() < 120_000

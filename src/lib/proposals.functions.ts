@@ -147,77 +147,55 @@ export const generateProposal = createServerFn({ method: "POST" })
       ? "DO NOT include a Timeline section. Return an empty string for the timeline field."
       : "Include a realistic Timeline section organised by months or quarters covering the full study.";
 
-    const systemPrompt = `You are a senior academic writing a graduate-level research proposal. Your prose must read as authored by a human researcher, not an AI assistant.
+    const systemPrompt = `You are a senior academic writing a graduate-level research proposal. Write in clear, natural academic English with varied sentence structure.
 
-OUTPUT FORMAT — STRICT:
-- Plain text only. NEVER use markdown syntax. NO asterisks (* or **), NO underscores for emphasis, NO backticks, NO hashes (#) for headings, NO hyphen bullets at line starts.
-- Do NOT bold, italicise, or otherwise emphasise words. Emphasis is conveyed through prose, not formatting marks.
-- Separate paragraphs with a single blank line. Each paragraph should be 3–6 sentences; do NOT produce 500-word walls of text.
-- Where a subheading is appropriate (e.g. "Significance to Policymakers", "Definition of Terms"), put the subheading on its OWN line with a blank line above and below it. Do not embed subheading labels inside paragraph prose.
+RULES:
+- Plain text only — NO markdown syntax (no *,**,#,>, -, backticks).
+- Vary sentence length: mix short declarative sentences with longer analytical ones.
+- Use specific, concrete details (numbers, methods, locations).
+- Do not copy phrasing from the provided references — write originally.
+- Each paragraph should be 3-6 sentences.
 
-WRITING RULES — absolute:
-- Write entirely in your own words. NEVER copy phrasing from the reference abstracts.
-- Vary sentence length naturally; mix concise sentences with longer analytical ones.
-- Use specific, concrete details (numbers, methods, locations, examples) over generic statements.
-ORIGINALITY & PLAGIARISM PREVENTION (ABSOLUTE REQUIREMENTS):
-- Every sentence must be 100% originally written. NEVER copy, paraphrase, or closely mirror any existing text from the provided references, your training data, or common academic templates.
-- For each sentence, ask yourself: "Could this sentence be found in any existing paper?" If yes, rewrite it completely.
-- Use highly specific context from the research topic (country, population, methods, dates, institutions) that cannot exist in any other paper.
-- Include concrete, field-specific terminology unique to this topic's discipline.
-- Vary sentence structure aggressively — mix short declarative sentences, complex compound sentences, and occasional questions.
-- BANNED PHRASES (zero tolerance): "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of", "in recent years", "over the years", "in the modern era", "in the digital age", "there is a growing need", "there has been an increasing", "this study aims to", "the purpose of this study", "the main objective", "this research seeks to", "it is against this background", "this study therefore", "the findings of this study", "the results indicate", "based on the findings", "in light of the above".
-- Do NOT begin ANY paragraph with: "In summary", "In conclusion", "Furthermore,", "Moreover,", "However,", "Therefore,", "Additionally,", "Consequently,".
-- At most two em-dashes per section.
-- If a sentence sounds like something a generic AI would write, delete it and rewrite from scratch.
-- READ your output before finalizing. If any 5-word sequence could appear verbatim in an existing academic paper, change those words.
-- Even, scholarly third-person voice. Occasional "we propose" / "we expect" allowed only in methodology.
+CITATION RULES (APA 7th):
+- Only cite the references provided below. Never invent sources.
+- Inline format: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+.
+- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
+- Reference list is rendered separately — do NOT output a bibliography.
 
-CITATION RULES — STRICT APA 7th EDITION:
-- Use ONLY the provided references. Do NOT invent authors, years, journals, or DOIs.
-- Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+.
-- Synthesize at least 12 references across background and literature review — argue, compare, identify gaps; do not summarize one-by-one.
-- Reference list is rendered programmatically, do not output a bibliography.
-
-DOCUMENT REQUIREMENTS:
-- TOTAL TARGET: EXACTLY ${target} words across all sections combined (abstract + every section).
-- Distribute words deliberately. Literature review and background should be the longest.
-- Use the numbered sub-section headings from the schema (e.g. "1.1 Background to the Study", "3.1 Research Design") on their own lines.
-- Methodology must include: research design, area of study, population, sample size, sampling technique, instrumentation, validity, reliability, data collection, data analysis.
-- ${timelineRule}
-
-Return STRICT JSON matching this exact schema:
+OUTPUT: Return ONLY valid JSON matching the schema below. No preamble, no commentary, no markdown.
 
 {
-  "abstract": "full abstract text",
+  "abstract": "...",
   "sections": {
-    "background_to_the_study": "full background text",
-    "statement_of_the_problem": "full problem statement text",
-    "objectives": ["Obj1", "Obj2"],
+    "background_to_the_study": "...",
+    "statement_of_the_problem": "...",
+    "objectives": ["Obj1", "Obj2", "Obj3"],
     "research_questions": ["RQ1", "RQ2"],
-    "research_hypotheses": ["Hypothesis 1", "Hypothesis 2"],
-    "significance": "full significance text",
-    "scope_of_the_study": "full scope text",
-    "definition_of_terms": "definition of key terms",
-    "conceptual_review": "conceptual review text",
-    "empirical_review": "empirical review text",
-    "theoretical_review": "theoretical review text",
-    "theoretical_framework": "theoretical framework text",
-    "summary_of_reviews": "summary text",
-    "gap_in_literature": "gap identification text",
-    "research_design": "research design text",
-    "area_of_the_study": "area description",
-    "population_of_the_study": "population description",
-    "sample_size": "sample size justification",
-    "sampling_technique": "sampling technique description",
-    "instrumentation": "instrument description",
-    "validity_of_instrument": "validity text",
-    "reliability_of_instrument": "reliability text",
-    "method_of_collecting_data": "data collection procedure",
-    "method_of_data_analysis": "data analysis plan"
+    "research_hypotheses": ["H1", "H2"],
+    "significance": "...",
+    "scope_of_the_study": "...",
+    "definition_of_terms": "...",
+    "conceptual_review": "...",
+    "empirical_review": "...",
+    "theoretical_review": "...",
+    "theoretical_framework": "...",
+    "summary_of_reviews": "...",
+    "gap_in_literature": "...",
+    "research_design": "...",
+    "area_of_the_study": "...",
+    "population_of_the_study": "...",
+    "sample_size": "...",
+    "sampling_technique": "...",
+    "instrumentation": "...",
+    "validity_of_instrument": "...",
+    "reliability_of_instrument": "...",
+    "method_of_collecting_data": "...",
+    "method_of_data_analysis": "..."
   }
 }
 
-No markdown, no commentary.`;
+Target: EXACTLY ${target} words total. Distribute words deliberately — literature review and background should be the longest.
+${timelineRule}`;
 
     const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
 
@@ -241,7 +219,26 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
         system: systemPrompt,
         user: userPrompt,
       });
-      parsed = ProposalSchema.parse(raw);
+      // Strip markdown code fences if present
+      let cleaned = raw.trim();
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+      }
+      try {
+        parsed = ProposalSchema.parse(JSON.parse(cleaned));
+      } catch {
+        // Retry once with a simpler prompt focused on valid JSON
+        const retryRaw = await callAI(apiKey, {
+          model: "deepseek-v4-pro",
+          system: "You are an academic proposal writer. Output ONLY valid JSON matching the exact schema provided. No markdown, no code fences, no commentary.",
+          user: `Write a research proposal in JSON for this topic: ${topicCtx.title}\nLevel: ${data.level}\nTarget: ${target} words.\n\nProblem: ${topicCtx.problem_statement}\nGap: ${topicCtx.research_gap}\n\nReferences:\n${refContext}\n\nUse this exact JSON schema:\n{\n  "abstract": "...",\n  "sections": {\n    "background_to_the_study": "...",\n    "statement_of_the_problem": "...",\n    "objectives": ["Obj1"],\n    "research_questions": ["RQ1"],\n    "research_hypotheses": ["H1"],\n    "significance": "...",\n    "scope_of_the_study": "...",\n    "definition_of_terms": "...",\n    "conceptual_review": "...",\n    "empirical_review": "...",\n    "theoretical_review": "...",\n    "theoretical_framework": "...",\n    "summary_of_reviews": "...",\n    "gap_in_literature": "...",\n    "research_design": "...",\n    "area_of_the_study": "...",\n    "population_of_the_study": "...",\n    "sample_size": "...",\n    "sampling_technique": "...",\n    "instrumentation": "...",\n    "validity_of_instrument": "...",\n    "reliability_of_instrument": "...",\n    "method_of_collecting_data": "...",\n    "method_of_data_analysis": "..."\n  }\n}`,
+        });
+        let r = retryRaw.trim();
+        if (r.startsWith("```")) {
+          r = r.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+        }
+        parsed = ProposalSchema.parse(JSON.parse(r));
+      }
     } catch (e) {
       console.error("Proposal AI generation failed:", e instanceof Error ? e.message : String(e));
       console.error("User prompt length:", userPrompt.length, "target:", target);

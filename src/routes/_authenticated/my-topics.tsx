@@ -87,6 +87,7 @@ function MyTopicsPage() {
     // Fire the mutation (fire-and-forget) and navigate immediately
     genFn({ data: { topic_id: topicId, level, target_words } }).catch((e) => {
       console.error("Proposal generation failed:", e);
+      sessionStorage.setItem("draft_error", e instanceof Error ? e.message : String(e));
     });
     toast.info("Drafting your proposal in the background…");
     navigate({ to: "/proposals" });
