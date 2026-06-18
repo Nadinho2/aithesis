@@ -71,8 +71,36 @@ async function crossref(q: string, n: number): Promise<ScholarlyRef[]> {
 }
 
 async function googleScholar(q: string, n: number): Promise<ScholarlyRef[]> {
-  // Google Scholar has no free API. We query Semantic Scholar — its corpus covers the
-  // same peer-reviewed literature (IEEE, Springer, Elsevier, ACM, etc.) indexed by Google Scholar.
+  // If a SerpAPI key is configured, query Google Scholar directly
+  const serpKey = typeof process !== "undefined" ? process.env.SERPAPI_KEY : undefined;
+  if (serpKey) {
+    try {
+      const url = `https://serpapi.com/search?engine=google_scholar&q=${encodeURIComponent(q)}&api_key=${encodeURIComponent(serpKey)}&num=${n}`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (r.ok) {
+        const j: any = await r.json();
+        const results = j.organic_results ?? [];
+        return results.map((p: any) => ({
+          source: "google_scholar" as const,
+          title: p.title ?? "",
+          authors: (p.publication_info?.authors ?? []).map((a: any) => a.name ?? a).filter(Boolean),
+          year: p.year ?? null,
+          venue: p.publication_info?.summary ?? null,
+          doi: null,
+          url: p.link ?? null,
+          abstract: p.snippet ?? null,
+          citation_count: p.cited_by_count ?? null,
+          volume: null,
+          issue: null,
+          pages: null,
+        }));
+      }
+    } catch {
+      // Fall through to Semantic Scholar
+    }
+  }
+
+  // Fallback: Semantic Scholar API (free, no key required)
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(q)}&limit=${n}&fields=title,authors,year,venue,abstract,citationCount,externalIds,url,journal`;
   const r = await fetch(url, { headers: { "User-Agent": UA } });
   if (!r.ok) return [];
