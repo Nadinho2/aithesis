@@ -42,16 +42,20 @@ Keep bullets concise — presentation style.`,
     // callAI already returns a parsed object
     const parsed = raw;
 
-    // Store in DB
+    // Store in DB (fire-and-forget)
     if (supabase) {
-      await supabase.from("presentations").insert({
-        user_id: userId,
-        topic: data.topic,
-        content: fullContent,
-        slide_count: data.slide_count,
-        slides: parsed.slides,
-        status: "completed",
-      }).catch(() => {});
+      try {
+        await supabase.from("presentations").insert({
+          user_id: userId,
+          topic: data.topic,
+          content: fullContent,
+          slide_count: data.slide_count,
+          slides: parsed.slides,
+          status: "completed",
+        });
+      } catch {
+        // non-critical
+      }
     }
 
     return parsed;

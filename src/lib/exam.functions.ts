@@ -69,16 +69,20 @@ Return ONLY valid JSON (no markdown, no code fences):
     // callAI already returns a parsed object
     const parsed = raw;
 
-    // Store in DB
+    // Store in DB (fire-and-forget)
     if (supabase) {
-      await supabase.from("exams").insert({
-        user_id: userId,
-        subject_notes: notes,
-        total_questions: data.total_questions,
-        question_type: data.question_type,
-        questions: parsed,
-        status: "completed",
-      }).catch(() => {});
+      try {
+        await supabase.from("exams").insert({
+          user_id: userId,
+          subject_notes: notes,
+          total_questions: data.total_questions,
+          question_type: data.question_type,
+          questions: parsed,
+          status: "completed",
+        });
+      } catch {
+        // non-critical
+      }
     }
 
     return parsed;

@@ -64,14 +64,18 @@ export const generateCv = createServerFn({ method: "POST" })
 
     const cleanedEnhanced = typeof enhanced === "string" ? enhanced.trim() : JSON.stringify(enhanced);
 
-    // Store in DB
+    // Store in DB (fire-and-forget)
     if (supabase) {
-      await supabase.from("cvs").insert({
-        user_id: userId,
-        cv_data: cvInfo,
-        enhanced: cleanedEnhanced,
-        status: "completed",
-      }).catch(() => {});
+      try {
+        await supabase.from("cvs").insert({
+          user_id: userId,
+          cv_data: cvInfo,
+          enhanced: cleanedEnhanced,
+          status: "completed",
+        });
+      } catch {
+        // non-critical
+      }
     }
 
     return { info: cvInfo, enhanced: cleanedEnhanced, headshot };

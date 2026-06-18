@@ -76,18 +76,22 @@ RULES:
       .replace(/\n?```\s*$/im, "")
       .trim();
 
-    // Store in DB
+    // Store in DB (fire-and-forget)
     if (supabase) {
-      await supabase.from("assignments").insert({
-        user_id: userId,
-        question: fullQuestion,
-        answer,
-        references_list: refs,
-        include_references: data.include_references,
-        citation_style: data.citation_style,
-        word_count: answer.split(/\s+/).length,
-        status: "completed",
-      }).catch(() => {});
+      try {
+        await supabase.from("assignments").insert({
+          user_id: userId,
+          question: fullQuestion,
+          answer,
+          references_list: refs,
+          include_references: data.include_references,
+          citation_style: data.citation_style,
+          word_count: answer.split(/\s+/).length,
+          status: "completed",
+        });
+      } catch {
+        // non-critical
+      }
     }
 
     return { answer, references: data.include_references ? sortReferences(refs) : [] };
