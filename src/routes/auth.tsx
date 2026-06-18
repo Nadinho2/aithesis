@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useSignIn, useSignUp } from "@clerk/clerk-react";
-import { Lock, Eye, EyeOff, Loader2, Mail, KeyRound } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -153,17 +153,21 @@ function AuthForms() {
           <form onSubmit={mode === "signin" ? handleSignIn : handleSignUp} className="space-y-4">
             <div>
               <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
-                Email
+                {mode === "signin" ? "Email or Username" : "Email"}
               </label>
               <div className="relative">
                 <input
-                  type="email"
+                  type={mode === "signin" ? "text" : "email"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@university.edu"
+                  placeholder={mode === "signin" ? "you@university.edu or username" : "you@university.edu"}
                   className="w-full bg-card border border-ink/15 rounded-sm px-3 py-2.5 pl-10 text-sm focus:outline-none focus:border-sage"
                 />
-                <Mail className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                {mode === "signin" ? (
+                  <User className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                ) : (
+                  <Mail className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                )}
               </div>
             </div>
 
