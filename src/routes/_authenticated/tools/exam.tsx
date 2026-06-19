@@ -106,13 +106,13 @@ function ExamPage() {
         return;
       }
     }
-    if (totalQ < 5 || totalQ > 50) {
-      toast.error("Total questions must be between 5 and 50.");
+    if (totalQ < 5 || totalQ > 100) {
+      toast.error("Total questions must be between 5 and 100.");
       return;
     }
     if (qType === "both") {
-      if (theoryCount < 1 || theoryCount > 30 || objectivesCount < 1 || objectivesCount > 30) {
-        toast.error("Theory and Objectives counts must be between 1 and 30.");
+      if (theoryCount < 1 || theoryCount > 100 || objectivesCount < 1 || objectivesCount > 100) {
+        toast.error("Theory and Objectives counts must be between 1 and 100.");
         return;
       }
       if (theoryCount + objectivesCount !== totalQ) {
@@ -309,9 +309,13 @@ function ExamPage() {
                   <input
                     type="number"
                     min={1}
-                    max={30}
+                    max={100}
                     value={objectivesCount}
-                    onChange={(e) => setObjectivesCount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v > 100) toast.error("Maximum of 100 objective questions allowed.");
+                      setObjectivesCount(v);
+                    }}
                     className="mt-1 w-full bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
                   />
                 </div>

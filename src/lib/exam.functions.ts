@@ -8,10 +8,10 @@ export const ExamQuestionType = z.enum(["objectives", "theory", "both"]);
 
 const ExamInput = z.object({
   subject_notes: z.string().min(10).max(20000),
-  total_questions: z.number().int().min(5).max(50).default(20),
+  total_questions: z.number().int().min(5).max(100).default(20),
   question_type: ExamQuestionType.default("both"),
-  theory_count: z.number().int().min(1).max(30).optional(),
-  objectives_count: z.number().int().min(1).max(30).optional(),
+  theory_count: z.number().int().min(1).max(100).optional(),
+  objectives_count: z.number().int().min(1).max(100).optional(),
   file_base64: z.string().optional(),
   file_mime: z.string().optional(),
   file_name: z.string().optional(),
