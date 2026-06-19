@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { generateSideHustle, startSideHustlePlan } from "@/lib/side-hustle.functions";
+import { generateSideHustle, startSideHustlePlan, getActivePlan } from "@/lib/side-hustle.functions";
 import {
   Loader2, Sparkles, ChevronLeft, ChevronRight, Zap, Briefcase,
   Target, Clock, Heart, Star, TrendingUp, Rocket, ExternalLink,
@@ -73,6 +73,27 @@ function SideHustlePage() {
   const [startingIndex, setStartingIndex] = useState<number | null>(null);
   const [journeyPlan, setJourneyPlan] = useState<any>(null);
   const [journeyStep, setJourneyStep] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // ─── Reload active plan from DB (survives refresh/logout) ───
+  const activeFn = useServerFn(getActivePlan);
+  useQuery({
+    queryKey: ["side-hustle-active-plan"],
+    queryFn: async () => {
+      try {
+        const p = await activeFn({});
+        if (p) {
+          setJourneyPlan(p);
+          setJourneyStep(p.current_step ?? 0);
+        }
+      } finally {
+        setInitialLoading(false);
+      }
+      return null;
+    },
+    retry: false,
+    staleTime: 0,
+  });
 
   const startPlan = useMutation({
     mutationFn: ({ suggestion }: { suggestion: any }) =>
@@ -445,6 +466,15 @@ function SideHustlePage() {
 
   // ─── Wizard ───
   const q = QUESTIONS[step];
+
+  // Show loading while checking for existing plan from DB
+  if (initialLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="size-6 animate-spin text-ink/30" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 md:py-12">
