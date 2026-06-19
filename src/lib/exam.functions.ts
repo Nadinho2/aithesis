@@ -55,10 +55,10 @@ export const generateExam = createServerFn({ method: "POST" })
           : 0;
 
     const systemPrompt = `You are an exam preparation assistant. Generate exam questions based on the provided notes.
-${objectiveCount > 0 ? `Generate ${objectiveCount} multiple-choice objectives (4 options each, mark the correct answer).` : ""}
+${objectiveCount > 0 ? `Generate ${objectiveCount} multiple-choice objectives (4 options each, mark the correct answer). Include a brief explanation for each correct answer.` : ""}
 ${theoryCount > 0 ? `Generate ${theoryCount} theory questions.` : ""}
 Return ONLY valid JSON (no markdown, no code fences):
-{ objectives: [{ question, options: [A,B,C,D], answer: "A" }], theory: [{ question, marks: number }] }`;
+{ objectives: [{ question, options: [A,B,C,D], answer: "A", explanation: "Why this is correct" }], theory: [{ question, marks: number }] }`;
 
     const raw = await callAI(apiKey, {
       model: "deepseek-v4-pro",

@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateExam } from "@/lib/exam.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, ImageIcon, Info } from "lucide-react";
+import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, ImageIcon, Info, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/exam")({
@@ -28,6 +28,9 @@ function ExamPage() {
   const imgRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{ objectives: any[]; theory: any[] } | null>(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [submitted, setSubmitted] = useState<Record<number, boolean>>({});
+  const [revealedTheory, setRevealedTheory] = useState<Record<number, boolean>>({});
 
   const mut = useMutation({
     mutationFn: () =>
@@ -296,9 +299,13 @@ function ExamPage() {
                   <input
                     type="number"
                     min={1}
-                    max={30}
+                    max={100}
                     value={theoryCount}
-                    onChange={(e) => setTheoryCount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (v > 100) toast.error("Maximum of 100 theory questions allowed.");
+                      setTheoryCount(v);
+                    }}
                     className="mt-1 w-full bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
                   />
                 </div>
@@ -341,34 +348,144 @@ function ExamPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* ─── Score Summary ─── */}
+          {result.objectives?.length > 0 && (
+            <div className="bg-card border border-ink/10 rounded-sm p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Check className="size-5 text-green-600" />
+                <div>
+                  <p className="text-sm font-medium">
+                    {Object.entries(submitted).filter(
+                      ([i, s]) => s && answers[Number(i)] === result.objectives[Number(i)]?.answer,
+                    ).length}{" "}
+                    / {result.objectives.length} correct
+                  </p>
+                  <p className="text-xs text-ink/40">
+                    {Object.keys(submitted).length} of {result.objectives.length} answered
+                  </p>
+                </div>
+              </div>
+              <div className="text-2xl font-serif text-ink/20">
+                {Math.round(
+                  (Object.entries(submitted).filter(
+                    ([i, s]) => s && answers[Number(i)] === result.objectives[Number(i)]?.answer,
+                  ).length /
+                    result.objectives.length) *
+                    100,
+                )}
+                %
+              </div>
+            </div>
+          )}
+
+          {/* ─── Objectives (Interactive Quiz) ─── */}
           {result.objectives?.length > 0 && (
             <div>
               <h2 className="font-serif text-xl mb-4">
                 Objectives ({result.objectives.length})
               </h2>
-              {result.objectives.map((q: any, i: number) => (
-                <div key={i} className="bg-card border border-ink/10 rounded-sm p-4 mb-3">
-                  <p className="font-medium text-sm mb-2">
-                    {i + 1}. {q.question}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {q.options?.map((o: string, j: number) => (
+              {result.objectives.map((q: any, i: number) => {
+                const isSubmitted = submitted[i];
+                const selected = answers[i];
+                const isCorrect = selected === q.answer;
+                const letterIndex = q.options?.findIndex((o: string) => o === q.answer);
+                const correctLetter = letterIndex >= 0 ? String.fromCharCode(65 + letterIndex) : "";
+                const ansLetterIndex = q.options?.findIndex((o: string) => o === selected);
+                const selectedLetter = ansLetterIndex >= 0 ? String.fromCharCode(65 + ansLetterIndex) : "";
+
+                return (
+                  <div
+                    key={i}
+                    className={`bg-card border rounded-sm p-4 mb-3 transition-colors ${
+                      isSubmitted
+                        ? isCorrect
+                          ? "border-green-300 bg-green-50/50"
+                          : "border-red-200 bg-red-50/50"
+                        : "border-ink/10"
+                    }`}
+                  >
+                    <p className="font-medium text-sm mb-3">
+                      {i + 1}. {q.question}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {q.options?.map((o: string, j: number) => {
+                        const letter = String.fromCharCode(65 + j);
+                        const isAns = letter === correctLetter;
+                        const isSel = letter === selectedLetter;
+                        let btnClass =
+                          "border-ink/10 hover:border-sage/40 hover:bg-sage/5 cursor-pointer";
+
+                        if (isSubmitted) {
+                          if (isAns && isSel) {
+                            btnClass =
+                              "border-green-500 bg-green-100 text-green-800 ring-1 ring-green-500";
+                          } else if (isAns) {
+                            btnClass =
+                              "border-green-400 bg-green-50 text-green-700";
+                          } else if (isSel && !isAns) {
+                            btnClass =
+                              "border-red-400 bg-red-50 text-red-700 line-through";
+                          } else {
+                            btnClass = "border-ink/10 opacity-50";
+                          }
+                        } else if (isSel) {
+                          btnClass =
+                            "border-ink bg-ink/5 text-ink ring-1 ring-ink/20 cursor-pointer";
+                        }
+
+                        return (
+                          <button
+                            key={j}
+                            onClick={() => {
+                              if (!isSubmitted) {
+                                setAnswers((prev) => ({ ...prev, [i]: o }));
+                                setSubmitted((prev) => ({ ...prev, [i]: true }));
+                              }
+                            }}
+                            disabled={isSubmitted}
+                            className={`px-3 py-2 rounded-sm border text-xs text-left transition-all ${btnClass}`}
+                          >
+                            <span className="font-semibold">{letter}.</span> {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* ─── Feedback Note ─── */}
+                    {isSubmitted && (
                       <div
-                        key={j}
-                        className={`px-3 py-1.5 rounded-sm border text-xs ${
-                          o === q.answer
-                            ? "border-green-400 bg-green-50 text-green-700"
-                            : "border-ink/10"
+                        className={`mt-3 flex items-start gap-2 text-xs p-2.5 rounded-sm ${
+                          isCorrect
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {String.fromCharCode(65 + j)}. {o}
+                        {isCorrect ? (
+                          <>
+                            <Check className="size-4 shrink-0 mt-0.5" />
+                            <div>
+                              <strong>✓ Correct!</strong>{" "}
+                              {q.explanation || "Well done! You selected the right answer."}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <BookOpen className="size-4 shrink-0 mt-0.5" />
+                            <div>
+                              <strong>✗ The correct answer is {correctLetter}.</strong>{" "}
+                              {q.explanation || ""}
+                            </div>
+                          </>
+                        )}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
+          {/* ─── Theory (Study Mode with Reveal) ─── */}
           {result.theory?.length > 0 && (
             <div>
               <h2 className="font-serif text-xl mb-4">
@@ -382,14 +499,47 @@ function ExamPage() {
                   {q.marks && (
                     <p className="text-xs text-ink/40 mt-1">[{q.marks} marks]</p>
                   )}
+
+                  {/* ─── Model Answer Reveal ─── */}
+                  {q.model_answer && (
+                    <div className="mt-3">
+                      {revealedTheory[i] ? (
+                        <div className="bg-blue-50 border border-blue-200 rounded-sm p-3 text-xs text-blue-800">
+                          <strong>Model Answer:</strong> {q.model_answer}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            setRevealedTheory((prev) => ({ ...prev, [i]: true }))
+                          }
+                          className="text-xs text-sage hover:text-sage/70 transition-colors"
+                        >
+                          + Reveal model answer
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ─── Student's Notes Textarea ─── */}
+                  <div className="mt-3">
+                    <textarea
+                      placeholder="Jot down your answer ideas here…"
+                      rows={2}
+                      className="w-full bg-paper border border-ink/10 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-sage resize-y"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
           )}
+
           <button
             onClick={() => {
               setResult(null);
               setNotes("");
+              setAnswers({});
+              setSubmitted({});
+              setRevealedTheory({});
             }}
             className="px-4 py-2 border border-ink/15 rounded-sm text-sm hover:bg-ink/5"
           >
