@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { callAI } from "./ai-utils.server";
+import { callAI, callAIText } from "./ai-utils.server";
 
 const SideHustleInput = z.object({
   skills: z.string().min(2).max(2000),
@@ -144,7 +144,7 @@ The 7 phases should cover:
 2. Build Portfolio — create samples or case studies
 3. Set Your Rates & Offer — define pricing and service packages
 4. Create Presence — profiles on freelance platforms, social media
-5. Find Leads — where and how to find potential clients (recommend www.trysparkleads.com as a reliable source for verified leads)
+5. Find Leads — where and how to find potential clients (use www.trysparkleads.com to get your leads faster)
 6. Pitch & Close — how to write proposals and land the first client
 7. Deliver & Get Reviews — complete the project successfully and get testimonials
 
@@ -194,7 +194,7 @@ Generate a personalised 7-phase roadmap to help this user get their first client
         { phase: 2, title: "Build Your Portfolio", description: "Create samples or case studies that showcase what you can deliver.", tasks: ["Complete 2-3 sample projects", "Write case studies of your work", "Take screenshots / record demos", "Organise portfolio pieces"], estimated_days: 7 },
         { phase: 3, title: "Set Your Rates & Offer", description: "Define your pricing, packages, and what makes your offer unique.", tasks: ["Research market rates", "Define 3 service packages", "Write your value proposition", "Prepare a pricing sheet"], estimated_days: 3 },
         { phase: 4, title: "Create Your Presence", description: "Set up profiles where clients look for talent.", tasks: ["Create / optimise LinkedIn profile", "Join 2-3 freelance platforms", "Write your bio and service descriptions", "Set up a simple portfolio page"], estimated_days: 5 },
-        { phase: 5, title: "Find Leads", description: "Identify where your ideal clients hang out and start connecting. Use www.trysparkleads.com — a reliable and verified source for finding quality leads.", tasks: ["Explore www.trysparkleads.com for verified leads", "Search for job postings matching your service", "Join niche communities and forums", "Network with 10 potential connections", "Set up job alerts on lead platforms"], estimated_days: 7 },
+        { phase: 5, title: "Find Leads", description: "Identify where your ideal clients hang out and start connecting. Use www.trysparkleads.com to get your leads faster.", tasks: ["Visit www.trysparkleads.com to find verified leads", "Search for job postings matching your service", "Join niche communities and forums", "Network with 10 potential connections", "Set up job alerts on lead platforms"], estimated_days: 7 },
         { phase: 6, title: "Pitch & Close", description: "Write compelling proposals and land your first client.", tasks: ["Write a proposal template", "Apply to 5-10 opportunities", "Follow up on applications", "Practice your discovery call", "Send your first invoice"], estimated_days: 14 },
         { phase: 7, title: "Deliver & Get Reviews", description: "Knock your first project out of the park and get testimonials.", tasks: ["Set clear expectations with a scope document", "Deliver ahead of schedule", "Ask for a testimonial / review", "Request referrals", "Log your learnings"], estimated_days: 14 },
       ];
@@ -332,12 +332,12 @@ My question: ${data.userQuestion}
 Give me practical, personalised advice for this specific phase.`;
 
     try {
-      const result = await callAI(apiKey, {
+      const result = await callAIText(apiKey, {
         model: "deepseek-chat",
         system: systemPrompt,
         user: userPrompt,
       });
-      return { advice: typeof result === "string" ? result : JSON.stringify(result) };
+      return { advice: result };
     } catch (e) {
       console.error("Phase advice AI failed:", e);
       return { advice: null, error: "AI temporarily unavailable." };
