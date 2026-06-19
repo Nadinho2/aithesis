@@ -70,9 +70,10 @@ function SideHustlePage() {
     experience: "",
   });
   const [result, setResult] = useState<any>(null);
+  const [startingIndex, setStartingIndex] = useState<number | null>(null);
 
   const startPlan = useMutation({
-    mutationFn: (suggestion: any) =>
+    mutationFn: ({ suggestion }: { suggestion: any }) =>
       startPlanFn({
         data: {
           sideHustleId: result?.recordId,
@@ -86,10 +87,14 @@ function SideHustlePage() {
         },
       }),
     onSuccess: () => {
+      setStartingIndex(null);
       toast.success("Journey started! Let's get you to your first client.");
       navigate({ to: "/tools/side-hustle/journey" });
     },
-    onError: (e) => toast.error(String(e)),
+    onError: (e) => {
+      setStartingIndex(null);
+      toast.error(String(e));
+    },
   });
 
   const mut = useMutation({
@@ -234,16 +239,19 @@ function SideHustlePage() {
 
               {/* Start this side hustle */}
               <button
-                onClick={() => startPlan.mutate(item)}
-                disabled={startPlan.isPending}
+                onClick={() => {
+                  setStartingIndex(i);
+                  startPlan.mutate({ suggestion: item });
+                }}
+                disabled={startingIndex !== null}
                 className="w-full flex items-center justify-center gap-2 text-xs px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 font-medium"
               >
-                {startPlan.isPending ? (
+                {startingIndex === i ? (
                   <Loader2 className="size-3.5 animate-spin" />
                 ) : (
                   <Rocket className="size-3.5" />
                 )}
-                Start This Side Hustle — Get Your Roadmap
+                {startingIndex === i ? "Creating your roadmap…" : "Start This Side Hustle — Get Your Roadmap"}
               </button>
             </div>
           ))}

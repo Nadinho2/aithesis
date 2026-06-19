@@ -103,7 +103,7 @@ ${data.experience}`;
 // ─── Side Hustle Journey / Plan ───
 
 const StartPlanInput = z.object({
-  sideHustleId: z.string().uuid(),
+  sideHustleId: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(500),
   difficulty: z.string().optional(),
   estimatedEarnings: z.string().optional(),

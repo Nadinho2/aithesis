@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS public.side_hustle_plans (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id text NOT NULL,
-  side_hustle_id uuid REFERENCES public.side_hustles(id) ON DELETE SET NULL,
+  side_hustle_id uuid,
   title text NOT NULL,
   difficulty text DEFAULT 'Beginner',
   estimated_earnings text DEFAULT '',
