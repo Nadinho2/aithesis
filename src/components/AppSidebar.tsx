@@ -20,6 +20,7 @@ import {
   UserSquare2,
   Menu,
   X,
+  Zap,
 } from "lucide-react";
 
 type NavItem = {
@@ -40,6 +41,7 @@ const baseNav: NavItem[] = [
 ];
 
 const toolsNav: NavItem[] = [
+  { to: "/tools/side-hustle", label: "Side Hustle", icon: Zap },
   { to: "/tools/assignment", label: "Assignment", icon: FileEdit },
   { to: "/tools/exam", label: "Exam Prep", icon: GraduationCap },
   { to: "/tools/presentation", label: "Presentation", icon: Presentation },
