@@ -5,7 +5,7 @@ import { verifyPayment } from "@/lib/payment.functions";
 import {
   Sparkles, Bookmark, CheckCircle, Loader2, XCircle,
   FileText, GraduationCap, Presentation, UserSquare2, BookOpen,
-  Library, History, Settings, ChevronDown, FlaskConical,
+  Library, History, Settings, ChevronDown, FlaskConical, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -132,10 +132,11 @@ function DashboardPage() {
           onToggle={() => toggle("career")}
           icon={UserSquare2}
           label="Career Tools"
-          desc="Presentations and CV building"
+          desc="Side hustles, presentations, and CV building"
           gradient="from-purple-600 to-pink-600"
         >
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <PricedCard to="/tools/side-hustle" icon={Zap} label="Side Hustle Finder" desc="Answer 5 questions and discover personalised side hustle ideas tailored to you." price="₦1,000" color="bg-yellow-100 text-yellow-700" />
             <PricedCard to="/tools/presentation" icon={Presentation} label="Presentation Assistant" desc="Create professional slide decks with speaker notes for your career talks." price="₦3,000" color="bg-amber-100 text-amber-700" />
             <PricedCard to="/tools/cv" icon={UserSquare2} label="CV Maker" desc="Upload or fill in your details. Get a professionally formatted CV." price="₦3,000" color="bg-purple-100 text-purple-700" />
           </div>

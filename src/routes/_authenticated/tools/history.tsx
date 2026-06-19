@@ -7,9 +7,10 @@ import {
   listExams, deleteExam,
   listPresentations, deletePresentation,
   listCvs, deleteCv,
+  listSideHustles, deleteSideHustle,
 } from "@/lib/tool-history.functions";
 import {
-  FileText, GraduationCap, Presentation, UserSquare2,
+  FileText, GraduationCap, Presentation, UserSquare2, Zap,
   Loader2, Trash2, Calendar, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,31 +20,34 @@ export const Route = createFileRoute("/_authenticated/tools/history")({
   component: ToolHistoryPage,
 });
 
-type Tab = "assignments" | "exams" | "presentations" | "cvs";
+type Tab = "assignments" | "exams" | "presentations" | "cvs" | "side_hustles";
 
 const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
   { key: "assignments", label: "Assignments", icon: FileText },
   { key: "exams", label: "Exams", icon: GraduationCap },
   { key: "presentations", label: "Presentations", icon: Presentation },
   { key: "cvs", label: "CVs", icon: UserSquare2 },
+  { key: "side_hustles", label: "Side Hustles", icon: Zap },
 ];
 
 function ToolHistoryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("assignments");
   const queryClient = useQueryClient();
 
-  const listFns = {
+  const listFns: Record<Tab, any> = {
     assignments: useServerFn(listAssignments),
     exams: useServerFn(listExams),
     presentations: useServerFn(listPresentations),
     cvs: useServerFn(listCvs),
+    side_hustles: useServerFn(listSideHustles),
   };
 
-  const deleteFns = {
+  const deleteFns: Record<Tab, any> = {
     assignments: useServerFn(deleteAssignment),
     exams: useServerFn(deleteExam),
     presentations: useServerFn(deletePresentation),
     cvs: useServerFn(deleteCv),
+    side_hustles: useServerFn(deleteSideHustle),
   };
 
   const { data, isLoading } = useQuery({
@@ -106,7 +110,15 @@ function ToolHistoryPage() {
           <TabIcon className="mx-auto size-8 text-ink/20 mb-3" />
           <p className="text-ink/40 text-sm mb-4">No {activeTab} yet</p>
           <Link
-            to={activeTab === "assignments" ? "/tools/assignment" : `/tools/${activeTab === "exams" ? "exam" : activeTab === "presentations" ? "presentation" : "cv"}`}
+            to={(() => {
+              switch (activeTab) {
+                case "assignments": return "/tools/assignment";
+                case "exams": return "/tools/exam";
+                case "presentations": return "/tools/presentation";
+                case "cvs": return "/tools/cv";
+                case "side_hustles": return "/tools/side-hustle";
+              }
+            })()}
             className="text-sm text-sage hover:underline font-medium"
           >
             Create one now
@@ -131,32 +143,39 @@ function ToolHistoryPage() {
 }
 
 function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: () => void }) {
-  const title =
-    tab === "assignments"
-      ? item.question?.slice(0, 80) + (item.question?.length > 80 ? "…" : "")
-      : tab === "exams"
-        ? `${item.total_questions} ${item.question_type} questions` + (item.subject_notes ? ` — ${item.subject_notes.slice(0, 50)}…` : "")
-        : tab === "presentations"
-          ? item.topic
-          : `CV — ${new Date(item.created_at).toLocaleDateString()}`;
+  let title = "";
+  let subtitle = "";
+  let viewPath = "";
 
-  const subtitle =
-    tab === "assignments"
-      ? `${item.word_count ?? 0} words`
-      : tab === "exams"
-        ? item.subject_notes?.slice(0, 80) + (item.subject_notes?.length > 80 ? "…" : "")
-        : tab === "presentations"
-          ? `${item.slide_count} slides`
-          : "CV document";
-
-  const viewPath =
-    tab === "assignments"
-      ? `/tools/assignment/${item.id}`
-      : tab === "exams"
-        ? `/tools/exam/${item.id}`
-        : tab === "presentations"
-          ? `/tools/presentation/${item.id}`
-          : `/tools/cv/${item.id}`;
+  switch (tab) {
+    case "assignments":
+      title = item.question?.slice(0, 80) + (item.question?.length > 80 ? "…" : "");
+      subtitle = `${item.word_count ?? 0} words`;
+      viewPath = `/tools/assignment/${item.id}`;
+      break;
+    case "exams":
+      title = `${item.total_questions} ${item.question_type} questions` + (item.subject_notes ? ` — ${item.subject_notes.slice(0, 50)}…` : "");
+      subtitle = item.subject_notes?.slice(0, 80) + (item.subject_notes?.length > 80 ? "…" : "");
+      viewPath = `/tools/exam/${item.id}`;
+      break;
+    case "presentations":
+      title = item.topic;
+      subtitle = `${item.slide_count} slides`;
+      viewPath = `/tools/presentation/${item.id}`;
+      break;
+    case "cvs":
+      title = `CV — ${new Date(item.created_at).toLocaleDateString()}`;
+      subtitle = "CV document";
+      viewPath = `/tools/cv/${item.id}`;
+      break;
+    case "side_hustles": {
+      const answers = typeof item.answers === "string" ? JSON.parse(item.answers) : item.answers;
+      title = answers?.skills?.slice(0, 60) + (answers?.skills?.length > 60 ? "…" : "") || "Side hustle ideas";
+      subtitle = new Date(item.created_at).toLocaleDateString();
+      viewPath = `/tools/side-hustle/${item.id}`;
+      break;
+    }
+  }
 
   return (
     <Link
