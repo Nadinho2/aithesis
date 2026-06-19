@@ -22,7 +22,7 @@ const GenerateInput = z
     topic_id: z.string().uuid().optional(),
     manual: ManualTopic.optional(),
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
-    target_words: z.number().int().min(2500).max(3000).default(2800),
+    target_words: z.number().int().min(500).max(20000).default(2800),
     citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
@@ -251,7 +251,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
     // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
     let total = countWordsDeep(parsed);
     let attempts = 0;
-    while (total < target && attempts < 1) {
+    while (total < target && attempts < 5) {
       attempts++;
       const diff = target - total;
       try {

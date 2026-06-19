@@ -208,13 +208,13 @@ function QuickProposalPage() {
           </div>
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
-              Target Words (2,500 – 3,000)
+              Target Words
             </label>
             <input
               type="number"
-              min={2500}
-              max={3000}
-              step={50}
+              min={500}
+              max={20000}
+              step={100}
               value={form.target_words}
               onChange={(e) => setForm({ ...form, target_words: Number(e.target.value) })}
               className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage"

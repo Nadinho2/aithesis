@@ -81,7 +81,7 @@ function MyTopicsPage() {
 
   const handleGenerate = async (topicId: string) => {
     const level = (genLevel[topicId] ?? "undergraduate") as "undergraduate" | "masters" | "phd";
-    const target_words = Math.min(3000, Math.max(2500, genWords[topicId] ?? 2800));
+    const target_words = Math.min(20000, Math.max(500, genWords[topicId] ?? 2800));
     setGenBusy(topicId);
     sessionStorage.setItem("draft_in_progress", Date.now().toString());
     // Fire the mutation (fire-and-forget) and navigate immediately
@@ -262,15 +262,15 @@ function MyTopicsPage() {
                         </select>
                         <input
                           type="number"
-                          min={2500}
-                          max={3000}
-                          step={50}
+                          min={500}
+                          max={20000}
+                          step={100}
                           value={genWords[t.id] ?? 2800}
                           onChange={(e) =>
                             setGenWords({ ...genWords, [t.id]: Number(e.target.value) })
                           }
-                          title="Target words (2,500–3,000)"
-                          className="text-xs bg-bone border border-ink/15 rounded-sm px-2 py-1.5 w-20 focus:outline-none focus:border-sage"
+                          title="Target words"
+                          className="text-xs bg-bone border border-ink/15 rounded-sm px-2 py-1.5 w-24 focus:outline-none focus:border-sage"
                         />
                         <button
                           onClick={() => handleGenerate(t.id)}
