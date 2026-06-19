@@ -13,9 +13,22 @@ export async function parseUploadedFile(
   const images: string[] = [];
 
   if (mimeType === "application/pdf") {
-    const pdfParse: any = await import("pdf-parse");
-    const data = await pdfParse.default(buffer);
-    text.push(data.text);
+    // Use pdfjs-dist legacy build (no canvas/DOM dependencies) for server-side text extraction
+    try {
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(" ");
+        text.push(pageText);
+      }
+    } catch {
+      // Fallback: try pdf-parse (requires DOMMatrix polyfill)
+      const pdfParse: any = await import("pdf-parse");
+      const data = await pdfParse.default(buffer);
+      text.push(data.text);
+    }
   } else if (
     mimeType ===
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||

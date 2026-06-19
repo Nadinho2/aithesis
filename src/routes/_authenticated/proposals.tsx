@@ -48,7 +48,8 @@ function ProposalsListPage() {
     setThesisBusy(id);
     try {
       const p = await getFn({ data: { id } });
-      const s = (p.sections as Record<string, any>) ?? {};
+      // sections may be a parsed object or a JSON string from supabase
+      const s = (typeof p.sections === "string" ? JSON.parse(p.sections) : p.sections ?? {}) as Record<string, any>;
       const objectives: string[] = Array.isArray(s.objectives) && s.objectives.length
         ? s.objectives
         : ["Investigate the central problem identified in the proposal."];

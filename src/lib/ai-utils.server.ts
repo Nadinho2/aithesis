@@ -106,19 +106,22 @@ export async function callAI(
     model: string;
     system: string;
     user: string;
+    max_tokens?: number;
   },
 ): Promise<any> {
+  const body: Record<string, any> = {
+    model: opts.model,
+    messages: [
+      { role: "system", content: opts.system },
+      { role: "user", content: opts.user },
+    ],
+    response_format: { type: "json_object" },
+  };
+  if (opts.max_tokens) body.max_tokens = opts.max_tokens;
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: opts.model,
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: opts.user },
-      ],
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(body),
   });
   if (!resp.ok) {
     const text = await resp.text();

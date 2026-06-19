@@ -57,8 +57,9 @@ export const generateCv = createServerFn({ method: "POST" })
     // Enhance with AI — improve wording, format professionally
     const enhanced = await callAI(apiKey, {
       model: "deepseek-v4-pro",
+      max_tokens: 4096,
       system:
-        "You are a professional CV writer. Improve the wording of this CV information. Make it concise, professional, and achievement-oriented. Return ONLY the improved text in the same format. No markdown.",
+        "You are a professional CV writer. Improve the wording of this CV information. Make it concise, professional, and achievement-oriented. Return ONLY valid JSON (no markdown, no code fences) in this exact format: { full_name: string, email: string, phone: string, address: string, summary: string, education: string, experience: string, skills: string, certifications: string, languages: string }",
       user: JSON.stringify(cvInfo),
     });
 
