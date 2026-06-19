@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { generateSideHustle, startSideHustlePlan, getActivePlan } from "@/lib/side-hustle.functions";
+import { generateSideHustle, startSideHustlePlan, getActivePlan, askPhaseAdvice } from "@/lib/side-hustle.functions";
 import {
   Loader2, Sparkles, ChevronLeft, ChevronRight, Zap, Briefcase,
   Target, Clock, Heart, Star, TrendingUp, Rocket, ExternalLink,
   CheckCircle2, Circle, Trophy, DollarSign, Flag,
+  MessageCircle, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,9 +59,172 @@ const QUESTIONS = [
   },
 ];
 
+/* ─── Milestone Card with AI Advice ─── */
+function MilestoneCard({
+  milestone: m,
+  index: i,
+  isCompleted,
+  isCurrent,
+  isLocked,
+  sideHustleTitle,
+  adviceFn,
+  onToggle,
+}: {
+  milestone: any;
+  index: number;
+  isCompleted: boolean;
+  isCurrent: boolean;
+  isLocked: boolean;
+  sideHustleTitle: string;
+  adviceFn: any;
+  onToggle: () => void;
+}) {
+  const [showAdvice, setShowAdvice] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [adviceResult, setAdviceResult] = useState<string | null>(null);
+  const [adviceLoading, setAdviceLoading] = useState(false);
+
+  const handleAsk = async () => {
+    if (!question.trim() || question.trim().length < 2) {
+      toast.error("Please type a question first.");
+      return;
+    }
+    setAdviceLoading(true);
+    setAdviceResult(null);
+    try {
+      const res = await adviceFn({
+        data: {
+          sideHustleTitle,
+          phaseTitle: m.title,
+          phaseDescription: m.description || "",
+          phaseTasks: m.tasks || [],
+          userQuestion: question.trim(),
+        },
+      });
+      if (res?.advice) {
+        setAdviceResult(res.advice);
+      } else {
+        setAdviceResult("I wasn't able to generate advice right now. Please try again.");
+      }
+    } catch (e) {
+      setAdviceResult("Something went wrong. Please try again.");
+    } finally {
+      setAdviceLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className={`border rounded-sm p-5 transition-all ${
+        isCurrent
+          ? "border-purple-300 bg-purple-50/30 shadow-sm"
+          : isCompleted
+            ? "border-green-200 bg-green-50/20"
+            : "border-ink/10 bg-card opacity-60"
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <button onClick={onToggle} className={`shrink-0 transition-colors ${isCompleted ? "text-green-500 hover:text-green-600" : isCurrent ? "text-purple-400 hover:text-purple-600" : "text-ink/20 cursor-not-allowed"}`}>
+            {isCompleted ? <CheckCircle2 className="size-6" /> : isCurrent ? <Circle className="size-6 fill-purple-100" /> : <Circle className="size-6" />}
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ink/30">Phase {m.phase}</span>
+              {isCompleted && <span className="text-[10px] font-semibold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-sm">Done</span>}
+              {isCurrent && <span className="text-[10px] font-semibold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-sm">In Progress</span>}
+            </div>
+            <h3 className="font-serif text-lg">{m.title}</h3>
+          </div>
+        </div>
+        <span className="text-[10px] text-ink/30 flex items-center gap-1 shrink-0">
+          <Clock className="size-3" /> ~{m.estimated_days} days
+        </span>
+      </div>
+
+      <p className="text-sm text-ink/60 leading-relaxed mb-3 ml-9">{m.description}</p>
+
+      {m.tasks?.length > 0 && (
+        <div className="ml-9 space-y-1.5 mb-4">
+          {m.tasks.map((task: string, j: number) => (
+            <div key={j} className="flex items-start gap-2 text-xs text-ink/50">
+              <span className="size-1.5 rounded-full bg-ink/20 mt-1.5 shrink-0" />
+              {task}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ─── AI Advice Panel ─── */}
+      <div className="ml-9 border-t border-ink/5 pt-3">
+        {!showAdvice ? (
+          <button
+            onClick={() => {
+              setShowAdvice(true);
+              if (!adviceResult) setAdviceResult(null);
+            }}
+            className="flex items-center gap-1.5 text-[11px] text-purple-600 hover:text-purple-700 font-medium transition-colors"
+          >
+            <MessageCircle className="size-3.5" />
+            Ask AI for advice on this phase
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="E.g. What skills should I focus on first?"
+                className="flex-1 bg-paper border border-ink/15 rounded-sm px-3 py-2 text-xs focus:outline-none focus:border-purple-400"
+                onKeyDown={(e) => e.key === "Enter" && handleAsk()}
+              />
+              <button
+                onClick={handleAsk}
+                disabled={adviceLoading || !question.trim()}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 bg-purple-600 text-white rounded-sm hover:bg-purple-700 transition-colors disabled:opacity-30 shrink-0"
+              >
+                {adviceLoading ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              </button>
+            </div>
+
+            {adviceLoading && (
+              <div className="flex items-center gap-2 text-xs text-ink/40">
+                <Loader2 className="size-3 animate-spin" />
+                Getting personalised advice…
+              </div>
+            )}
+
+            {adviceResult && (
+              <div className="bg-purple-50 border border-purple-100 rounded-sm p-3">
+                <div className="flex items-start gap-2">
+                  <MessageCircle className="size-3.5 text-purple-500 mt-0.5 shrink-0" />
+                  <div className="text-xs text-ink/70 leading-relaxed whitespace-pre-wrap">{adviceResult}</div>
+                </div>
+                <button
+                  onClick={() => {
+                    setQuestion("");
+                    setAdviceResult(null);
+                    setShowAdvice(false);
+                  }}
+                  className="mt-2 text-[10px] text-ink/30 hover:text-ink transition-colors"
+                >
+                  Clear advice
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SideHustlePage() {
   const genFn = useServerFn(generateSideHustle);
   const startPlanFn = useServerFn(startSideHustlePlan);
+  const adviceFn = useServerFn(askPhaseAdvice);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({
     skills: "",
@@ -236,75 +400,23 @@ function SideHustlePage() {
             const isLocked = i > currentStep;
 
             return (
-              <div
+              <MilestoneCard
                 key={i}
-                className={`border rounded-sm p-5 transition-all ${
-                  isCurrent
-                    ? "border-purple-300 bg-purple-50/30 shadow-sm"
-                    : isCompleted
-                      ? "border-green-200 bg-green-50/20"
-                      : "border-ink/10 bg-card opacity-60"
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => {
-                        if (isCompleted) {
-                          setJourneyStep(Math.max(0, i - 1));
-                        } else if (isCurrent || isLocked) {
-                          setJourneyStep(i + 1);
-                        }
-                      }}
-                      className={`shrink-0 transition-colors ${
-                        isCompleted
-                          ? "text-green-500 hover:text-green-600"
-                          : isCurrent
-                            ? "text-purple-400 hover:text-purple-600"
-                            : "text-ink/20 cursor-not-allowed"
-                      }`}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle2 className="size-6" />
-                      ) : isCurrent ? (
-                        <Circle className="size-6 fill-purple-100" />
-                      ) : (
-                        <Circle className="size-6" />
-                      )}
-                    </button>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-ink/30">
-                          Phase {m.phase}
-                        </span>
-                        {isCompleted && (
-                          <span className="text-[10px] font-semibold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-sm">Done</span>
-                        )}
-                        {isCurrent && (
-                          <span className="text-[10px] font-semibold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-sm">In Progress</span>
-                        )}
-                      </div>
-                      <h3 className="font-serif text-lg">{m.title}</h3>
-                    </div>
-                  </div>
-                  <span className="text-[10px] text-ink/30 flex items-center gap-1 shrink-0">
-                    <Clock className="size-3" /> ~{m.estimated_days} days
-                  </span>
-                </div>
-
-                <p className="text-sm text-ink/60 leading-relaxed mb-3 ml-9">{m.description}</p>
-
-                {m.tasks?.length > 0 && (
-                  <div className="ml-9 space-y-1.5">
-                    {m.tasks.map((task: string, j: number) => (
-                      <div key={j} className="flex items-start gap-2 text-xs text-ink/50">
-                        <span className="size-1.5 rounded-full bg-ink/20 mt-1.5 shrink-0" />
-                        {task}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                milestone={m}
+                index={i}
+                isCompleted={isCompleted}
+                isCurrent={isCurrent}
+                isLocked={isLocked}
+                sideHustleTitle={journeyPlan.title}
+                adviceFn={adviceFn}
+                onToggle={() => {
+                  if (isCompleted) {
+                    setJourneyStep(Math.max(0, i - 1));
+                  } else if (isCurrent || isLocked) {
+                    setJourneyStep(i + 1);
+                  }
+                }}
+              />
             );
           })}
         </div>

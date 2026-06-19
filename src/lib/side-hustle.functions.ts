@@ -295,6 +295,55 @@ export const completePlan = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ─── Phase Advice / Guidance ───
+
+const AskAdviceInput = z.object({
+  sideHustleTitle: z.string().min(1).max(500),
+  phaseTitle: z.string().min(1).max(500),
+  phaseDescription: z.string().optional().default(""),
+  phaseTasks: z.array(z.string()).optional().default([]),
+  userQuestion: z.string().min(2).max(2000),
+});
+
+export const askPhaseAdvice = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => AskAdviceInput.parse(i))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) return { advice: null };
+
+    const systemPrompt = `You are a personal side-hustle coach and mentor. The user is working through a milestone in their journey to launching a side hustle and getting their first paying client.
+
+Given the phase they're on and their specific question, provide:
+1. A direct, practical answer to their question
+2. Specific actionable steps or resources they can use right now
+3. Encouragement tailored to where they are in the journey
+
+Keep your response concise (3-6 sentences), warm but professional, and extremely practical. Avoid generic advice — make it specific to their phase and question.`;
+
+    const userPrompt = `My side hustle: ${data.sideHustleTitle}
+
+Current phase: ${data.phaseTitle}
+Phase description: ${data.phaseDescription}
+Phase tasks: ${(data.phaseTasks || []).join(", ")}
+
+My question: ${data.userQuestion}
+
+Give me practical, personalised advice for this specific phase.`;
+
+    try {
+      const result = await callAI(apiKey, {
+        model: "deepseek-chat",
+        system: systemPrompt,
+        user: userPrompt,
+      });
+      return { advice: typeof result === "string" ? result : JSON.stringify(result) };
+    } catch (e) {
+      console.error("Phase advice AI failed:", e);
+      return { advice: null, error: "AI temporarily unavailable." };
+    }
+  });
+
 export const listPlans = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
