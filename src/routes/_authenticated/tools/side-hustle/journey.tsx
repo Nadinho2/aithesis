@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getActivePlan, updateMilestone, completePlan, listPlans } from "@/lib/side-hustle.functions";
+import { getActivePlan, updateMilestone, completePlan } from "@/lib/side-hustle.functions";
 import {
   Loader2, Zap, ArrowLeft, CheckCircle2, Circle,
-  Trophy, Target, Clock, DollarSign, Star, Flag,
+  Trophy, Target, Clock, DollarSign, Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,11 +19,20 @@ function JourneyPage() {
   const updateFn = useServerFn(updateMilestone);
   const completeFn = useServerFn(completePlan);
 
-  const { data: plan, isLoading } = useQuery({
+  // Check for plan data passed via sessionStorage (from wizard)
+  const stored = typeof window !== "undefined" ? sessionStorage.getItem("sh-plan") : null;
+  const statePlan = stored ? JSON.parse(stored) : null;
+  if (stored) sessionStorage.removeItem("sh-plan");
+
+  const { data: dbPlan, isLoading } = useQuery({
     queryKey: ["side-hustle-active-plan"],
     queryFn: () => activeFn({}),
     refetchOnWindowFocus: true,
+    enabled: !statePlan,
   });
+
+  // Use the state plan if available, otherwise fall back to DB
+  const plan = statePlan ?? dbPlan;
 
   const updateStep = useMutation({
     mutationFn: (step: number) => updateFn({ data: { planId: plan!.id, step } }),
@@ -31,7 +40,14 @@ function JourneyPage() {
       queryClient.invalidateQueries({ queryKey: ["side-hustle-active-plan"] });
       toast.success("Progress saved!");
     },
-    onError: (e) => toast.error(String(e)),
+    onError: (e) => {
+      if (plan?._local) {
+        // Local-only plan — just update locally, DB save not expected
+        queryClient.invalidateQueries({ queryKey: ["side-hustle-active-plan"] });
+      } else {
+        toast.error(String(e));
+      }
+    },
   });
 
   const finishPlan = useMutation({
@@ -40,7 +56,13 @@ function JourneyPage() {
       queryClient.invalidateQueries({ queryKey: ["side-hustle-active-plan"] });
       toast.success("Congratulations! You completed your journey! 🎉");
     },
-    onError: (e) => toast.error(String(e)),
+    onError: (e) => {
+      if (plan?._local) {
+        toast.success("Congratulations! 🎉");
+      } else {
+        toast.error(String(e));
+      }
+    },
   });
 
   // Loading

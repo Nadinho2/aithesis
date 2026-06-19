@@ -86,8 +86,9 @@ function SideHustlePage() {
           userAnswers: result?.userAnswers,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (plan) => {
       setStartingIndex(null);
+      sessionStorage.setItem("sh-plan", JSON.stringify(plan));
       toast.success("Journey started! Let's get you to your first client.");
       navigate({ to: "/tools/side-hustle/journey" });
     },
