@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyPayment } from "@/lib/payment.functions";
+import { getActivePlan } from "@/lib/side-hustle.functions";
 import {
   Sparkles, Bookmark, CheckCircle, Loader2, XCircle,
   FileText, GraduationCap, Presentation, UserSquare2, BookOpen,
-  Library, History, Settings, ChevronDown, FlaskConical, Zap,
+  Library, History, Settings, ChevronDown, FlaskConical, Zap, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,6 +65,56 @@ function PaymentVerifier() {
 }
 
 type Section = "research" | "student" | "career" | "account";
+
+/* ─── Active Journey Card ─── */
+function ActiveJourneyCard() {
+  const activeFn = useServerFn(getActivePlan);
+  const { data: plan } = useQuery({
+    queryKey: ["side-hustle-active-plan"],
+    queryFn: () => activeFn({}),
+    refetchInterval: 30000,
+  });
+
+  if (!plan) return null;
+
+  const milestones = typeof plan.milestones === "string" ? JSON.parse(plan.milestones) : plan.milestones;
+  const totalSteps = milestones?.length ?? 7;
+  const currentStep = plan.current_step ?? 0;
+  const progressPct = Math.round((currentStep / totalSteps) * 100);
+
+  return (
+    <Link
+      to="/tools/side-hustle/journey"
+      className="mt-3 block p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-md hover:border-purple-300 transition-all group"
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-purple-100 text-purple-700">
+            <Target className="size-4" />
+          </div>
+          <div>
+            <h3 className="font-serif text-sm group-hover:text-sage transition-colors">
+              {plan.title}
+            </h3>
+            <p className="text-[10px] text-ink/40">Active journey</p>
+          </div>
+        </div>
+        <span className="text-[10px] font-semibold text-purple-700 bg-purple-100 px-1.5 py-0.5 rounded-sm">
+          {progressPct}%
+        </span>
+      </div>
+      <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+      <p className="text-[10px] text-ink/40 mt-1.5">
+        {currentStep} of {totalSteps} phases &middot; Goal: First paying client
+      </p>
+    </Link>
+  );
+}
 
 function DashboardPage() {
   const [open, setOpen] = useState<Section>("research");
@@ -140,6 +192,7 @@ function DashboardPage() {
             <PricedCard to="/tools/presentation" icon={Presentation} label="Presentation Assistant" desc="Create professional slide decks with speaker notes for your career talks." price="₦3,000" color="bg-amber-100 text-amber-700" />
             <PricedCard to="/tools/cv" icon={UserSquare2} label="CV Maker" desc="Upload or fill in your details. Get a professionally formatted CV." price="₦3,000" color="bg-purple-100 text-purple-700" />
           </div>
+          <ActiveJourneyCard />
         </SectionBlock>
 
         {/* ===== ACCOUNT ===== */}

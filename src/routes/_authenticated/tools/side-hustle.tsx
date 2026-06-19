@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { generateSideHustle } from "@/lib/side-hustle.functions";
+import { generateSideHustle, startSideHustlePlan } from "@/lib/side-hustle.functions";
 import {
   Loader2, Sparkles, ChevronLeft, ChevronRight, Zap, Briefcase,
-  Target, Clock, Heart, Star, TrendingUp,
+  Target, Clock, Heart, Star, TrendingUp, ArrowRight, Rocket, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -58,7 +58,9 @@ const QUESTIONS = [
 ];
 
 function SideHustlePage() {
+  const navigate = useNavigate();
   const genFn = useServerFn(generateSideHustle);
+  const startPlanFn = useServerFn(startSideHustlePlan);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({
     skills: "",
@@ -68,6 +70,27 @@ function SideHustlePage() {
     experience: "",
   });
   const [result, setResult] = useState<any>(null);
+
+  const startPlan = useMutation({
+    mutationFn: (suggestion: any) =>
+      startPlanFn({
+        data: {
+          sideHustleId: result?.recordId,
+          title: suggestion.title,
+          difficulty: suggestion.difficulty,
+          estimatedEarnings: suggestion.estimated_earnings,
+          timeRequired: suggestion.time_required,
+          description: suggestion.description,
+          firstSteps: suggestion.first_steps,
+          userAnswers: result?.userAnswers,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Journey started! Let's get you to your first client.");
+      navigate({ to: "/tools/side-hustle/journey" });
+    },
+    onError: (e) => toast.error(String(e)),
+  });
 
   const mut = useMutation({
     mutationFn: () =>
@@ -208,20 +231,46 @@ function SideHustlePage() {
                   </ol>
                 </div>
               )}
+
+              {/* Start this side hustle */}
+              <button
+                onClick={() => startPlan.mutate(item)}
+                disabled={startPlan.isPending}
+                className="w-full flex items-center justify-center gap-2 text-xs px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-sm hover:opacity-90 transition-opacity disabled:opacity-30 font-medium"
+              >
+                {startPlan.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Rocket className="size-3.5" />
+                )}
+                Start This Side Hustle — Get Your Roadmap
+              </button>
             </div>
           ))}
         </div>
 
-        <button
-          onClick={() => {
-            setResult(null);
-            setAnswers({ skills: "", interests: "", time: "", goal: "", experience: "" });
-            setStep(0);
-          }}
-          className="mt-6 px-4 py-2 border border-ink/15 rounded-sm text-sm hover:bg-ink/5"
-        >
-          Start Over
-        </button>
+        <div className="mt-8 flex flex-wrap gap-3 items-center justify-between">
+          <button
+            onClick={() => {
+              setResult(null);
+              setAnswers({ skills: "", interests: "", time: "", goal: "", experience: "" });
+              setStep(0);
+            }}
+            className="px-4 py-2 border border-ink/15 rounded-sm text-sm hover:bg-ink/5"
+          >
+            Start Over
+          </button>
+          {result.recordId && (
+            <Link
+              to="/tools/side-hustle/$id"
+              params={{ id: result.recordId }}
+              className="flex items-center gap-1.5 text-xs px-4 py-2 border border-purple-200 text-purple-700 rounded-sm hover:bg-purple-50 transition-colors"
+            >
+              <ExternalLink className="size-3.5" />
+              View Full Details
+            </Link>
+          )}
+        </div>
       </div>
     );
   }

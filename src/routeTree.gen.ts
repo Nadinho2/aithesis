@@ -35,6 +35,8 @@ import { Route as AuthenticatedToolsCvRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedToolsAssignmentRouteImport } from './routes/_authenticated/tools/assignment'
 import { Route as AuthenticatedThesisIdRouteImport } from './routes/_authenticated/thesis/$id'
 import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authenticated/proposal/$id'
+import { Route as AuthenticatedToolsSideHustlePlansRouteImport } from './routes/_authenticated/tools/side-hustle/plans'
+import { Route as AuthenticatedToolsSideHustleJourneyRouteImport } from './routes/_authenticated/tools/side-hustle/journey'
 import { Route as AuthenticatedToolsSideHustleIdRouteImport } from './routes/_authenticated/tools/side-hustle.$id'
 import { Route as AuthenticatedToolsPresentationIdRouteImport } from './routes/_authenticated/tools/presentation.$id'
 import { Route as AuthenticatedToolsExamIdRouteImport } from './routes/_authenticated/tools/exam.$id'
@@ -177,6 +179,18 @@ const AuthenticatedProposalIdRoute = AuthenticatedProposalIdRouteImport.update({
   path: '/proposal/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedToolsSideHustlePlansRoute =
+  AuthenticatedToolsSideHustlePlansRouteImport.update({
+    id: '/plans',
+    path: '/plans',
+    getParentRoute: () => AuthenticatedToolsSideHustleRoute,
+  } as any)
+const AuthenticatedToolsSideHustleJourneyRoute =
+  AuthenticatedToolsSideHustleJourneyRouteImport.update({
+    id: '/journey',
+    path: '/journey',
+    getParentRoute: () => AuthenticatedToolsSideHustleRoute,
+  } as any)
 const AuthenticatedToolsSideHustleIdRoute =
   AuthenticatedToolsSideHustleIdRouteImport.update({
     id: '/$id',
@@ -238,6 +252,8 @@ export interface FileRoutesByFullPath {
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
+  '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
+  '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -270,6 +286,8 @@ export interface FileRoutesByTo {
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
+  '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
+  '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -304,6 +322,8 @@ export interface FileRoutesById {
   '/_authenticated/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/_authenticated/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
   '/_authenticated/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
+  '/_authenticated/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
+  '/_authenticated/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -338,6 +358,8 @@ export interface FileRouteTypes {
     | '/tools/exam/$id'
     | '/tools/presentation/$id'
     | '/tools/side-hustle/$id'
+    | '/tools/side-hustle/journey'
+    | '/tools/side-hustle/plans'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -370,6 +392,8 @@ export interface FileRouteTypes {
     | '/tools/exam/$id'
     | '/tools/presentation/$id'
     | '/tools/side-hustle/$id'
+    | '/tools/side-hustle/journey'
+    | '/tools/side-hustle/plans'
   id:
     | '__root__'
     | '/'
@@ -403,6 +427,8 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/exam/$id'
     | '/_authenticated/tools/presentation/$id'
     | '/_authenticated/tools/side-hustle/$id'
+    | '/_authenticated/tools/side-hustle/journey'
+    | '/_authenticated/tools/side-hustle/plans'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -600,6 +626,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProposalIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools/side-hustle/plans': {
+      id: '/_authenticated/tools/side-hustle/plans'
+      path: '/plans'
+      fullPath: '/tools/side-hustle/plans'
+      preLoaderRoute: typeof AuthenticatedToolsSideHustlePlansRouteImport
+      parentRoute: typeof AuthenticatedToolsSideHustleRoute
+    }
+    '/_authenticated/tools/side-hustle/journey': {
+      id: '/_authenticated/tools/side-hustle/journey'
+      path: '/journey'
+      fullPath: '/tools/side-hustle/journey'
+      preLoaderRoute: typeof AuthenticatedToolsSideHustleJourneyRouteImport
+      parentRoute: typeof AuthenticatedToolsSideHustleRoute
+    }
     '/_authenticated/tools/side-hustle/$id': {
       id: '/_authenticated/tools/side-hustle/$id'
       path: '/$id'
@@ -694,11 +734,17 @@ const AuthenticatedToolsPresentationRouteWithChildren =
 
 interface AuthenticatedToolsSideHustleRouteChildren {
   AuthenticatedToolsSideHustleIdRoute: typeof AuthenticatedToolsSideHustleIdRoute
+  AuthenticatedToolsSideHustleJourneyRoute: typeof AuthenticatedToolsSideHustleJourneyRoute
+  AuthenticatedToolsSideHustlePlansRoute: typeof AuthenticatedToolsSideHustlePlansRoute
 }
 
 const AuthenticatedToolsSideHustleRouteChildren: AuthenticatedToolsSideHustleRouteChildren =
   {
     AuthenticatedToolsSideHustleIdRoute: AuthenticatedToolsSideHustleIdRoute,
+    AuthenticatedToolsSideHustleJourneyRoute:
+      AuthenticatedToolsSideHustleJourneyRoute,
+    AuthenticatedToolsSideHustlePlansRoute:
+      AuthenticatedToolsSideHustlePlansRoute,
   }
 
 const AuthenticatedToolsSideHustleRouteWithChildren =
