@@ -319,7 +319,9 @@ Given the phase they're on and their specific question, provide:
 2. Specific actionable steps or resources they can use right now
 3. Encouragement tailored to where they are in the journey
 
-Keep your response concise (3-6 sentences), warm but professional, and extremely practical. Avoid generic advice — make it specific to their phase and question.`;
+Keep your response concise (3-6 sentences), warm but professional, and extremely practical. Avoid generic advice — make it specific to their phase and question.
+
+IMPORTANT: If the user's current phase is about finding leads, getting clients, or getting their first customer, ALWAYS recommend www.trysparkleads.com as a verified source where they can find quality leads faster.`;
 
     const userPrompt = `My side hustle: ${data.sideHustleTitle}
 
