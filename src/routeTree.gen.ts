@@ -34,6 +34,10 @@ import { Route as AuthenticatedToolsCvRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedToolsAssignmentRouteImport } from './routes/_authenticated/tools/assignment'
 import { Route as AuthenticatedThesisIdRouteImport } from './routes/_authenticated/thesis/$id'
 import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authenticated/proposal/$id'
+import { Route as AuthenticatedToolsPresentationIdRouteImport } from './routes/_authenticated/tools/presentation.$id'
+import { Route as AuthenticatedToolsExamIdRouteImport } from './routes/_authenticated/tools/exam.$id'
+import { Route as AuthenticatedToolsCvIdRouteImport } from './routes/_authenticated/tools/cv.$id'
+import { Route as AuthenticatedToolsAssignmentIdRouteImport } from './routes/_authenticated/tools/assignment.$id'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -165,6 +169,29 @@ const AuthenticatedProposalIdRoute = AuthenticatedProposalIdRouteImport.update({
   path: '/proposal/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedToolsPresentationIdRoute =
+  AuthenticatedToolsPresentationIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedToolsPresentationRoute,
+  } as any)
+const AuthenticatedToolsExamIdRoute =
+  AuthenticatedToolsExamIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedToolsExamRoute,
+  } as any)
+const AuthenticatedToolsCvIdRoute = AuthenticatedToolsCvIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedToolsCvRoute,
+} as any)
+const AuthenticatedToolsAssignmentIdRoute =
+  AuthenticatedToolsAssignmentIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedToolsAssignmentRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -185,12 +212,16 @@ export interface FileRoutesByFullPath {
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
-  '/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
-  '/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
+  '/tools/cv': typeof AuthenticatedToolsCvRouteWithChildren
   '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
-  '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/tools/history': typeof AuthenticatedToolsHistoryRoute
-  '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
+  '/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
+  '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
+  '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
+  '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -211,12 +242,16 @@ export interface FileRoutesByTo {
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
-  '/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
-  '/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
+  '/tools/cv': typeof AuthenticatedToolsCvRouteWithChildren
   '/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
-  '/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/tools/history': typeof AuthenticatedToolsHistoryRoute
-  '/tools/presentation': typeof AuthenticatedToolsPresentationRoute
+  '/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
+  '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
+  '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
+  '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,12 +274,16 @@ export interface FileRoutesById {
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/_authenticated/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/_authenticated/thesis/$id': typeof AuthenticatedThesisIdRoute
-  '/_authenticated/tools/assignment': typeof AuthenticatedToolsAssignmentRoute
-  '/_authenticated/tools/cv': typeof AuthenticatedToolsCvRoute
+  '/_authenticated/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
+  '/_authenticated/tools/cv': typeof AuthenticatedToolsCvRouteWithChildren
   '/_authenticated/tools/dashboard': typeof AuthenticatedToolsDashboardRoute
-  '/_authenticated/tools/exam': typeof AuthenticatedToolsExamRoute
+  '/_authenticated/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/_authenticated/tools/history': typeof AuthenticatedToolsHistoryRoute
-  '/_authenticated/tools/presentation': typeof AuthenticatedToolsPresentationRoute
+  '/_authenticated/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/_authenticated/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
+  '/_authenticated/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
+  '/_authenticated/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
+  '/_authenticated/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -273,6 +312,10 @@ export interface FileRouteTypes {
     | '/tools/exam'
     | '/tools/history'
     | '/tools/presentation'
+    | '/tools/assignment/$id'
+    | '/tools/cv/$id'
+    | '/tools/exam/$id'
+    | '/tools/presentation/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -299,6 +342,10 @@ export interface FileRouteTypes {
     | '/tools/exam'
     | '/tools/history'
     | '/tools/presentation'
+    | '/tools/assignment/$id'
+    | '/tools/cv/$id'
+    | '/tools/exam/$id'
+    | '/tools/presentation/$id'
   id:
     | '__root__'
     | '/'
@@ -326,6 +373,10 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/exam'
     | '/_authenticated/tools/history'
     | '/_authenticated/tools/presentation'
+    | '/_authenticated/tools/assignment/$id'
+    | '/_authenticated/tools/cv/$id'
+    | '/_authenticated/tools/exam/$id'
+    | '/_authenticated/tools/presentation/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -516,8 +567,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProposalIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools/presentation/$id': {
+      id: '/_authenticated/tools/presentation/$id'
+      path: '/$id'
+      fullPath: '/tools/presentation/$id'
+      preLoaderRoute: typeof AuthenticatedToolsPresentationIdRouteImport
+      parentRoute: typeof AuthenticatedToolsPresentationRoute
+    }
+    '/_authenticated/tools/exam/$id': {
+      id: '/_authenticated/tools/exam/$id'
+      path: '/$id'
+      fullPath: '/tools/exam/$id'
+      preLoaderRoute: typeof AuthenticatedToolsExamIdRouteImport
+      parentRoute: typeof AuthenticatedToolsExamRoute
+    }
+    '/_authenticated/tools/cv/$id': {
+      id: '/_authenticated/tools/cv/$id'
+      path: '/$id'
+      fullPath: '/tools/cv/$id'
+      preLoaderRoute: typeof AuthenticatedToolsCvIdRouteImport
+      parentRoute: typeof AuthenticatedToolsCvRoute
+    }
+    '/_authenticated/tools/assignment/$id': {
+      id: '/_authenticated/tools/assignment/$id'
+      path: '/$id'
+      fullPath: '/tools/assignment/$id'
+      preLoaderRoute: typeof AuthenticatedToolsAssignmentIdRouteImport
+      parentRoute: typeof AuthenticatedToolsAssignmentRoute
+    }
   }
 }
+
+interface AuthenticatedToolsAssignmentRouteChildren {
+  AuthenticatedToolsAssignmentIdRoute: typeof AuthenticatedToolsAssignmentIdRoute
+}
+
+const AuthenticatedToolsAssignmentRouteChildren: AuthenticatedToolsAssignmentRouteChildren =
+  {
+    AuthenticatedToolsAssignmentIdRoute: AuthenticatedToolsAssignmentIdRoute,
+  }
+
+const AuthenticatedToolsAssignmentRouteWithChildren =
+  AuthenticatedToolsAssignmentRoute._addFileChildren(
+    AuthenticatedToolsAssignmentRouteChildren,
+  )
+
+interface AuthenticatedToolsCvRouteChildren {
+  AuthenticatedToolsCvIdRoute: typeof AuthenticatedToolsCvIdRoute
+}
+
+const AuthenticatedToolsCvRouteChildren: AuthenticatedToolsCvRouteChildren = {
+  AuthenticatedToolsCvIdRoute: AuthenticatedToolsCvIdRoute,
+}
+
+const AuthenticatedToolsCvRouteWithChildren =
+  AuthenticatedToolsCvRoute._addFileChildren(AuthenticatedToolsCvRouteChildren)
+
+interface AuthenticatedToolsExamRouteChildren {
+  AuthenticatedToolsExamIdRoute: typeof AuthenticatedToolsExamIdRoute
+}
+
+const AuthenticatedToolsExamRouteChildren: AuthenticatedToolsExamRouteChildren =
+  {
+    AuthenticatedToolsExamIdRoute: AuthenticatedToolsExamIdRoute,
+  }
+
+const AuthenticatedToolsExamRouteWithChildren =
+  AuthenticatedToolsExamRoute._addFileChildren(
+    AuthenticatedToolsExamRouteChildren,
+  )
+
+interface AuthenticatedToolsPresentationRouteChildren {
+  AuthenticatedToolsPresentationIdRoute: typeof AuthenticatedToolsPresentationIdRoute
+}
+
+const AuthenticatedToolsPresentationRouteChildren: AuthenticatedToolsPresentationRouteChildren =
+  {
+    AuthenticatedToolsPresentationIdRoute:
+      AuthenticatedToolsPresentationIdRoute,
+  }
+
+const AuthenticatedToolsPresentationRouteWithChildren =
+  AuthenticatedToolsPresentationRoute._addFileChildren(
+    AuthenticatedToolsPresentationRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
@@ -531,12 +664,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedProposalIdRoute: typeof AuthenticatedProposalIdRoute
   AuthenticatedThesisIdRoute: typeof AuthenticatedThesisIdRoute
-  AuthenticatedToolsAssignmentRoute: typeof AuthenticatedToolsAssignmentRoute
-  AuthenticatedToolsCvRoute: typeof AuthenticatedToolsCvRoute
+  AuthenticatedToolsAssignmentRoute: typeof AuthenticatedToolsAssignmentRouteWithChildren
+  AuthenticatedToolsCvRoute: typeof AuthenticatedToolsCvRouteWithChildren
   AuthenticatedToolsDashboardRoute: typeof AuthenticatedToolsDashboardRoute
-  AuthenticatedToolsExamRoute: typeof AuthenticatedToolsExamRoute
+  AuthenticatedToolsExamRoute: typeof AuthenticatedToolsExamRouteWithChildren
   AuthenticatedToolsHistoryRoute: typeof AuthenticatedToolsHistoryRoute
-  AuthenticatedToolsPresentationRoute: typeof AuthenticatedToolsPresentationRoute
+  AuthenticatedToolsPresentationRoute: typeof AuthenticatedToolsPresentationRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -551,12 +684,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedProposalIdRoute: AuthenticatedProposalIdRoute,
   AuthenticatedThesisIdRoute: AuthenticatedThesisIdRoute,
-  AuthenticatedToolsAssignmentRoute: AuthenticatedToolsAssignmentRoute,
-  AuthenticatedToolsCvRoute: AuthenticatedToolsCvRoute,
+  AuthenticatedToolsAssignmentRoute:
+    AuthenticatedToolsAssignmentRouteWithChildren,
+  AuthenticatedToolsCvRoute: AuthenticatedToolsCvRouteWithChildren,
   AuthenticatedToolsDashboardRoute: AuthenticatedToolsDashboardRoute,
-  AuthenticatedToolsExamRoute: AuthenticatedToolsExamRoute,
+  AuthenticatedToolsExamRoute: AuthenticatedToolsExamRouteWithChildren,
   AuthenticatedToolsHistoryRoute: AuthenticatedToolsHistoryRoute,
-  AuthenticatedToolsPresentationRoute: AuthenticatedToolsPresentationRoute,
+  AuthenticatedToolsPresentationRoute:
+    AuthenticatedToolsPresentationRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -10,7 +10,7 @@ import {
 } from "@/lib/tool-history.functions";
 import {
   FileText, GraduationCap, Presentation, UserSquare2,
-  Loader2, Trash2, Calendar,
+  Loader2, Trash2, Calendar, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -149,10 +149,22 @@ function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: (
           ? `${item.slide_count} slides`
           : "CV document";
 
+  const viewPath =
+    tab === "assignments"
+      ? `/tools/assignment/${item.id}`
+      : tab === "exams"
+        ? `/tools/exam/${item.id}`
+        : tab === "presentations"
+          ? `/tools/presentation/${item.id}`
+          : `/tools/cv/${item.id}`;
+
   return (
-    <div className="flex items-center justify-between bg-card border border-ink/10 rounded-sm p-4 hover:border-ink/20 transition-colors">
+    <Link
+      to={viewPath}
+      className="flex items-center justify-between bg-card border border-ink/10 rounded-sm p-4 hover:border-ink/20 transition-colors group"
+    >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{title}</p>
+        <p className="text-sm font-medium truncate group-hover:text-sage transition-colors">{title}</p>
         <div className="flex items-center gap-3 mt-1 text-xs text-ink/40">
           <span className="flex items-center gap-1">
             <Calendar className="size-3" />
@@ -163,13 +175,17 @@ function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: (
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
         <button
-          onClick={onDelete}
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete();
+          }}
           className="p-1.5 text-ink/30 hover:text-red-500 transition-colors"
           title="Delete"
         >
           <Trash2 className="size-4" />
         </button>
+        <ChevronRight className="size-4 text-ink/20 group-hover:text-ink/40 transition-colors" />
       </div>
-    </div>
+    </Link>
   );
 }
