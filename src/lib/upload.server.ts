@@ -26,17 +26,7 @@ export async function parseUploadedFile(
     text.push(result.value);
   } else if (mimeType.startsWith("image/")) {
     images.push(`data:${mimeType};base64,${base64}`);
-    // Try OCR for text extraction (tesseract.js may not be installed)
-    try {
-      let Tesseract: any;
-      try { Tesseract = await import("tesseract.js"); } catch { Tesseract = null; }
-      if (Tesseract?.recognize) {
-        const { data } = await Tesseract.recognize(buffer, "eng");
-        if (data.text.trim()) text.push(data.text);
-      }
-    } catch {
-      // OCR failed — image will be sent as base64 context
-    }
+    // Images are sent as base64 context to the AI — no OCR needed
   } else {
     // Plain text fallback
     text.push(buffer.toString("utf-8"));
