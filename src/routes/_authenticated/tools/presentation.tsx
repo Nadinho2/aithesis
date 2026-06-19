@@ -325,7 +325,7 @@ function PresentationPage() {
               min={5}
               max={30}
               value={slideCount}
-              onChange={(e) => setSlideCount(Number(e.target.value))}
+              onChange={(e) => setSlideCount(Math.min(30, Math.max(5, Number(e.target.value))))}
               className="mt-1 w-32 bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
             />
           </div>

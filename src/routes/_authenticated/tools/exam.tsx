@@ -106,9 +106,19 @@ function ExamPage() {
         return;
       }
     }
-    if (qType === "both" && theoryCount + objectivesCount !== totalQ) {
-      toast.error(`Theory (${theoryCount}) + Objectives (${objectivesCount}) must equal ${totalQ}.`);
+    if (totalQ < 5 || totalQ > 50) {
+      toast.error("Total questions must be between 5 and 50.");
       return;
+    }
+    if (qType === "both") {
+      if (theoryCount < 1 || theoryCount > 30 || objectivesCount < 1 || objectivesCount > 30) {
+        toast.error("Theory and Objectives counts must be between 1 and 30.");
+        return;
+      }
+      if (theoryCount + objectivesCount !== totalQ) {
+        toast.error(`Theory (${theoryCount}) + Objectives (${objectivesCount}) must equal ${totalQ}.`);
+        return;
+      }
     }
     try {
       const access = await checkAccessFn({ data: { product: "exam" } });
