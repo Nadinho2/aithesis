@@ -58,7 +58,9 @@ export const generateExam = createServerFn({ method: "POST" })
 ${objectiveCount > 0 ? `Generate ${objectiveCount} multiple-choice objectives (4 options each, mark the correct answer). Include a brief explanation for each correct answer.` : ""}
 ${theoryCount > 0 ? `Generate ${theoryCount} theory questions.` : ""}
 Return ONLY valid JSON (no markdown, no code fences):
-{ objectives: [{ question, options: [A,B,C,D], answer: "A", explanation: "Why this is correct" }], theory: [{ question, marks: number }] }`;
+{ objectives: [{ question: "question text", options: ["Option A text", "Option B text", "Option C text", "Option D text"], answer: "Option A text", explanation: "Why this is correct" }], theory: [{ question: "question text", marks: number }] }
+IMPORTANT: The "answer" field must contain the FULL TEXT of the correct option, NOT a letter label.
+IMPORTANT: Each option in the "options" array must be the full text of the choice, not just "A", "B", etc.`;
 
     const raw = await callAI(apiKey, {
       model: "deepseek-v4-pro",

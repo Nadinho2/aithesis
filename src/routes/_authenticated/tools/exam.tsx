@@ -133,6 +133,20 @@ function ExamPage() {
     mut.mutate();
   };
 
+  const matchAnswer = (q: any, selected: string | undefined) => {
+    if (!q || !selected) return false;
+    if (q.answer === selected) return true;
+    if (typeof q.answer === "string" && q.answer.length === 1 && /^[A-D]$/i.test(q.answer)) {
+      const idx = q.answer.toUpperCase().charCodeAt(0) - 65;
+      return q.options?.[idx] === selected;
+    }
+    return false;
+  };
+
+  const correctCount = result
+    ? Object.entries(submitted).filter(([i, s]) => s && matchAnswer(result.objectives[Number(i)], answers[Number(i)])).length
+    : 0;
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
       <div className="mb-6">
@@ -270,9 +284,13 @@ function ExamPage() {
               <input
                 type="number"
                 min={5}
-                max={50}
+                max={100}
                 value={totalQ}
-                onChange={(e) => setTotalQ(Number(e.target.value))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v > 100) toast.error("Maximum of 100 questions allowed.");
+                  setTotalQ(v);
+                }}
                 className="mt-1 w-full bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
               />
             </div>
@@ -355,10 +373,7 @@ function ExamPage() {
                 <Check className="size-5 text-green-600" />
                 <div>
                   <p className="text-sm font-medium">
-                    {Object.entries(submitted).filter(
-                      ([i, s]) => s && answers[Number(i)] === result.objectives[Number(i)]?.answer,
-                    ).length}{" "}
-                    / {result.objectives.length} correct
+                    {correctCount} / {result.objectives.length} correct
                   </p>
                   <p className="text-xs text-ink/40">
                     {Object.keys(submitted).length} of {result.objectives.length} answered
@@ -366,13 +381,7 @@ function ExamPage() {
                 </div>
               </div>
               <div className="text-2xl font-serif text-ink/20">
-                {Math.round(
-                  (Object.entries(submitted).filter(
-                    ([i, s]) => s && answers[Number(i)] === result.objectives[Number(i)]?.answer,
-                  ).length /
-                    result.objectives.length) *
-                    100,
-                )}
+                {result.objectives.length > 0 ? Math.round((correctCount / result.objectives.length) * 100) : 0}
                 %
               </div>
             </div>
@@ -387,9 +396,12 @@ function ExamPage() {
               {result.objectives.map((q: any, i: number) => {
                 const isSubmitted = submitted[i];
                 const selected = answers[i];
-                const isCorrect = selected === q.answer;
-                const letterIndex = q.options?.findIndex((o: string) => o === q.answer);
-                const correctLetter = letterIndex >= 0 ? String.fromCharCode(65 + letterIndex) : "";
+                const answerIsLetter = typeof q.answer === "string" && q.answer.length === 1 && /^[A-D]$/i.test(q.answer);
+                const correctIndex = answerIsLetter
+                  ? q.answer.toUpperCase().charCodeAt(0) - 65
+                  : q.options?.findIndex((o: string) => o === q.answer) ?? -1;
+                const correctLetter = correctIndex >= 0 ? String.fromCharCode(65 + correctIndex) : "";
+                const matchResult = q.answer === selected || (answerIsLetter && q.options?.indexOf(selected) === correctIndex);
                 const ansLetterIndex = q.options?.findIndex((o: string) => o === selected);
                 const selectedLetter = ansLetterIndex >= 0 ? String.fromCharCode(65 + ansLetterIndex) : "";
 
@@ -398,7 +410,7 @@ function ExamPage() {
                     key={i}
                     className={`bg-card border rounded-sm p-4 mb-3 transition-colors ${
                       isSubmitted
-                        ? isCorrect
+                        ? matchResult
                           ? "border-green-300 bg-green-50/50"
                           : "border-red-200 bg-red-50/50"
                         : "border-ink/10"
@@ -455,12 +467,12 @@ function ExamPage() {
                     {isSubmitted && (
                       <div
                         className={`mt-3 flex items-start gap-2 text-xs p-2.5 rounded-sm ${
-                          isCorrect
+                          matchResult
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {isCorrect ? (
+                        {matchResult ? (
                           <>
                             <Check className="size-4 shrink-0 mt-0.5" />
                             <div>

@@ -88,9 +88,12 @@ function ExamDetailPage() {
             {objectives.map((q: any, i: number) => {
               const isSubmitted = submitted[i];
               const selected = answers[i];
-              const isCorrect = selected === q.answer;
-              const letterIndex = q.options?.findIndex((o: string) => o === q.answer);
-              const correctLetter = letterIndex >= 0 ? String.fromCharCode(65 + letterIndex) : "";
+              const answerIsLetter = typeof q.answer === "string" && q.answer.length === 1 && /^[A-D]$/i.test(q.answer);
+              const correctIndex = answerIsLetter
+                ? q.answer.toUpperCase().charCodeAt(0) - 65
+                : q.options?.findIndex((o: string) => o === q.answer) ?? -1;
+              const correctLetter = correctIndex >= 0 ? String.fromCharCode(65 + correctIndex) : "";
+              const matchResult = q.answer === selected || (answerIsLetter && q.options?.indexOf(selected) === correctIndex);
               const ansLetterIndex = q.options?.findIndex((o: string) => o === selected);
               const selectedLetter = ansLetterIndex >= 0 ? String.fromCharCode(65 + ansLetterIndex) : "";
 
@@ -99,7 +102,7 @@ function ExamDetailPage() {
                   key={i}
                   className={`bg-card border rounded-sm p-4 transition-colors ${
                     isSubmitted
-                      ? isCorrect ? "border-green-300 bg-green-50/50" : "border-red-200 bg-red-50/50"
+                      ? matchResult ? "border-green-300 bg-green-50/50" : "border-red-200 bg-red-50/50"
                       : "border-ink/10"
                   }`}
                 >
@@ -139,9 +142,9 @@ function ExamDetailPage() {
                   </div>
                   {isSubmitted && (
                     <div className={`mt-3 flex items-start gap-2 text-xs p-2.5 rounded-sm ${
-                      isCorrect ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      matchResult ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                     }`}>
-                      {isCorrect ? (
+                      {matchResult ? (
                         <><Check className="size-4 shrink-0 mt-0.5" /><div><strong>✓ Correct!</strong> {q.explanation || "Well done!"}</div></>
                       ) : (
                         <><BookOpen className="size-4 shrink-0 mt-0.5" /><div><strong>✗ Correct answer: {correctLetter}.</strong> {q.explanation || ""}</div></>
