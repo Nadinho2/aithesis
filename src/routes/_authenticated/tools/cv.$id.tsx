@@ -37,7 +37,7 @@ function CvDetailPage() {
     );
   }
 
-  const cv = typeof data.content === "string" ? JSON.parse(data.content) : data.content;
+  const cv = typeof data.cv_data === "string" ? JSON.parse(data.cv_data) : data.cv_data;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">

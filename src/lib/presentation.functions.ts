@@ -53,8 +53,8 @@ Keep bullets concise — presentation style.`,
           slides: parsed.slides,
           status: "completed",
         });
-      } catch {
-        // non-critical
+      } catch (e: any) {
+        console.error("Failed to save presentation to history:", e?.message ?? e);
       }
     }
 

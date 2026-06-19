@@ -80,8 +80,8 @@ Return ONLY valid JSON (no markdown, no code fences):
           questions: parsed,
           status: "completed",
         });
-      } catch {
-        // non-critical
+      } catch (e: any) {
+        console.error("Failed to save exam to history:", e?.message ?? e);
       }
     }
 

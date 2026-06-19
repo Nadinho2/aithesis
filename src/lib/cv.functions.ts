@@ -73,8 +73,8 @@ export const generateCv = createServerFn({ method: "POST" })
           enhanced: cleanedEnhanced,
           status: "completed",
         });
-      } catch {
-        // non-critical
+      } catch (e: any) {
+        console.error("Failed to save CV to history:", e?.message ?? e);
       }
     }
 

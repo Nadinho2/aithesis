@@ -89,8 +89,8 @@ RULES:
           word_count: answer.split(/\s+/).length,
           status: "completed",
         });
-      } catch {
-        // non-critical
+      } catch (e: any) {
+        console.error("Failed to save assignment to history:", e?.message ?? e);
       }
     }
 
