@@ -227,7 +227,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
     try {
       const raw = await callAI(apiKey, {
         model: "deepseek-reasoner",
-        max_tokens: 8192,
+        max_tokens: 64000,
         system: systemPrompt,
         user: userPrompt,
       });
@@ -238,7 +238,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       try {
         const retryRaw = await callAI(apiKey, {
           model: "deepseek-reasoner",
-          max_tokens: 8192,
+          max_tokens: 64000,
           system: "You are an academic proposal writer. Output ONLY valid JSON matching the exact schema provided. No markdown, no code fences, no commentary.",
           user: `Write a research proposal in JSON for this topic: ${topicCtx.title}\nLevel: ${data.level}\nTarget: ${target} words.\n\nProblem: ${topicCtx.problem_statement}\nGap: ${topicCtx.research_gap}\n\nReferences:\n${refContext}\n\nUse this exact JSON schema:\n{\n  "abstract": "...",\n  "sections": {\n    "background_to_the_study": "...",\n    "statement_of_the_problem": "...",\n    "objectives": ["Obj1"],\n    "research_questions": ["RQ1"],\n    "research_hypotheses": ["H1"],\n    "significance": "...",\n    "scope_of_the_study": "...",\n    "definition_of_terms": "...",\n    "conceptual_review": "...",\n    "empirical_review": "...",\n    "theoretical_review": "...",\n    "theoretical_framework": "...",\n    "summary_of_reviews": "...",\n    "gap_in_literature": "...",\n    "research_design": "...",\n    "area_of_the_study": "...",\n    "population_of_the_study": "...",\n    "sample_size": "...",\n    "sampling_technique": "...",\n    "instrumentation": "...",\n    "validity_of_instrument": "...",\n    "reliability_of_instrument": "...",\n    "method_of_collecting_data": "...",\n    "method_of_data_analysis": "..."\n  }\n}`,
         });
@@ -259,7 +259,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       try {
         const refine = await callAI(apiKey, {
           model: "deepseek-reasoner",
-          max_tokens: 8192,
+          max_tokens: 64000,
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
 Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across conceptual_review, empirical_review, theoretical_review, and background_to_the_study. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal.

@@ -167,16 +167,18 @@ export async function callAIText(
     user: string;
   },
 ): Promise<string> {
+  const isReasoner = opts.model === "deepseek-reasoner";
+  const body: Record<string, any> = {
+    model: opts.model,
+    messages: [
+      { role: "system", content: opts.system },
+      { role: "user", content: opts.user },
+    ],
+  };
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: opts.model,
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: opts.user },
-      ],
-    }),
+    body: JSON.stringify(body),
   });
   if (!resp.ok) {
     const text = await resp.text();
@@ -184,7 +186,11 @@ export async function callAIText(
     throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
   }
   const payload = await resp.json();
-  const content = payload?.choices?.[0]?.message?.content;
+  let content = payload?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Did not receive a response.");
+  // deepseek-reasoner includes reasoning tags — strip them from text output
+  if (isReasoner) {
+    content = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();
+  }
   return content.trim();
 }

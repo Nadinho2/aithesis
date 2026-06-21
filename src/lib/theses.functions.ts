@@ -278,7 +278,7 @@ Output the chapter text directly as plain text — NOT wrapped in JSON.`;
       const userPrompt = `${topicContext}
 
 Write ${label} now — EXACTLY ${wordTarget} words.`;
-      const content = await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+      const content = await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
       return { key, content };
     };
 
@@ -294,7 +294,7 @@ Output the abstract text directly as plain text — NOT wrapped in JSON.`;
       const userPrompt = `${topicContext}
 
 Write the abstract now — EXACTLY ${abstractTarget} words.`;
-      return await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+      return await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
     };
 
     const [abstractResult, ...chapterResults] = await Promise.all([
@@ -353,7 +353,7 @@ Below is your current draft of ${def.label} (${c.current} words). Expand it to A
 
 CURRENT DRAFT:
 ${chapters[c.key]}`;
-        const content = await callAIText(apiKey, { model: "deepseek-v4-flash", system: systemPrompt, user: userPrompt });
+        const content = await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
         return { key: c.key, content };
       });
 
