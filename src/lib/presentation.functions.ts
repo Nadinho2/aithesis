@@ -30,7 +30,7 @@ export const generatePresentation = createServerFn({ method: "POST" })
     }
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-v4-pro",
+      model: "deepseek-reasoner",
       system: `You are a presentation designer. Generate ${data.slide_count} slides for a presentation on "${data.topic}".
 Each slide has: title, bullets (max 6), and speaker notes.
 Return ONLY valid JSON (no markdown, no code fences):

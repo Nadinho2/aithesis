@@ -226,7 +226,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
     let parsed: any;
     try {
       const raw = await callAI(apiKey, {
-        model: "deepseek-v4-pro",
+        model: "deepseek-reasoner",
         max_tokens: 8192,
         system: systemPrompt,
         user: userPrompt,
@@ -237,7 +237,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       // Retry once with a simpler prompt
       try {
         const retryRaw = await callAI(apiKey, {
-          model: "deepseek-v4-pro",
+          model: "deepseek-reasoner",
           max_tokens: 8192,
           system: "You are an academic proposal writer. Output ONLY valid JSON matching the exact schema provided. No markdown, no code fences, no commentary.",
           user: `Write a research proposal in JSON for this topic: ${topicCtx.title}\nLevel: ${data.level}\nTarget: ${target} words.\n\nProblem: ${topicCtx.problem_statement}\nGap: ${topicCtx.research_gap}\n\nReferences:\n${refContext}\n\nUse this exact JSON schema:\n{\n  "abstract": "...",\n  "sections": {\n    "background_to_the_study": "...",\n    "statement_of_the_problem": "...",\n    "objectives": ["Obj1"],\n    "research_questions": ["RQ1"],\n    "research_hypotheses": ["H1"],\n    "significance": "...",\n    "scope_of_the_study": "...",\n    "definition_of_terms": "...",\n    "conceptual_review": "...",\n    "empirical_review": "...",\n    "theoretical_review": "...",\n    "theoretical_framework": "...",\n    "summary_of_reviews": "...",\n    "gap_in_literature": "...",\n    "research_design": "...",\n    "area_of_the_study": "...",\n    "population_of_the_study": "...",\n    "sample_size": "...",\n    "sampling_technique": "...",\n    "instrumentation": "...",\n    "validity_of_instrument": "...",\n    "reliability_of_instrument": "...",\n    "method_of_collecting_data": "...",\n    "method_of_data_analysis": "..."\n  }\n}`,
@@ -258,7 +258,7 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
       const diff = target - total;
       try {
         const refine = await callAI(apiKey, {
-          model: "deepseek-v4-pro",
+          model: "deepseek-reasoner",
           max_tokens: 8192,
           system: systemPrompt,
           user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).

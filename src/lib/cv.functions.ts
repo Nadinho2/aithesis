@@ -41,7 +41,7 @@ export const generateCv = createServerFn({ method: "POST" })
     if (data.file_base64 && data.file_mime) {
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
       const raw = await callAI(apiKey, {
-        model: "deepseek-v4-pro",
+        model: "deepseek-reasoner",
         system:
           "Extract the following fields from this CV document and return ONLY valid JSON (no markdown, no code fences): { full_name, email, phone, address, summary, education, experience, skills, certifications, languages }",
         user: parsed.text,
@@ -56,7 +56,7 @@ export const generateCv = createServerFn({ method: "POST" })
 
     // Enhance with AI — improve wording, format professionally
     const enhanced = await callAI(apiKey, {
-      model: "deepseek-v4-pro",
+      model: "deepseek-reasoner",
       max_tokens: 4096,
       system:
         "You are a professional CV writer. Improve the wording of this CV information. Make it concise, professional, and achievement-oriented. Return ONLY valid JSON (no markdown, no code fences) in this exact format: { full_name: string, email: string, phone: string, address: string, summary: string, education: string, experience: string, skills: string, certifications: string, languages: string }",

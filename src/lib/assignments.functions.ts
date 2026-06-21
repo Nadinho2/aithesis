@@ -65,7 +65,7 @@ RULES:
     const userPrompt = `Assignment question:\n${fullQuestion}\n\n${refContext ? `Scholarly references:\n${refContext}` : ""}`;
 
     const raw = await callAIText(apiKey, {
-      model: "deepseek-v4-pro",
+      model: "deepseek-reasoner",
       system: systemPrompt,
       user: userPrompt,
     });

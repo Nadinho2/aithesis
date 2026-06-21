@@ -109,14 +109,16 @@ export async function callAI(
     max_tokens?: number;
   },
 ): Promise<any> {
+  const isReasoner = opts.model === "deepseek-reasoner";
   const body: Record<string, any> = {
     model: opts.model,
     messages: [
       { role: "system", content: opts.system },
       { role: "user", content: opts.user },
     ],
-    response_format: { type: "json_object" },
   };
+  // deepseek-reasoner does NOT support response_format — skip it
+  if (!isReasoner) body.response_format = { type: "json_object" };
   if (opts.max_tokens) body.max_tokens = opts.max_tokens;
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
@@ -131,7 +133,22 @@ export async function callAI(
   const payload = await resp.json();
   const content = payload?.choices?.[0]?.message?.content;
   if (!content) throw new Error("Did not receive a response.");
-  // Strip markdown fences if present
+
+  if (isReasoner) {
+    // R1 wraps JSON in  blocks and may prepend reasoning
+    // Strip reasoning section (between  and ) if present
+    let cleaned = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();
+    // Strip markdown fences
+    cleaned = cleaned.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+    // Find first { or [ to locate JSON
+    const start = cleaned.indexOf("{") >= 0 ? cleaned.indexOf("{") : cleaned.indexOf("[");
+    if (start === -1) throw new Error("No JSON found in R1 response.");
+    const end = cleaned.lastIndexOf("}") >= 0 ? cleaned.lastIndexOf("}") + 1 : cleaned.lastIndexOf("]") + 1;
+    if (end <= start) throw new Error("Malformed JSON in R1 response.");
+    return JSON.parse(cleaned.slice(start, end));
+  }
+
+  // Standard model: strip markdown fences and parse
   const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
   return JSON.parse(json);
 }

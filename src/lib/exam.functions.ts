@@ -63,7 +63,7 @@ IMPORTANT: The "answer" field must contain the FULL TEXT of the correct option, 
 IMPORTANT: Each option in the "options" array must be the full text of the choice, not just "A", "B", etc.`;
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-v4-pro",
+      model: "deepseek-reasoner",
       system: systemPrompt,
       user: notes,
     });
