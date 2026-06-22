@@ -5,7 +5,7 @@ import { getCv } from "@/lib/tool-history.functions";
 import { Loader2, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/cv/$id")({
-  head: () => ({ meta: [{ title: "CV — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "CV — Mybrainpadi" }] }),
   component: CvDetailPage,
 });
 

@@ -6,7 +6,7 @@ import { getExam } from "@/lib/tool-history.functions";
 import { Loader2, ArrowLeft, Check, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/exam/$id")({
-  head: () => ({ meta: [{ title: "Exam — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Exam — Mybrainpadi" }] }),
   component: ExamDetailPage,
 });
 

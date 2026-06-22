@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/history")({
-  head: () => ({ meta: [{ title: "Tool History — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Tool History — Mybrainpadi" }] }),
   component: ToolHistoryPage,
 });
 

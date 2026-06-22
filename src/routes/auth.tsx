@@ -144,7 +144,7 @@ function AuthForms() {
 
         <div className="mb-8 text-center">
           <Link to="/" className="block">
-            <h1 className="font-serif text-3xl text-ink">ThesisPro</h1>
+            <h1 className="font-serif text-3xl text-ink">Mybrainpadi</h1>
           </Link>
           <p className="mt-2 text-sm text-ink-secondary">Your all-in-one education ecosystem for research, study, and career tools</p>
         </div>

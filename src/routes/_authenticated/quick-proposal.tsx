@@ -9,7 +9,7 @@ import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/quick-proposal")({
-  head: () => ({ meta: [{ title: "Draft Proposal — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Draft Proposal — Mybrainpadi" }] }),
   component: QuickProposalPage,
 });
 

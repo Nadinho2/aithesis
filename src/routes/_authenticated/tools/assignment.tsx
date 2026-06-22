@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/assignment")({
-  head: () => ({ meta: [{ title: "Assignment Assistant — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Assignment Assistant — Mybrainpadi" }] }),
   component: AssignmentPage,
 });
 

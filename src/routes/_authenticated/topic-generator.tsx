@@ -7,7 +7,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/topic-generator")({
-  head: () => ({ meta: [{ title: "Topic Discovery — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Topic Discovery — Mybrainpadi" }] }),
   component: TopicGeneratorPage,
 });
 

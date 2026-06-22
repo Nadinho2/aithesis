@@ -5,7 +5,7 @@ import { listPlans } from "@/lib/side-hustle.functions";
 import { Loader2, Zap, ArrowLeft, Target, CheckCircle2, Clock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/side-hustle/plans")({
-  head: () => ({ meta: [{ title: "My Journeys — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "My Journeys — Mybrainpadi" }] }),
   component: PlansHistoryPage,
 });
 

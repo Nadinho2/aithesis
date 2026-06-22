@@ -18,7 +18,7 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/_authenticated/proposal/$id")({
-  head: () => ({ meta: [{ title: "Proposal — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Proposal — Mybrainpadi" }] }),
   component: ProposalPage,
 });
 

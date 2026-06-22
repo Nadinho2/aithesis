@@ -9,7 +9,7 @@ import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, Im
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/exam")({
-  head: () => ({ meta: [{ title: "Exam Preparation — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Exam Preparation — Mybrainpadi" }] }),
   component: ExamPage,
 });
 

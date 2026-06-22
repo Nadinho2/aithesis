@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/billing")({
-  head: () => ({ meta: [{ title: "Billing — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Billing — Mybrainpadi" }] }),
   component: BillingPage,
 });
 

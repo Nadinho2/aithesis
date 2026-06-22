@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import WhileYouWait from "@/components/WhileYouWait";
 
 export const Route = createFileRoute("/_authenticated/proposals")({
-  head: () => ({ meta: [{ title: "My Proposals — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "My Proposals — Mybrainpadi" }] }),
   component: ProposalsListPage,
 });
 

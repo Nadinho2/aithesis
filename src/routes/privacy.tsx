@@ -16,7 +16,7 @@ function PrivacyPage() {
         <div className="prose prose-sm max-w-none text-ink-secondary leading-[1.7] space-y-5">
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Information We Collect</h2>
           <p>
-            When you sign up for ThesisPro, we collect your email address and a user profile
+            When you sign up for Mybrainpadi, we collect your email address and a user profile
             name. We also store the topics, proposals, theses, assignments, exam materials,
             presentations, CVs, and other content you create or upload while using the platform.
             Payment information is processed by Paystack; we do not store credit card details.
@@ -39,7 +39,7 @@ function PrivacyPage() {
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">4. Third-Party Services</h2>
           <p>
-            ThesisPro integrates with Clerk (authentication), Supabase (database), Paystack
+            Mybrainpadi integrates with Clerk (authentication), Supabase (database), Paystack
             (payments), OpenAlex and Crossref (citation lookup). Each service has its own privacy
             policy governing how it handles your data. We only share the minimum data necessary
             for each service to function.
@@ -60,7 +60,7 @@ function PrivacyPage() {
           </p>
 
           <p className="italic mt-8 text-sm">
-            Last updated: June 2026. Questions? Contact privacy@thesispro.ai.
+            Last updated: June 2026. Questions? Contact privacy@mybrainpadi.com.
           </p>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info } fro
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/presentation")({
-  head: () => ({ meta: [{ title: "Presentation Assistant — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Presentation Assistant — Mybrainpadi" }] }),
   component: PresentationPage,
 });
 

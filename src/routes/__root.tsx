@@ -77,27 +77,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ThesisPro — Your complete education ecosystem" },
+      { title: "Mybrainpadi — Your complete education ecosystem" },
       {
         name: "description",
         content:
           "Topics, proposals, theses, assignments, exam prep, presentations, and CVs — all in one platform powered by 200M+ verified scholarly sources.",
       },
-      { property: "og:title", content: "ThesisPro — Your complete education ecosystem" },
+      { property: "og:title", content: "Mybrainpadi — Your complete education ecosystem" },
       {
         property: "og:description",
         content: "An all-in-one academic toolkit for students: research, assignments, exams, presentations, and career tools backed by verified citations.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "ThesisPro — Your complete education ecosystem" },
-      { name: "description", content: "ThesisPro is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
-      { property: "og:description", content: "ThesisPro is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
-      { name: "twitter:description", content: "ThesisPro is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
+      { name: "twitter:title", content: "Mybrainpadi — Your complete education ecosystem" },
+      { name: "description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
+      { property: "og:description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
+      { name: "twitter:description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4c0d5e38-e8bf-47bc-b447-ea259822b476/id-preview-62eeb6e3--ea7c23ab-faa4-4923-be18-021aa6bd5e40.lovable.app-1780473278507.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4c0d5e38-e8bf-47bc-b447-ea259822b476/id-preview-62eeb6e3--ea7c23ab-faa4-4923-be18-021aa6bd5e40.lovable.app-1780473278507.png" },
     ],
     links: [
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       {
         rel: "stylesheet",

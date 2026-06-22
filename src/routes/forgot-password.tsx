@@ -5,7 +5,7 @@ import { Lock, Eye, EyeOff, Loader2, Mail, ArrowLeft, KeyRound, ShieldCheck } fr
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/forgot-password")({
-  head: () => ({ meta: [{ title: "Reset Password — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Reset Password — Mybrainpadi" }] }),
   component: ForgotPasswordPage,
 });
 
@@ -80,7 +80,7 @@ function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link to="/" className="block">
-            <h1 className="font-serif text-3xl text-ink">ThesisPro</h1>
+            <h1 className="font-serif text-3xl text-ink">Mybrainpadi</h1>
           </Link>
           <p className="mt-2 text-sm text-ink-secondary">Reset your password</p>
         </div>

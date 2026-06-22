@@ -4,7 +4,7 @@ import { useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ThesisPro — Your complete education ecosystem" },
+      { title: "Mybrainpadi — Your complete education ecosystem" },
       {
         name: "description",
         content:
@@ -183,7 +183,7 @@ function FeaturesSection() {
             Everything you need to excel, from first assignment to final defence.
           </h2>
           <p className="text-ink-secondary leading-[1.7]">
-            ThesisPro is an all-in-one education ecosystem — discover research topics, draft
+            Mybrainpadi is an all-in-one education ecosystem — discover research topics, draft
             proposals and theses, tackle assignments, prepare for exams, build presentations,
             and create a professional CV. All backed by verified citations.
           </p>
@@ -299,7 +299,7 @@ function LandingPage() {
           <span className="w-9 h-9 bg-ink rounded-lg flex items-center justify-center">
             <span className="w-4 h-0.5 bg-paper" />
           </span>
-          <span className="font-serif italic text-xl font-bold tracking-tight text-ink">ThesisPro</span>
+          <span className="font-serif italic text-xl font-bold tracking-tight text-ink">Mybrainpadi</span>
         </Link>
 
         {/* Desktop nav */}
@@ -458,7 +458,7 @@ function LandingPage() {
       <footer className="bg-ink text-paper py-20 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-12">
           <div className="max-w-sm">
-            <div className="font-serif italic text-2xl font-bold text-paper mb-6">ThesisPro</div>
+            <div className="font-serif italic text-2xl font-bold text-paper mb-6">Mybrainpadi</div>
             <p className="text-paper/50 text-sm leading-relaxed">
               An all-in-one education ecosystem for the next generation of scholars. Research tools,
               study aids, and career resources — all backed by verified citations.
@@ -487,7 +487,7 @@ function LandingPage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto mt-16 pt-8 border-t border-paper/10 text-[10px] uppercase tracking-widest text-paper/30 flex flex-col sm:flex-row justify-between gap-2">
-          <span>&copy; 2026 ThesisPro</span>
+          <span>&copy; 2026 Mybrainpadi</span>
           <span>Secure &amp; Encrypted</span>
         </div>
       </footer>

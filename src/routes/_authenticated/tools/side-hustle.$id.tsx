@@ -5,7 +5,7 @@ import { getSideHustle } from "@/lib/tool-history.functions";
 import { Loader2, ArrowLeft, Zap, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/side-hustle/$id")({
-  head: () => ({ meta: [{ title: "Side Hustle — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Side Hustle — Mybrainpadi" }] }),
   component: SideHustleDetailPage,
 });
 

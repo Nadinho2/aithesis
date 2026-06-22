@@ -37,7 +37,7 @@ export const initPayment = createServerFn({ method: "POST" })
       level: data.level ?? null,
     };
 
-    const callbackUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://aithesis.vercel.app";
+    const callbackUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://mybrainpadi.com";
     const redirectUrl = data.level
       ? `${callbackUrl}/dashboard?payment_verify=thesis&level=${data.level}`
       : `${callbackUrl}/dashboard?payment_verify=proposal`;

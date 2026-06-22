@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Mybrainpadi" }] }),
   component: DashboardPage,
 });
 

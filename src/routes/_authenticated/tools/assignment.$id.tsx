@@ -5,7 +5,7 @@ import { getAssignment } from "@/lib/tool-history.functions";
 import { Loader2, ArrowLeft, FileText, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/assignment/$id")({
-  head: () => ({ meta: [{ title: "Assignment — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Assignment — Mybrainpadi" }] }),
   component: AssignmentDetailPage,
 });
 

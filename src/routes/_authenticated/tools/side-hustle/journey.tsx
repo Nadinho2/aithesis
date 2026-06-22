@@ -9,7 +9,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/side-hustle/journey")({
-  head: () => ({ meta: [{ title: "My Side Hustle Journey — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "My Side Hustle Journey — Mybrainpadi" }] }),
   component: JourneyPage,
 });
 

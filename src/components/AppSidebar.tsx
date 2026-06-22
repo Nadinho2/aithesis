@@ -84,7 +84,7 @@ export function AppSidebar() {
         <span className="size-8 bg-ink rounded-sm flex items-center justify-center">
           <span className="w-4 h-0.5 bg-bone" />
         </span>
-        <span className="font-serif italic text-xl font-bold tracking-tight">ThesisPro</span>
+        <span className="font-serif italic text-xl font-bold tracking-tight">Mybrainpadi</span>
       </Link>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -160,7 +160,7 @@ export function AppSidebar() {
           <span className="size-7 bg-ink rounded-sm flex items-center justify-center">
             <span className="w-3.5 h-0.5 bg-bone" />
           </span>
-          <span className="font-serif italic text-lg font-bold">ThesisPro</span>
+          <span className="font-serif italic text-lg font-bold">Mybrainpadi</span>
         </Link>
         <button
           onClick={() => setOpen(true)}

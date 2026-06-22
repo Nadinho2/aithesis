@@ -9,7 +9,7 @@ import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/new-thesis")({
-  head: () => ({ meta: [{ title: "Draft Thesis — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Draft Thesis — Mybrainpadi" }] }),
   component: NewThesisPage,
 });
 

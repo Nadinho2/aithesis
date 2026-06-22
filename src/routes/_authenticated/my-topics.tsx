@@ -23,7 +23,7 @@ function downloadFromBase64(base64: string, filename: string, mime: string) {
 }
 
 export const Route = createFileRoute("/_authenticated/my-topics")({
-  head: () => ({ meta: [{ title: "My Topics — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "My Topics — Mybrainpadi" }] }),
   component: MyTopicsPage,
 });
 

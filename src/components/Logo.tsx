@@ -7,7 +7,7 @@ export function Logo({ to = "/" }: { to?: string }) {
         <span className="w-4 h-0.5 bg-bone" />
       </span>
       <span className="font-serif italic text-xl font-bold tracking-tight text-ink">
-        ThesisPro
+        Mybrainpadi
       </span>
     </Link>
   );

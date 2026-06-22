@@ -5,7 +5,7 @@ import { getPresentation } from "@/lib/tool-history.functions";
 import { Loader2, ArrowLeft, Presentation, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/presentation/$id")({
-  head: () => ({ meta: [{ title: "Presentation — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Presentation — Mybrainpadi" }] }),
   component: PresentationDetailPage,
 });
 

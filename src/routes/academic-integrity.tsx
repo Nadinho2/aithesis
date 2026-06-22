@@ -15,16 +15,16 @@ function IntegrityPage() {
 
         <div className="prose prose-sm max-w-none text-ink-secondary leading-[1.7] space-y-5">
           <p>
-            ThesisPro is an all-in-one education ecosystem — a platform to help you conduct research,
+            Mybrainpadi is an all-in-one education ecosystem — a platform to help you conduct research,
             draft assignments, prepare for exams, build presentations, and create professional CVs.
             It does not replace your own intellectual work. Every idea, every analysis, every
-            conclusion remains your own. ThesisPro helps you organise, structure, and source your
+            conclusion remains your own. Mybrainpadi helps you organise, structure, and source your
             work, but the final output — analysis, conclusions, and writing — is yours.
           </p>
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">1. Your Authorship</h2>
           <p>
-            You are the author of every document created using ThesisPro. The tool provides
+            You are the author of every document created using Mybrainpadi. The tool provides
             structural suggestions and source discovery, much like a citation manager or a
             writing centre advisor. All intellectual work — the arguments, interpretations,
             methodology decisions, and conclusions — must come from you.
@@ -40,7 +40,7 @@ function IntegrityPage() {
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">3. Originality</h2>
           <p>
-            ThesisPro does not copy from existing sources. All suggested text is produced by a
+            Mybrainpadi does not copy from existing sources. All suggested text is produced by a
             language model trained on a broad corpus of academic writing — but the final
             intellectual work remains your own. We strongly advise running all output through
             institutional plagiarism detection tools and making substantive modifications
@@ -59,7 +59,7 @@ function IntegrityPage() {
           <p>
             Different universities have different policies on AI-assisted writing. It is your
             responsibility to review your institution&apos;s academic integrity guidelines and
-            determine whether and how such tools may be used in your work. ThesisPro disclaims
+            determine whether and how such tools may be used in your work. Mybrainpadi disclaims
             any liability for violations of institutional policies.
           </p>
 

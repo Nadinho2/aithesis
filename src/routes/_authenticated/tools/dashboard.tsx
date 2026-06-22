@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText, GraduationCap, Presentation, UserSquare2, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/dashboard")({
-  head: () => ({ meta: [{ title: "Student Tools — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "Student Tools — Mybrainpadi" }] }),
   component: ToolsDashboardPage,
 });
 

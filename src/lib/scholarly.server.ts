@@ -16,7 +16,7 @@ export type ScholarlyRef = {
   pages?: string | null;
 };
 
-const UA = "ThesisProEcosystem/1.0 (mailto:research@thesispro.ai)";
+const UA = "Mybrainpadi/1.0 (mailto:research@mybrainpadi.com)";
 
 async function safe<T>(p: Promise<T>): Promise<T | null> {
   try { return await p; } catch { return null; }

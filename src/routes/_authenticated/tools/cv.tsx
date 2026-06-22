@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/cv")({
-  head: () => ({ meta: [{ title: "CV Maker — ThesisPro" }] }),
+  head: () => ({ meta: [{ title: "CV Maker — Mybrainpadi" }] }),
   component: CvPage,
 });
 
