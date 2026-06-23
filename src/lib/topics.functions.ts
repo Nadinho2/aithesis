@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { buildTopicsDocx, toBase64 } from "./docx.server";
+import { callAI } from "./ai-utils.server";
 
 const GenerateInput = z.object({
   department: z.string().min(2).max(120),
@@ -61,34 +62,12 @@ Research type: ${data.research_type || "(unspecified)"}
 
 Generate exactly ${data.count} topics now.`;
 
-    const resp = await fetch("https://api.deepseek.com/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const raw = await callAI(apiKey, {
+      model: "deepseek-chat",
+      system: systemPrompt,
+      user: userPrompt,
     });
-
-    if (!resp.ok) {
-      const text = await resp.text();
-      if (resp.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-      throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
-    }
-
-    const payload = await resp.json();
-    const content = payload?.choices?.[0]?.message?.content;
-    if (!content) throw new Error("Could not generate topics.");
-    const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-    const args = JSON.parse(json);
-    const parsed = TopicsResponse.parse(args);
+    const parsed = TopicsResponse.parse(raw);
 
     const { data: gen, error: genErr } = await supabase
       .from("topic_generations")

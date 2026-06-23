@@ -1,4 +1,13 @@
-// Shared AI helpers: DeepSeek tool-call, AI-tell scrubbing, word counting/trimming.
+/**
+ * Shared AI helpers: unified provider calls, AI-tell scrubbing, word counting/trimming.
+ *
+ * callAI()   → returns a parsed JSON object (for structured data generation).
+ * callAIText() → returns raw text (for long-form prose generation).
+ *
+ * Both support DeepSeek and Gemini models transparently via ai-provider.ts.
+ */
+
+import { callProvider, extractJSON, stripReasoningTags } from "./ai-provider";
 
 const AI_TELLS: RegExp[] = [
   /\bin today'?s (?:fast-paced|rapidly evolving|modern|digital) world\b/gi,
@@ -32,21 +41,16 @@ const AI_TELLS: RegExp[] = [
 
 export function stripMarkdown(input: string): string {
   let out = input;
-  // Bold/italic markers — keep inner text
   out = out.replace(/\*\*\*([^*\n]+?)\*\*\*/g, "$1");
   out = out.replace(/\*\*([^*\n]+?)\*\*/g, "$1");
   out = out.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1$2");
   out = out.replace(/___([^_\n]+?)___/g, "$1");
   out = out.replace(/__([^_\n]+?)__/g, "$1");
   out = out.replace(/(^|[^_])_([^_\n]+?)_(?!_)/g, "$1$2");
-  // Inline code & strikethrough
   out = out.replace(/`([^`\n]+?)`/g, "$1");
   out = out.replace(/~~([^~\n]+?)~~/g, "$1");
-  // Markdown headings (#, ##, ###) — convert to plain heading lines
   out = out.replace(/^#{1,6}\s+/gm, "");
-  // Markdown bullet markers at line start
   out = out.replace(/^\s*[-*+]\s+/gm, "• ");
-  // Stray leftover asterisks
   out = out.replace(/\*+/g, "");
   return out;
 }
@@ -96,10 +100,22 @@ export function trimToExactWords(text: string, n: number): string {
   const words = text.trim().split(/\s+/);
   if (words.length <= n) return text.trim();
   const kept = words.slice(0, n).join(" ");
-  // close with a period if cleanly possible
   return /[.!?]$/.test(kept) ? kept : kept.replace(/[,;:]$/, "") + ".";
 }
 
+/**
+ * Call any supported AI model and return a parsed JSON object.
+ *
+ * Works with:
+ *   deepseek-chat / deepseek-reasoner (via DeepSeek API)
+ *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
+ *
+ * @param apiKey - Provider API key. Optional for Gemini (reads GEMINI_API_KEY env).
+ * @param opts.model - Model name (e.g. "deepseek-chat", "gemini-2.5-flash")
+ * @param opts.system - System prompt
+ * @param opts.user - User prompt
+ * @param opts.max_tokens - Max output tokens (optional)
+ */
 export async function callAI(
   apiKey: string,
   opts: {
@@ -109,55 +125,24 @@ export async function callAI(
     max_tokens?: number;
   },
 ): Promise<any> {
-  const isReasoner = opts.model === "deepseek-reasoner";
-  const body: Record<string, any> = {
-    model: opts.model,
-    messages: [
-      { role: "system", content: opts.system },
-      { role: "user", content: opts.user },
-    ],
-  };
-  // deepseek-reasoner does NOT support response_format — skip it
-  if (!isReasoner) body.response_format = { type: "json_object" };
-  if (opts.max_tokens) body.max_tokens = opts.max_tokens;
-  const resp = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    if (resp.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-    throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
-  }
-  const payload = await resp.json();
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Did not receive a response.");
-
-  if (isReasoner) {
-    // R1 wraps JSON in  blocks and may prepend reasoning
-    // Strip reasoning section (between  and ) if present
-    let cleaned = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();
-    // Strip markdown fences
-    cleaned = cleaned.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
-    // Find first { or [ to locate JSON
-    const start = cleaned.indexOf("{") >= 0 ? cleaned.indexOf("{") : cleaned.indexOf("[");
-    if (start === -1) throw new Error("No JSON found in R1 response.");
-    const end = cleaned.lastIndexOf("}") >= 0 ? cleaned.lastIndexOf("}") + 1 : cleaned.lastIndexOf("]") + 1;
-    if (end <= start) throw new Error("Malformed JSON in R1 response.");
-    return JSON.parse(cleaned.slice(start, end));
-  }
-
-  // Standard model: strip markdown fences and parse
-  const json = content.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-  return JSON.parse(json);
+  const result = await callProvider(apiKey, opts);
+  return extractJSON(result.content);
 }
 
 /**
- * Like callAI but without response_format: json_object.
- * Returns the raw text content. Use for long-form prose where
- * embedding the text inside a JSON string value would risk
+ * Call any supported AI model and return raw text content.
+ *
+ * Works with:
+ *   deepseek-chat / deepseek-reasoner (via DeepSeek API)
+ *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
+ *
+ * Useful for long-form prose where embedding text inside JSON would risk
  * unescaped characters.
+ *
+ * @param apiKey - Provider API key. Optional for Gemini (reads GEMINI_API_KEY env).
+ * @param opts.model - Model name
+ * @param opts.system - System prompt
+ * @param opts.user - User prompt
  */
 export async function callAIText(
   apiKey: string,
@@ -167,30 +152,10 @@ export async function callAIText(
     user: string;
   },
 ): Promise<string> {
-  const isReasoner = opts.model === "deepseek-reasoner";
-  const body: Record<string, any> = {
-    model: opts.model,
-    messages: [
-      { role: "system", content: opts.system },
-      { role: "user", content: opts.user },
-    ],
-  };
-  const resp = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    const text = await resp.text();
-    if (resp.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-    throw new Error(`DeepSeek API error ${resp.status}: ${text}`);
-  }
-  const payload = await resp.json();
-  let content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Did not receive a response.");
-  // deepseek-reasoner includes reasoning tags — strip them from text output
-  if (isReasoner) {
-    content = content.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();
+  const result = await callProvider(apiKey, opts);
+  let content = result.content;
+  if (result.isReasoner) {
+    content = stripReasoningTags(content);
   }
   return content.trim();
 }
