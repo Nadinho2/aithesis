@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { enqueueJob } from "./queue";
+import { generateThesisContent } from "./generation.server";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -103,8 +103,8 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
-    // Enqueue background job
-    await enqueueJob("thesis", {
+    // Start background generation (fire-and-forget)
+    generateThesisContent({
       userId,
       data: {
         level: data.level,
@@ -114,7 +114,7 @@ export const generateThesis = createServerFn({ method: "POST" })
         refs: refs.slice(0, 30),
         isPaid,
       },
-    });
+    }).catch((err) => console.error("[thesis] Background generation failed:", err));
 
     // Increment usage
     if (!isPaid) {

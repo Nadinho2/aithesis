@@ -37,6 +37,7 @@ export function productToTool(product: string): string | null {
  */
 import {
   sendThesisReadyEmail,
+  sendProposalReadyEmail,
   sendAssignmentReadyEmail,
   sendExamPrepReadyEmail,
   sendPresentationReadyEmail,
@@ -48,7 +49,7 @@ import type { BrainPadiTool } from "./mail";
 
 export async function notifyToolCompleted(
   userId: string,
-  tool: "thesis" | "assignment" | "exam" | "presentation" | "cv" | "side_hustle",
+  tool: "thesis" | "proposal" | "assignment" | "exam" | "presentation" | "cv" | "side_hustle",
   opts: {
     title?: string;
     downloadUrl?: string;
@@ -63,6 +64,16 @@ export async function notifyToolCompleted(
 
   try {
     switch (tool) {
+      case "proposal":
+        await sendProposalReadyEmail({
+          to: email,
+          name,
+          proposalTitle: opts.title ?? "Your Proposal",
+          downloadUrl: opts.downloadUrl ?? "",
+          aiScore: opts.aiScore ?? 85,
+          plagiarismScore: opts.plagiarismScore ?? 92,
+        });
+        break;
       case "thesis":
         await sendThesisReadyEmail({
           to: email,

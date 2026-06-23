@@ -4,6 +4,7 @@ import { resend, DEFAULT_FROM } from "./resend";
 
 export type BrainPadiTool =
   | "Thesis"
+  | "Proposal"
   | "Assignment"
   | "Exam Prep"
   | "Presentation"
@@ -35,6 +36,7 @@ const SITE = "https://www.mybrainpadi.com";
 function toolSlug(tool: BrainPadiTool): string {
   const map: Record<BrainPadiTool, string> = {
     Thesis: "thesis",
+    Proposal: "proposal",
     Assignment: "assignment",
     "Exam Prep": "exam",
     Presentation: "presentation",
@@ -352,6 +354,32 @@ ${greeting(name)}
 ${paragraph(`Your thesis <strong>"${thesisTitle}"</strong> has been generated and is ready for review.`)}
 ${scoreCard(aiScore, plagiarismScore)}
 ${ctaButton(downloadUrl, "View & Download Thesis")}`,
+  );
+}
+
+export async function sendProposalReadyEmail({
+  to,
+  name,
+  proposalTitle,
+  downloadUrl,
+  aiScore,
+  plagiarismScore,
+}: {
+  to: string;
+  name: string;
+  proposalTitle: string;
+  downloadUrl: string;
+  aiScore: number;
+  plagiarismScore: number;
+}): Promise<SendResult> {
+  return send(
+    to,
+    "Your Proposal is ready — MyBrainPadi",
+    `${heading("Your Proposal is ready 🎉")}
+${greeting(name)}
+${paragraph(`Your proposal <strong>"${proposalTitle}"</strong> has been generated and is ready for review.`)}
+${scoreCard(aiScore, plagiarismScore)}
+${ctaButton(downloadUrl, "View & Download Proposal")}`,
   );
 }
 

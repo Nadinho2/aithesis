@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.se
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { enqueueJob } from "./queue";
+import { generateProposalContent } from "./generation.server";
 import { getUserEmail } from "./mail-helper";
 
 const ManualTopic = z.object({
@@ -157,8 +157,8 @@ export const generateProposal = createServerFn({ method: "POST" })
       });
     }
 
-    // Enqueue background job
-    await enqueueJob("proposal", {
+    // Start background generation (fire-and-forget)
+    generateProposalContent({
       userId,
       data: {
         level: data.level,
@@ -168,7 +168,7 @@ export const generateProposal = createServerFn({ method: "POST" })
         refs: refs.slice(0, 20),
         isPaid,
       },
-    });
+    }).catch((err) => console.error("[proposal] Background generation failed:", err));
 
     // Increment usage
     if (!isPaid) {

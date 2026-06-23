@@ -237,17 +237,37 @@ export async function generateProposalContent(payload: {
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
 
-  const [abstract, prelimData, litData, methodData] = await Promise.all([
+  // Helper: parse ## header-delimited sections from plain text output
+  function parseSections(text: string): Record<string, string> {
+    const result: Record<string, string> = {};
+    const parts = text.split(/(?=^#{1,3}\s+\w)/m);
+    for (const part of parts) {
+      const match = part.match(/^#{1,3}\s+(\w+)\s*\n([\s\S]*)$/m);
+      if (match) {
+        result[match[1].trim()] = match[2].trim();
+      }
+    }
+    // Fallback: if no headers found, treat entire text as the first expected section
+    return result;
+  }
+
+  // Use deepseek-chat (faster, no reasoning overhead) for large sections
+  // and deepseek-reasoner only for the small abstract
+  const [abstract, prelimText, litText, methodText] = await Promise.all([
     (async () => {
-      const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system: `${baseSystemRules}\nWrite ONLY abstract. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
+      const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
       return raw?.abstract ?? "";
     })(),
-    callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system: `${baseSystemRules}\nWrite ONLY: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms. Target: ${prelimTarget} words total.`, user: topicContext }),
-    callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system: `${baseSystemRules}\nWrite ONLY: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature. Target: ${litReviewTarget} words total. Synthesise 8+ refs.`, user: topicContext }),
-    callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system: `${baseSystemRules}\nWrite ONLY: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis. Target: ${methodTarget} words total.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total. Synthesise 8+ refs.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total.`, user: topicContext }),
   ]);
 
-  const sections = { ...prelimData, ...litData, ...methodData };
+  const sections = {
+    ...parseSections(prelimText),
+    ...parseSections(litText),
+    ...parseSections(methodText),
+  };
 
   // Word count enforcement — expand shortest sections if below target
   const { countWords } = await import("@/lib/ai-utils.server");
@@ -270,7 +290,7 @@ Current length: ${f.len} words. Target: approximately ${newTarget} words.
 Add substantive depth with synthesised citations, extended analysis, and concrete examples.
 Write only the paragraph text — no headings, no JSON.`;
       try {
-        const padText = await callAIText(apiKey, { model: "deepseek-chat", system: baseSystemRules, user: expandPrompt });
+        const padText = await callAIText(apiKey, { model: "deepseek-chat", system: `You are a senior academic writing in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} style.`, user: expandPrompt });
         sections[f.key as keyof typeof sections] = String(sections[f.key as keyof typeof sections] ?? "") + "\n\n" + padText;
       } catch {
         // Continue with what we have
@@ -283,7 +303,7 @@ Write only the paragraph text — no headings, no JSON.`;
   // HARD ENFORCEMENT — never save below target
   if (totalWords < target) {
     const { notifyToolFailed } = await import("@/lib/mail-helper");
-    await notifyToolFailed(userId, "Thesis");
+    await notifyToolFailed(userId, "Proposal");
 
     await supabase
       .from("proposals")
@@ -327,7 +347,7 @@ Write only the paragraph text — no headings, no JSON.`;
 
   // Send email
   const { notifyToolCompleted } = await import("@/lib/mail-helper");
-  await notifyToolCompleted(userId, "thesis", {
+  await notifyToolCompleted(userId, "proposal", {
     title: topicCtx.title,
     downloadUrl: `${SITE}/proposals`,
     aiScore: 85,

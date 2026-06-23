@@ -60,8 +60,19 @@ export async function claimNextJob(): Promise<{
 } | null> {
   const supabase = await getQueueClient();
 
-  // Find the oldest pending job and lock it
-  const { data: job, error } = await (supabase as any)
+  // Find the oldest pending job
+  const { data: pending } = await (supabase as any)
+    .from("generation_queue")
+    .select("id")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (!pending || pending.length === 0) return null;
+  const jobId = pending[0].id;
+
+  // Atomically claim it — only update if still pending
+  const { data: claimed } = await (supabase as any)
     .from("generation_queue")
     .update({
       status: "processing",
@@ -69,13 +80,12 @@ export async function claimNextJob(): Promise<{
       attempts: 0,
       updated_at: new Date().toISOString(),
     })
+    .eq("id", jobId)
     .eq("status", "pending")
-    .order("created_at", { ascending: true })
-    .limit(1)
     .select();
 
-  if (error || !job || job.length === 0) return null;
-  const j = job[0] as any;
+  if (!claimed || claimed.length === 0) return null;
+  const j = claimed[0];
   return {
     id: j.id,
     job_type: j.job_type,
