@@ -121,8 +121,8 @@ function ThesisPage() {
   if (error || !data) return <div className="p-10 text-ink/60">Thesis not found.</div>;
 
   const thesis = data.thesis;
-  const c = (editMode ? editChapters : thesis.chapters) as Record<string, string>;
-  const refs = (thesis.references_list as Array<{ apa: string; url: string | null; source: string }>) ?? [];
+  const c = (editMode ? editChapters : (thesis.chapters ?? {})) as Record<string, string>;
+  const refs = ((thesis.references_list ?? []) as Array<{ apa: string; url: string | null; source: string }>);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
@@ -133,13 +133,13 @@ function ThesisPage() {
       <div className="mb-8 pb-6 border-b border-ink/10 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
-            {thesis.level} Thesis · {thesis.word_count.toLocaleString()} / {(thesis as any).target_words?.toLocaleString() ?? thesis.word_count.toLocaleString()} words ·{" "}
+            {thesis.level ?? "Undergraduate"} Thesis · {(thesis.word_count ?? 0).toLocaleString()} words ·{" "}
             {(thesis as any).citation_style === "harvard" ? "Harvard" : "APA 7th"}
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl leading-tight mb-3">{thesis.title}</h1>
-          <div className="text-xs text-ink/50">{thesis.department} · {thesis.area_of_interest}</div>
+          <div className="text-xs text-ink/50">{(thesis.department ?? "") + (thesis.department && thesis.area_of_interest ? " · " : "") + (thesis.area_of_interest ?? "")}</div>
           <div className="text-[11px] text-ink/40 mt-2">
-            Generated {new Date(thesis.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            Generated {thesis.created_at ? new Date(thesis.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : ""}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -165,7 +165,7 @@ function ThesisPage() {
       {/* Abstract */}
       {editMode ? (
         <EditableSection title="Abstract" value={editAbstract} onChange={setEditAbstract} />
-      ) : thesis.abstract ? (
+      ) : thesis?.abstract ? (
         <Section title="Abstract" body={thesis.abstract} />
       ) : null}
 
