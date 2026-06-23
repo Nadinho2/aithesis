@@ -22,7 +22,7 @@ const GenerateInput = z
     topic_id: z.string().uuid().optional(),
     manual: ManualTopic.optional(),
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
-    target_words: z.number().int().min(500).max(20000).default(2800),
+    target_words: z.number().int().min(500).max(80000).default(2800),
     citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
@@ -162,7 +162,7 @@ export const generateProposal = createServerFn({ method: "POST" })
 - Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
 - Reference list is rendered separately — do NOT output a bibliography.`;
 
-    const systemPrompt = `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style. Write in clear, natural academic English with varied sentence structure.
+    const baseSystemRules = `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style. Write in clear, natural academic English with varied sentence structure.
 
 RULES:
 - Plain text only — NO markdown syntax (no *,**,#,>, -, backticks).
@@ -170,46 +170,13 @@ RULES:
 - Use specific, concrete details (numbers, methods, locations).
 - Do not copy phrasing from the provided references — write originally.
 - Each paragraph should be 3-6 sentences.
+- Never invent citations — only cite the references provided below.
 
 ${citationRules}
 
-OUTPUT: Return ONLY valid JSON matching the schema below. No preamble, no commentary, no markdown.
+Return ONLY valid JSON. No preamble, no commentary, no markdown.`;
 
-{
-  "abstract": "...",
-  "sections": {
-    "background_to_the_study": "...",
-    "statement_of_the_problem": "...",
-    "objectives": ["Obj1", "Obj2", "Obj3"],
-    "research_questions": ["RQ1", "RQ2"],
-    "research_hypotheses": ["H1", "H2"],
-    "significance": "...",
-    "scope_of_the_study": "...",
-    "definition_of_terms": "...",
-    "conceptual_review": "...",
-    "empirical_review": "...",
-    "theoretical_review": "...",
-    "theoretical_framework": "...",
-    "summary_of_reviews": "...",
-    "gap_in_literature": "...",
-    "research_design": "...",
-    "area_of_the_study": "...",
-    "population_of_the_study": "...",
-    "sample_size": "...",
-    "sampling_technique": "...",
-    "instrumentation": "...",
-    "validity_of_instrument": "...",
-    "reliability_of_instrument": "...",
-    "method_of_collecting_data": "...",
-    "method_of_data_analysis": "..."
-  }
-}
-
-Target: EXACTLY ${target} words total. Distribute words deliberately — literature review and background should be the longest.
-${timelineRule}`;
-
-    const userPrompt = `RESEARCH TOPIC: ${topicCtx.title}
-
+    const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
 PROBLEM: ${topicCtx.problem_statement}
 RESEARCH GAP: ${topicCtx.research_gap}
 OBJECTIVES: ${topicCtx.objectives.join("; ")}
@@ -219,38 +186,76 @@ RESEARCH TYPE: ${topicCtx.research_type ?? "Not specified"}
 ACADEMIC LEVEL: ${data.level}
 
 VERIFIED SCHOLARLY REFERENCES (cite these only):
-${refContext}
+${refContext}`;
 
-Write the proposal now — TOTAL EXACTLY ${target} words.`;
+    // Parallel chunked generation — split into 3 logical groups + abstract.
+    const abstractTarget = Math.max(80, Math.round(target * 0.03));
+    const prelimTarget = Math.round(target * 0.28);
+    const litReviewTarget = Math.round(target * 0.44);
+    const methodTarget = Math.round(target * 0.25);
 
-    let parsed: any;
+    const genAbstractChunk = async () => {
+      const system = `${baseSystemRules}
+Write ONLY the abstract field. Return JSON: {"abstract": "..."}
+Target: EXACTLY ${abstractTarget} words. Single continuous paragraph.`;
+      const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
+      return raw?.abstract ?? "";
+    };
+
+    const genPreliminaryChunk = async () => {
+      const system = `${baseSystemRules}
+Write ONLY these fields as JSON:
+{"background_to_the_study":"...","statement_of_the_problem":"...","objectives":["Obj1","Obj2","Obj3"],"research_questions":["RQ1","RQ2"],"research_hypotheses":["H1","H2"],"significance":"...","scope_of_the_study":"...","definition_of_terms":"..."}
+Target total for these 8 fields: EXACTLY ${prelimTarget} words. Background and statement of problem longest.`;
+      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
+    };
+
+    const genLitReviewChunk = async () => {
+      const system = `${baseSystemRules}
+Write ONLY the literature review fields as JSON:
+{"conceptual_review":"...","empirical_review":"...","theoretical_review":"...","theoretical_framework":"...","summary_of_reviews":"...","gap_in_literature":"..."}
+Target total: EXACTLY ${litReviewTarget} words. Synthesise at least 8 references.`;
+      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
+    };
+
+    const genMethodologyChunk = async () => {
+      const system = `${baseSystemRules}
+Write ONLY the methodology fields as JSON:
+{"research_design":"...","area_of_the_study":"...","population_of_the_study":"...","sample_size":"...","sampling_technique":"...","instrumentation":"...","validity_of_instrument":"...","reliability_of_instrument":"...","method_of_collecting_data":"...","method_of_data_analysis":"..."}
+Target total: EXACTLY ${methodTarget} words.`;
+      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
+    };
+
+    let abstract: string;
+    let prelimData: any;
+    let litData: any;
+    let methodData: any;
+
     try {
-      const raw = await callAI(apiKey, {
-        model: "deepseek-reasoner",
-        max_tokens: 64000,
-        system: systemPrompt,
-        user: userPrompt,
-      });
-      // callAI already returns a parsed JSON object
-      parsed = ProposalSchema.parse(raw);
-    } catch {
-      // Retry once with a simpler prompt
-      try {
-        const retryRaw = await callAI(apiKey, {
-          model: "deepseek-reasoner",
-          max_tokens: 64000,
-          system: "You are an academic proposal writer. Output ONLY valid JSON matching the exact schema provided. No markdown, no code fences, no commentary.",
-          user: `Write a research proposal in JSON for this topic: ${topicCtx.title}\nLevel: ${data.level}\nTarget: ${target} words.\n\nProblem: ${topicCtx.problem_statement}\nGap: ${topicCtx.research_gap}\n\nReferences:\n${refContext}\n\nUse this exact JSON schema:\n{\n  "abstract": "...",\n  "sections": {\n    "background_to_the_study": "...",\n    "statement_of_the_problem": "...",\n    "objectives": ["Obj1"],\n    "research_questions": ["RQ1"],\n    "research_hypotheses": ["H1"],\n    "significance": "...",\n    "scope_of_the_study": "...",\n    "definition_of_terms": "...",\n    "conceptual_review": "...",\n    "empirical_review": "...",\n    "theoretical_review": "...",\n    "theoretical_framework": "...",\n    "summary_of_reviews": "...",\n    "gap_in_literature": "...",\n    "research_design": "...",\n    "area_of_the_study": "...",\n    "population_of_the_study": "...",\n    "sample_size": "...",\n    "sampling_technique": "...",\n    "instrumentation": "...",\n    "validity_of_instrument": "...",\n    "reliability_of_instrument": "...",\n    "method_of_collecting_data": "...",\n    "method_of_data_analysis": "..."\n  }\n}`,
-        });
-        parsed = ProposalSchema.parse(retryRaw);
-      } catch (e) {
-        console.error("Proposal AI generation failed:", e instanceof Error ? e.message : String(e));
-        console.error("User prompt length:", userPrompt.length, "target:", target);
-        throw new Error("Proposal generation failed. Please try again.");
-      }
+      const results = await Promise.all([
+        genAbstractChunk(),
+        genPreliminaryChunk(),
+        genLitReviewChunk(),
+        genMethodologyChunk(),
+      ]);
+      abstract = results[0];
+      prelimData = results[1];
+      litData = results[2];
+      methodData = results[3];
+    } catch (e) {
+      console.error("Proposal parallel generation failed:", e instanceof Error ? e.message : String(e));
+      throw new Error("Proposal generation failed. Please try again.");
     }
 
-    // Word count enforcement — multi-pass expansion if under, then deterministic trim to EXACT.
+    // Assemble full proposal from chunks
+    let parsed: any = {
+      abstract,
+      sections: { ...prelimData, ...litData, ...methodData },
+    };
+
+    const fullSections = SectionSchema.parse(parsed.sections);
+    parsed = ProposalSchema.parse({ abstract: parsed.abstract, sections: fullSections });
+
     let total = countWordsDeep(parsed);
     let attempts = 0;
     while (total < target && attempts < 5) {
@@ -260,22 +265,18 @@ Write the proposal now — TOTAL EXACTLY ${target} words.`;
         const refine = await callAI(apiKey, {
           model: "deepseek-reasoner",
           max_tokens: 64000,
-          system: systemPrompt,
-          user: `Your previous draft was ${total} words. The target is EXACTLY ${target} words (currently SHORT by ${diff}).
-Expand the proposal by adding approximately ${diff} more words of substantive analytical content distributed across conceptual_review, empirical_review, theoretical_review, and background_to_the_study. Preserve all existing arguments, structure, and citations — add depth, do not pad with filler. Re-submit the COMPLETE updated proposal.
+          system: baseSystemRules,
+          user: `Your previous draft was ${total} words. Target: EXACTLY ${target} words (SHORT by ${diff}).
+Expand conceptual_review, empirical_review, theoretical_review, and background_to_the_study. Return COMPLETE updated JSON.
 
-PREVIOUS DRAFT (JSON):
+PREVIOUS DRAFT:
 ${JSON.stringify(parsed)}`,
         });
         const refined = ProposalSchema.parse(refine);
         const scrubbed = scrubObject(refined) as typeof parsed;
         const newTotal = countWordsDeep(scrubbed);
-        if (newTotal > total) {
-          parsed = scrubbed;
-          total = newTotal;
-        } else {
-          break; // no progress; stop looping
-        }
+        if (newTotal > total) { parsed = scrubbed; total = newTotal; }
+        else break;
       } catch (e) {
         console.error("Proposal refinement failed:", e);
         break;

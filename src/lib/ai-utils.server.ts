@@ -150,6 +150,7 @@ export async function callAIText(
     model: string;
     system: string;
     user: string;
+    max_tokens?: number;
   },
 ): Promise<string> {
   const result = await callProvider(apiKey, opts);

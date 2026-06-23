@@ -22,7 +22,7 @@ const GenerateInput = z
     topic_id: z.string().uuid().optional(),
     manual: ManualTopic.optional(),
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
-    target_words: z.number().int().min(6000).max(15000).default(8000),
+    target_words: z.number().int().min(6000).max(80000).default(8000),
     citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
@@ -266,6 +266,9 @@ Present results as if data were collected. Include realistic-sounding tables des
 
     // Generate abstract and all 5 chapters in parallel.
     const genChapter = async (key: string, label: string, instructions: string, wordTarget: number) => {
+      // Use deepseek-reasoner for chapters needing > 6K words (most chapters at 80K total),
+      // deepseek-chat for smaller ones
+      const model = wordTarget > 6000 ? "deepseek-reasoner" : "deepseek-chat";
       const systemPrompt = `You are a senior academic writing ${label} of a ${data.level} thesis.
 
 ${baseRules}
@@ -278,7 +281,7 @@ Output the chapter text directly as plain text — NOT wrapped in JSON.`;
       const userPrompt = `${topicContext}
 
 Write ${label} now — EXACTLY ${wordTarget} words.`;
-      const content = await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
+      const content = await callAIText(apiKey, { model, max_tokens: 64000, system: systemPrompt, user: userPrompt });
       return { key, content };
     };
 
@@ -335,6 +338,7 @@ Write the abstract now — EXACTLY ${abstractTarget} words.`;
       const expandPromises = toExpand.map(async (c) => {
         const def = chapterDefs.find((d) => d.key === c.key)!;
         const newTarget = Math.max(def.target, c.current + Math.ceil(diff / toExpand.length));
+        const expandModel = newTarget > 6000 ? "deepseek-reasoner" : "deepseek-chat";
         const systemPrompt = `You are a senior academic writing ${def.label} of a ${data.level} thesis.
 
 ${baseRules}
@@ -353,7 +357,7 @@ Below is your current draft of ${def.label} (${c.current} words). Expand it to A
 
 CURRENT DRAFT:
 ${chapters[c.key]}`;
-        const content = await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
+        const content = await callAIText(apiKey, { max_tokens: 64000, model: expandModel, system: systemPrompt, user: userPrompt });
         return { key: c.key, content };
       });
 
