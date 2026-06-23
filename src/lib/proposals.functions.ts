@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.se
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { inngest } from "./inngest/client";
+import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 
 const ManualTopic = z.object({
@@ -158,18 +158,15 @@ export const generateProposal = createServerFn({ method: "POST" })
     }
 
     // Enqueue background job
-    await inngest.send({
-      name: "mybrainpadi/proposal.generate",
+    await enqueueJob("proposal", {
+      userId,
       data: {
-        userId,
-        data: {
-          level: data.level,
-          target_words: target,
-          citation_style: data.citation_style,
-          topicCtx,
-          refs: refs.slice(0, 20),
-          isPaid,
-        },
+        level: data.level,
+        target_words: target,
+        citation_style: data.citation_style,
+        topicCtx,
+        refs: refs.slice(0, 20),
+        isPaid,
       },
     });
 

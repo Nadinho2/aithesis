@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { inngest } from "./inngest/client";
+import { enqueueJob } from "./queue";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -104,18 +104,15 @@ export const generateThesis = createServerFn({ method: "POST" })
     }
 
     // Enqueue background job
-    await inngest.send({
-      name: "mybrainpadi/thesis.generate",
+    await enqueueJob("thesis", {
+      userId,
       data: {
-        userId,
-        data: {
-          level: data.level,
-          target_words: data.target_words,
-          citation_style: data.citation_style,
-          topicCtx,
-          refs: refs.slice(0, 30),
-          isPaid,
-        },
+        level: data.level,
+        target_words: data.target_words,
+        citation_style: data.citation_style,
+        topicCtx,
+        refs: refs.slice(0, 30),
+        isPaid,
       },
     });
 

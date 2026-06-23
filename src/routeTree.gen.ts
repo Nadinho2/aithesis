@@ -17,7 +17,6 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcademicIntegrityRouteImport } from './routes/academic-integrity'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiInngestRouteImport } from './routes/api/inngest'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as AuthenticatedTopicGeneratorRouteImport } from './routes/_authenticated/topic-generator'
 import { Route as AuthenticatedThesesRouteImport } from './routes/_authenticated/theses'
@@ -82,11 +81,6 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiInngestRoute = ApiInngestRouteImport.update({
-  id: '/api/inngest',
-  path: '/api/inngest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiClerkWebhookRoute = ApiClerkWebhookRouteImport.update({
@@ -251,7 +245,6 @@ export interface FileRoutesByFullPath {
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
-  '/api/inngest': typeof ApiInngestRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -287,7 +280,6 @@ export interface FileRoutesByTo {
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
-  '/api/inngest': typeof ApiInngestRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -325,7 +317,6 @@ export interface FileRoutesById {
   '/_authenticated/theses': typeof AuthenticatedThesesRoute
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
-  '/api/inngest': typeof ApiInngestRoute
   '/_authenticated/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/_authenticated/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/_authenticated/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -363,7 +354,6 @@ export interface FileRouteTypes {
     | '/theses'
     | '/topic-generator'
     | '/api/clerk-webhook'
-    | '/api/inngest'
     | '/proposal/$id'
     | '/thesis/$id'
     | '/tools/assignment'
@@ -399,7 +389,6 @@ export interface FileRouteTypes {
     | '/theses'
     | '/topic-generator'
     | '/api/clerk-webhook'
-    | '/api/inngest'
     | '/proposal/$id'
     | '/thesis/$id'
     | '/tools/assignment'
@@ -436,7 +425,6 @@ export interface FileRouteTypes {
     | '/_authenticated/theses'
     | '/_authenticated/topic-generator'
     | '/api/clerk-webhook'
-    | '/api/inngest'
     | '/_authenticated/proposal/$id'
     | '/_authenticated/thesis/$id'
     | '/_authenticated/tools/assignment'
@@ -465,7 +453,6 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiClerkWebhookRoute: typeof ApiClerkWebhookRoute
-  ApiInngestRoute: typeof ApiInngestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -524,13 +511,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/inngest': {
-      id: '/api/inngest'
-      path: '/api/inngest'
-      fullPath: '/api/inngest'
-      preLoaderRoute: typeof ApiInngestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/clerk-webhook': {
@@ -850,7 +830,6 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiClerkWebhookRoute: ApiClerkWebhookRoute,
-  ApiInngestRoute: ApiInngestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
