@@ -11,4 +11,5 @@ function runtimeEnv(key: string): string | undefined {
 export const inngest = new Inngest({
   id: "mybrainpadi",
   eventKey: runtimeEnv("INNGEST_EVENT_KEY") ?? undefined,
+  signingKey: runtimeEnv("INNGEST_SIGNING_KEY") ?? undefined,
 });

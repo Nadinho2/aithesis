@@ -6,7 +6,7 @@ import { serve } from "inngest/next";
 // Inngest serves its functions at this endpoint.
 // Inngest calls back here to run background jobs.
 
-const handler = serve({
+const { GET: inngestGET, POST: inngestPOST } = serve({
   client: inngest,
   functions: [generateThesisJob, generateProposalJob],
 });
@@ -15,14 +15,11 @@ export const Route = createFileRoute("/api/inngest")({
   server: {
     handlers: {
       GET: async (ctx) => {
-        // Inngest uses GET for health checks / dev server UI
-        return new Response("Inngest handler ready", { status: 200 });
+        return inngestGET(ctx.request as any, undefined as any);
       },
       POST: async (ctx) => {
         try {
-          // The Inngest serve handler expects a standard Request and returns a Response
-          const response = await handler(ctx.request as any, undefined as any);
-          return response;
+          return inngestPOST(ctx.request as any, undefined as any);
         } catch (err: any) {
           console.error("[inngest] Handler error:", err?.message ?? String(err));
           return new Response(JSON.stringify({ error: "Internal error" }), {
