@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { inngest } from "@/lib/inngest/client";
 import { generateThesisJob, generateProposalJob } from "@/lib/inngest/functions";
-import { serve } from "inngest/next";
+import { serve } from "inngest/astro";
 
 // Inngest serves its functions at this endpoint.
 // Inngest calls back here to run background jobs.
@@ -14,12 +14,10 @@ const { GET: inngestGET, POST: inngestPOST } = serve({
 export const Route = createFileRoute("/api/inngest")({
   server: {
     handlers: {
-      GET: async (ctx) => {
-        return inngestGET(ctx.request as any, undefined as any);
-      },
+      GET: async (ctx) => inngestGET(ctx),
       POST: async (ctx) => {
         try {
-          return inngestPOST(ctx.request as any, undefined as any);
+          return inngestPOST(ctx);
         } catch (err: any) {
           console.error("[inngest] Handler error:", err?.message ?? String(err));
           return new Response(JSON.stringify({ error: "Internal error" }), {
