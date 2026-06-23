@@ -114,7 +114,11 @@ export const generateThesis = createServerFn({ method: "POST" })
         refs: refs.slice(0, 30),
         isPaid,
       },
-    }).catch((err) => console.error("[thesis] Background generation failed:", err));
+    }).catch(async (err) => {
+      console.error("[thesis] Background generation failed:", err);
+      const { notifyToolFailed } = await import("./mail-helper");
+      await notifyToolFailed(userId, "Thesis").catch(() => {});
+    });
 
     // Increment usage
     if (!isPaid) {

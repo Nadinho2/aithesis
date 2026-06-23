@@ -168,7 +168,11 @@ export const generateProposal = createServerFn({ method: "POST" })
         refs: refs.slice(0, 20),
         isPaid,
       },
-    }).catch((err) => console.error("[proposal] Background generation failed:", err));
+    }).catch(async (err) => {
+      console.error("[proposal] Background generation failed:", err);
+      const { notifyToolFailed } = await import("./mail-helper");
+      await notifyToolFailed(userId, "Proposal").catch(() => {});
+    });
 
     // Increment usage
     if (!isPaid) {
