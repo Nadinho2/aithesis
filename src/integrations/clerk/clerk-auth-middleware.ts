@@ -4,12 +4,41 @@ import type { Database } from '@/integrations/supabase/types'
 
 function runtimeEnv(key: string): string | undefined {
   try {
-    // Use bracket notation + globalThis to prevent bundler static replacement
     const proc = (globalThis as any).process
     return proc?.env?.[key]
   } catch {
     return undefined
   }
+}
+
+/**
+ * Extract a header value from an unknown headers object.
+ * Handles both standard Headers objects (with .get()) and plain objects.
+ */
+function getHeader(headers: unknown, name: string): string | null {
+  if (!headers) return null
+  // Standard Headers API
+  if (typeof (headers as any).get === 'function') {
+    return (headers as any).get(name) ?? null
+  }
+  // Plain object (e.g. IncomingMessage.headers)
+  const val = (headers as Record<string, any>)[name]
+  if (Array.isArray(val)) return val[0] ?? null
+  return val ?? null
+}
+
+/**
+ * Extract the Clerk session token from a cookie string.
+ * Clerk uses '__session' as the default cookie name.
+ */
+function extractSessionFromCookies(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null
+  // Try __session first, then __clerk_db_jwt as fallback
+  for (const name of ['__session', '__clerk_db_jwt']) {
+    const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`))
+    if (match) return match[1]
+  }
+  return null
 }
 
 export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
@@ -24,7 +53,6 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
         const supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
           auth: { persistSession: false, autoRefreshToken: false },
         })
-        // Check if dev user has admin role in user_roles table
         const { data: roleRow } = await supabase
           .from("user_roles")
           .select("role")
@@ -37,41 +65,47 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       }
     }
 
-    // Dynamically import Clerk backend to avoid bundling Node.js-only code in the client
+    // Parse headers, supporting both Headers API and plain-object headers
+    const headers = (request as any)?.headers ?? {}
+
+    // 1. Try custom header from client-side auth-attacher middleware
+    let sessionToken = getHeader(headers, 'x-clerk-session-token')
+
+    // 2. Try Authorization Bearer header
+    if (!sessionToken) {
+      const authHeader = getHeader(headers, 'authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        sessionToken = authHeader.slice(7)
+      }
+    }
+
+    // 3. Fallback to Clerk __session cookie
+    if (!sessionToken) {
+      const cookieHeader = getHeader(headers, 'cookie')
+      sessionToken = extractSessionFromCookies(cookieHeader)
+    }
+
+    if (!sessionToken) {
+      console.warn('[requireClerkAuth] No session token found in headers, authorization header, or cookies')
+      throw new Error('Unauthorized: No valid session')
+    }
+
     const { verifyToken, createClerkClient } = await import('@clerk/backend')
     const clerkSecretKey = runtimeEnv('CLERK_SECRET_KEY')
     if (!clerkSecretKey) throw new Error('Missing CLERK_SECRET_KEY environment variable')
     const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
 
-    // Try header first (from client-side middleware)
-    let sessionToken = request?.headers?.get?.('x-clerk-session-token')
-
-    // Fallback: try the Clerk __session cookie (automatically sent with requests)
-    if (!sessionToken) {
-      const cookieHeader = request?.headers?.get?.('cookie') ?? ''
-      sessionToken = cookieHeader
-        .split(';')
-        .map((c: string) => c.trim())
-        .find((c: string) => c.startsWith('__session='))
-        ?.slice('__session='.length) ?? null
-    }
-
     let userId: string | null = null
-
-    if (sessionToken) {
-      try {
-        const payload = await verifyToken(sessionToken, {
-          secretKey: clerkSecretKey,
-        })
-        userId = payload.sub ?? null
-      } catch {
-        // Token invalid — will fall through to error below
-      }
+    try {
+      const payload = await verifyToken(sessionToken, { secretKey: clerkSecretKey })
+      userId = payload.sub ?? null
+    } catch (err) {
+      console.warn('[requireClerkAuth] Session token verification failed:', (err as any)?.message ?? err)
+      throw new Error('Unauthorized: No valid session')
     }
 
     if (!userId) throw new Error('Unauthorized: No valid session')
 
-    // Fetch admin status from Clerk public metadata
     let isAdmin = false
     try {
       const clerkUser = await clerkClient.users.getUser(userId)
@@ -97,20 +131,9 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     const supabase = createClient<Database>(
       supabaseUrl,
       supabaseServiceRoleKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      },
+      { auth: { persistSession: false, autoRefreshToken: false } },
     )
 
-    return next({
-      context: {
-        supabase,
-        userId,
-        isAdmin,
-      },
-    })
+    return next({ context: { supabase, userId, isAdmin } })
   },
 )
