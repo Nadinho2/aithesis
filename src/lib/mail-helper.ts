@@ -42,6 +42,7 @@ import {
   sendPresentationReadyEmail,
   sendCVReadyEmail,
   sendSideHustleReadyEmail,
+  sendGenerationFailedEmail,
 } from "./mail";
 import type { BrainPadiTool } from "./mail";
 

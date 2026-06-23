@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
+import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
-import { scrubObject, countWords, countWordsDeep, callAIText } from "./ai-utils.server";
-import { notifyToolCompleted, getUserEmail, notifyToolFailed } from "./mail-helper";
+import { getUserEmail } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
+import { inngest } from "./inngest/client";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -28,28 +28,13 @@ const GenerateInput = z
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
 
-const ChapterSchema = z.object({
-  chapter_1_introduction: z.string(),
-  chapter_2_literature_review: z.string(),
-  chapter_3_methodology: z.string(),
-  chapter_4_results_findings: z.string(),
-  chapter_5_discussion_conclusion: z.string(),
-});
-
-const ThesisSchema = z.object({
-  abstract: z.string(),
-  chapters: ChapterSchema,
-});
-
 export const generateThesis = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    if (!apiKey) throw new Error("DeepSeek is not configured.");
 
-    // Payment check — if user has paid, skip limit check
+    // Payment check
     let isPaid = false;
     const { data: paidTx } = await (supabase as any)
       .from("transactions")
@@ -59,28 +44,16 @@ export const generateThesis = createServerFn({ method: "POST" })
       .eq("product", "thesis")
       .eq("level", data.level)
       .limit(1);
-    if (paidTx?.length) {
-      isPaid = true;
-    }
+    if (paidTx?.length) isPaid = true;
 
-    // Check generation limit (only for non-paid users)
+    // Limit check (non-paid only)
     if (!isPaid) {
       const canGen = await checkGenerateLimit(supabase, userId, "thesis", data.level);
       if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
     }
 
-    let topicCtx: {
-      title: string;
-      problem_statement: string;
-      research_gap: string;
-      objectives: string[];
-      department?: string | null;
-      area_of_interest?: string | null;
-      country?: string | null;
-      research_type?: string | null;
-      id?: string | null;
-    };
-
+    // Build topic context
+    let topicCtx: any;
     if (data.topic_id) {
       const { data: topic, error } = await supabase
         .from("topics")
@@ -114,9 +87,12 @@ export const generateThesis = createServerFn({ method: "POST" })
       };
     }
 
-    const target = data.target_words;
+    // Fetch references
+    const query = `${topicCtx.title} ${topicCtx.area_of_interest ?? ""}`.trim();
+    const refs = await fetchScholarlyRefs(query, 8);
+    if (refs.length === 0) throw new Error("No scholarly references could be retrieved.");
 
-    // Send processing started notification (fire-and-forget)
+    // Processing started email
     const processingEmail = await getUserEmail(userId);
     if (processingEmail) {
       const { sendProcessingStartedEmail } = await import("./mail");
@@ -127,313 +103,43 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
-    const query = `${topicCtx.title} ${topicCtx.area_of_interest ?? ""}`.trim();
-    const refs = await fetchScholarlyRefs(query, 8);
-    if (refs.length === 0) throw new Error("No scholarly references could be retrieved. Please try again.");
-
-    const refContext = refs
-      .slice(0, 30)
-      .map(
-        (r, i) =>
-          `[${i + 1}] ${r.authors.slice(0, 3).join(", ")}${r.authors.length > 3 ? " et al." : ""} (${r.year ?? "n.d."}). "${r.title}". ${r.venue ?? r.source}. ${r.abstract ? "Abstract: " + r.abstract : ""}`,
-      )
-      .join("\n\n");
-
-    // Distribute target words across chapters
-    const abstractTarget = Math.round(target * 0.04); // ~4%
-    const chapterTargets = {
-      chapter_1_introduction: Math.round(target * 0.15),
-      chapter_2_literature_review: Math.round(target * 0.32),
-      chapter_3_methodology: Math.round(target * 0.18),
-      chapter_4_results_findings: Math.round(target * 0.20),
-      chapter_5_discussion_conclusion: Math.round(target * 0.15),
-    };
-
-    const citationRulesStr = data.citation_style === "harvard"
-      ? `CITATION RULES — STRICT HARVARD STYLE:
-- Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
-- Inline parenthetical: (Author, Year); (Author and Author, Year); for 4+ authors use (First et al., Year) after first use.
-- For narrative citations: Author (Year)...
-- Reference list is rendered programmatically; do NOT output a bibliography.`
-      : `CITATION RULES — STRICT APA 7th EDITION:
-- Use ONLY the provided references. NEVER invent authors, years, journals, or DOIs.
-- Inline: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+ authors.
-- Reference list is rendered programmatically; do NOT output a bibliography.`;
-
-    const baseRules = `OUTPUT FORMAT — STRICT:
-- Plain text only. NEVER use markdown syntax. NO asterisks (* or **), NO underscores for emphasis, NO backticks, NO hashes (#) for headings, NO hyphen bullets at line starts.
-- Do NOT bold, italicise, or otherwise emphasise words.
-- Separate paragraphs with a single blank line. Paragraphs should be 3–6 sentences.
-- Put every subheading on its OWN line with a blank line above and below it.
-
-ORIGINALITY & PLAGIARISM PREVENTION (ABSOLUTE REQUIREMENTS):
-- Every sentence must be 100% originally written. NEVER copy, paraphrase, or closely mirror any existing text from the provided references, your training data, or common academic templates.
-- For each sentence, ask yourself: "Could this sentence be found in any existing paper?" If yes, rewrite it completely.
-- Use highly specific context from the research topic (country, population, methods, dates, institutions) that cannot exist in any other paper.
-- Include concrete, field-specific terminology unique to this topic's discipline.
-- Vary sentence structure aggressively — mix short declarative sentences, complex compound sentences, and occasional questions.
-- BANNED PHRASES (zero tolerance): "in today's world", "delve into", "navigate the landscape", "it is important to note", "plays a pivotal/crucial/vital role", "a testament to", "in the realm of", "ever-evolving", "tapestry", "myriad", "harness the power of", "unlock the potential", "furthermore it is worth noting", "needless to say", "game-changer", "cutting-edge", "state-of-the-art", "paradigm shift", "dive deep into", "underscores the importance of", "in recent years", "over the years", "in the modern era", "in the digital age", "there is a growing need", "there has been an increasing", "this study aims to", "the purpose of this study", "the main objective", "this research seeks to", "it is against this background", "this study therefore", "the findings of this study", "the results indicate", "based on the findings", "in light of the above".
-- Do NOT begin ANY paragraph with: "In summary", "In conclusion", "Furthermore,", "Moreover,", "However,", "Therefore,", "Additionally,", "Consequently,".
-- At most two em-dashes per chapter.
-- If a sentence sounds like something a generic AI would write, delete it and rewrite from scratch.
-- READ your output before finalizing. If any 5-word sequence could appear verbatim in an existing academic paper, change those words.
-
-${citationRulesStr}
-
-TABLES & FIGURES:
-When you present tabular data, embed it as:
-[TABLE: Table X: Caption]
-| Header 1 | Header 2 | Header 3 |
-| Cell 1,1 | Cell 1,2 | Cell 1,3 |
-| Cell 2,1 | Cell 2,2 | Cell 2,3 |
-
-Each table starts with [TABLE: caption] on its own line, has pipe-delimited rows, and closes with ] on its own line after all rows.
-
-For figures:
-[FIGURE: Figure X: Caption]
-Prose describing the figure, key values, and trends.
-
-Place tables ONLY in Chapter 4 (Results) and Chapter 3 (Methodology). At most 3 tables and 2 figures total.
-
-Output the chapter text as plain text — NOT wrapped in any format like JSON or markdown.`;
-
-    const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
-PROBLEM: ${topicCtx.problem_statement}
-RESEARCH GAP: ${topicCtx.research_gap}
-OBJECTIVES: ${topicCtx.objectives.join("; ")}
-DEPARTMENT: ${topicCtx.department ?? ""}
-CONTEXT/COUNTRY: ${topicCtx.country ?? "Not specified"}
-RESEARCH TYPE: ${topicCtx.research_type ?? "Not specified"}
-ACADEMIC LEVEL: ${data.level}
-
-VERIFIED SCHOLARLY REFERENCES (cite these only):
-${refContext}`;
-
-    const chapterDefs: { key: string; label: string; instructions: string; target: number }[] = [
-      {
-        key: "chapter_1_introduction",
-        label: "Chapter 1: Introduction",
-        instructions: `Write Chapter 1 with these exact sub-sections, each on its own line as a heading:
-1.1 Background to the Study
-1.2 Statement of Problem
-1.3 Objective of the Study
-1.4 Research Questions
-1.5 Research Hypothesis
-1.6 Significant of the Study
-1.7 Scope of the Study
-1.8 Definition of Terms`,
-        target: chapterTargets.chapter_1_introduction,
+    // Enqueue background job
+    await inngest.send({
+      name: "mybrainpadi/thesis.generate",
+      data: {
+        userId,
+        data: {
+          level: data.level,
+          target_words: data.target_words,
+          citation_style: data.citation_style,
+          topicCtx,
+          refs: refs.slice(0, 30),
+          isPaid,
+        },
       },
-      {
-        key: "chapter_2_literature_review",
-        label: "Chapter 2: Literature Review",
-        instructions: `Write Chapter 2 with these exact sub-sections, each on its own line as a heading:
-2.1 Conceptual Review
-2.2 Empirical Review
-2.3 Theoretical Review
-2.4 Theoretical Framework
-2.5 Summary of Reviews
-2.6 Gap in Literature
-
-Synthesise at least 8 references, arguing themes rather than summarising one-by-one.`,
-        target: chapterTargets.chapter_2_literature_review,
-      },
-      {
-        key: "chapter_3_methodology",
-        label: "Chapter 3: Methodology",
-        instructions: `Write Chapter 3 with these exact sub-sections, each on its own line as a heading:
-3.1 Research Design
-3.2 Area of the Study
-3.3 Population of the Study
-3.4 Sample Size
-3.5 Sampling Techniques
-3.6 Instrument for Data Collection
-3.7 Validity of Instrument
-3.8 Reliability of Instrument
-3.9 Method of Administering Data
-3.10 Method of Presentation and Data Analysis`,
-        target: chapterTargets.chapter_3_methodology,
-      },
-      {
-        key: "chapter_4_results_findings",
-        label: "Chapter 4: Results and Findings",
-        instructions: `Write Chapter 4 with these exact sub-sections, each on its own line as a heading:
-4.1 Introduction
-4.2 Data Analysis and Presentation
-4.3 Discussion of Findings
-
-Present results as if data were collected. Include realistic-sounding tables described in prose.`,
-        target: chapterTargets.chapter_4_results_findings,
-      },
-      {
-        key: "chapter_5_discussion_conclusion",
-        label: "Chapter 5: Summary, Conclusion and Recommendations",
-        instructions: `Write Chapter 5 with these exact sub-sections, each on its own line as a heading:
-5.1 Summary of Findings
-5.2 Conclusion
-5.3 Limitations of the Study
-5.4 Recommendations`,
-        target: chapterTargets.chapter_5_discussion_conclusion,
-      },
-    ];
-
-    // Generate abstract and all 5 chapters in parallel.
-    const genChapter = async (key: string, label: string, instructions: string, wordTarget: number) => {
-      // Use deepseek-reasoner for chapters needing > 6K words (most chapters at 80K total),
-      // deepseek-chat for smaller ones
-      const model = wordTarget > 6000 ? "deepseek-reasoner" : "deepseek-chat";
-      const systemPrompt = `You are a senior academic writing ${label} of a ${data.level} thesis.
-
-${baseRules}
-
-Write exactly one chapter: ${label}. ${instructions}
-Target: EXACTLY ${wordTarget} words.
-Use sub-headings (e.g. "1.1 Background to the Study", "3.2 Population and Sample") on their own lines.
-
-Output the chapter text directly as plain text — NOT wrapped in JSON.`;
-      const userPrompt = `${topicContext}
-
-Write ${label} now — EXACTLY ${wordTarget} words.`;
-      const content = await callAIText(apiKey, { model, max_tokens: 64000, system: systemPrompt, user: userPrompt });
-      return { key, content };
-    };
-
-    const genAbstract = async () => {
-      const systemPrompt = `You are a senior academic writing the abstract of a ${data.level} thesis.
-
-${baseRules}
-
-Write the abstract. Target: EXACTLY ${abstractTarget} words.
-Do NOT use sub-headings. The abstract is a single continuous paragraph.
-
-Output the abstract text directly as plain text — NOT wrapped in JSON.`;
-      const userPrompt = `${topicContext}
-
-Write the abstract now — EXACTLY ${abstractTarget} words.`;
-      return await callAIText(apiKey, { model: "deepseek-chat", system: systemPrompt, user: userPrompt });
-    };
-
-    const [abstractResult, ...chapterResults] = await Promise.all([
-      genAbstract(),
-      ...chapterDefs.map((c) => genChapter(c.key, c.label, c.instructions, c.target)),
-    ]);
-
-    const abstract = abstractResult;
-    const chapters: Record<string, string> = {};
-    let total = 0;
-    for (const cr of chapterResults) {
-      chapters[cr.key] = cr.content;
-      total += countWords(cr.content);
-    }
-    total += countWords(abstract);
-
-    // Strict word-count enforcement — never below target
-    const maxRetries = 8;
-    let retries = 0;
-    while (total < target && retries < maxRetries) {
-      retries++;
-      const diff = target - total;
-      const sorted = chapterDefs
-        .map((c) => ({ key: c.key, label: c.label, current: countWords(chapters[c.key] || ""), target: c.target }))
-        .sort((a, b) => a.current - b.current);
-
-      // Pick the 2 shortest chapters — expand aggressively
-      const toExpand = sorted.slice(0, 2);
-
-      const expandPromises = toExpand.map(async (c) => {
-        const def = chapterDefs.find((d) => d.key === c.key)!;
-        const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
-        const newTarget = c.current + overshoot;
-        const systemPrompt = `You are a senior academic writing ${def.label} of a ${data.level} thesis.
-
-${baseRules}
-
-You previously wrote a version of this chapter. The user requires AT LEAST ${target} words total — the current draft is SHORT by ${diff} words. You MUST EXPAND this chapter with substantial additional content.
-
-Do NOT delete or summarise existing content. Keep all existing arguments and add depth with: more synthesised citations, extended analysis, concrete examples, additional sub-topics, and detailed discussion.
-
-Target for THIS chapter: AT LEAST ${newTarget} words (currently ${c.current}).
-Current word count: ${c.current} words.
-
-Use sub-headings on their own lines.
-
-Output the FULL updated chapter as plain text — NOT wrapped in JSON.`;
-        const userPrompt = `${topicContext}
-
-Below is your current draft of ${def.label} (${c.current} words). Expand it to AT LEAST ${newTarget} words by adding more analysis, examples, citations, and detail. Keep ALL existing text.
-
-CURRENT DRAFT:
-${chapters[c.key]}`;
-        const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-reasoner", system: systemPrompt, user: userPrompt });
-        return { key: c.key, content };
-      });
-
-      const expanded = await Promise.all(expandPromises);
-      for (const e of expanded) {
-        chapters[e.key] = e.content;
-      }
-      total = countWordsDeep({ abstract, chapters } as any);
-    }
-
-    let parsed: z.infer<typeof ThesisSchema> = { abstract, chapters } as any;
-    parsed = scrubObject(parsed) as typeof parsed;
-    total = countWordsDeep(parsed);
-
-    // HARD ENFORCEMENT — never save below target
-    if (total < target) {
-      throw new Error(
-        `Thesis generation could only reach ${total} words (target: ${target}) after ${maxRetries} expansion attempts. Please try again with a slightly lower target.`,
-      );
-    }
-
-    const referencesList = refs.map((r) => ({ ...r, apa: formatAPA(r) }));
-
-    const { data: created, error: insErr } = await supabase
-      .from("theses")
-      .insert({
-        user_id: userId,
-        topic_id: topicCtx.id,
-        title: topicCtx.title,
-        level: data.level,
-        department: topicCtx.department ?? null,
-        area_of_interest: topicCtx.area_of_interest ?? null,
-        country: topicCtx.country ?? null,
-        research_type: topicCtx.research_type ?? null,
-        abstract: parsed.abstract,
-        chapters: parsed.chapters,
-        references_list: referencesList,
-        word_count: total,
-        target_words: target,
-        citation_style: data.citation_style,
-        status: "draft",
-      } as any)
-      .select()
-      .single();
-    if (insErr) throw new Error(insErr.message);
-
-    // Increment usage after successful generation
-    await incrementUsage(supabase, userId, "thesis");
-
-    // Fire-and-forget email notification
-    notifyToolCompleted(userId, "thesis", {
-      title: created.title,
-      downloadUrl: `https://www.mybrainpadi.com/thesis/${created.id}`,
-      aiScore: 85,
-      plagiarismScore: 92,
     });
 
-    return { thesis: created };
+    // Increment usage
+    if (!isPaid) {
+      await incrementUsage(supabase, userId, "thesis", data.level);
+    }
+
+    return { success: true, message: "Your thesis is being generated. You'll receive an email when it's ready." };
   });
 
 export const getThesis = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((i: unknown) => z.object({ id: z.string() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: row, error } = await supabase.from("theses").select("*").eq("id", data.id).maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) throw new Error("Thesis not found");
-    return row;
+    const { supabase, userId } = context;
+    const { data: thesis } = await supabase
+      .from("theses")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (!thesis) throw new Error("Thesis not found.");
+    return { thesis };
   });
 
 export const listTheses = createServerFn({ method: "GET" })
@@ -442,49 +148,40 @@ export const listTheses = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("theses")
-      .select("id,title,level,word_count,target_words,created_at")
+      .select("id, title, level, word_count, status, created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(200);
+      .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
   });
 
 export const deleteThesis = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((i: unknown) => z.object({ id: z.string() }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { error } = await supabase.from("theses").delete().eq("id", data.id);
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("theses")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
 
 export const exportThesisDocx = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((i: unknown) => z.object({ id: z.string() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { data: row, error } = await supabase.from("theses").select("*").eq("id", data.id).maybeSingle();
-    if (error || !row) throw new Error("Thesis not found");
-    const bytes = await buildThesisDocx({
-      title: row.title,
-      level: row.level,
-      department: row.department,
-      area_of_interest: row.area_of_interest,
-      country: row.country,
-      abstract: row.abstract,
-      word_count: row.word_count,
-      chapters: row.chapters as any,
-      references_list: (row.references_list as any) ?? [],
-      citation_style: ((row as any).citation_style as "apa_7" | "harvard") ?? "apa_7",
-    });
-    const filename = sanitize(`${row.title}-thesis.docx`);
-    return { base64: toBase64(bytes), filename, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+    const { data: thesis } = await supabase
+      .from("theses")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (!thesis) throw new Error("Thesis not found.");
+
+    const buffers = await buildThesisDocx(thesis as any);
+    const base64 = await toBase64(buffers);
+    return { base64, filename: `${thesis.title?.replace(/\s+/g, "_").slice(0, 60) ?? "thesis"}.docx` };
   });
-
-export type ThesisReference = ScholarlyRef & { apa: string };
-
-function sanitize(s: string): string {
-  return s.replace(/[^a-z0-9._-]+/gi, "_").slice(0, 120);
-}

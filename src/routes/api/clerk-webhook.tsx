@@ -11,43 +11,45 @@ function runtimeEnv(key: string): string | undefined {
 
 export const Route = createFileRoute("/api/clerk-webhook")({
   server: {
-    POST: async ({ request }) => {
-      try {
-        const secretKey = runtimeEnv("CLERK_SECRET_KEY");
-        if (!secretKey) {
-          return new Response(JSON.stringify({ error: "Clerk not configured" }), { status: 500 });
-        }
+    handlers: {
+      POST: async (ctx) => {
+        const request = ctx.request;
+        try {
+          const secretKey = runtimeEnv("CLERK_SECRET_KEY");
+          if (!secretKey) {
+            return new Response(JSON.stringify({ error: "Clerk not configured" }), { status: 500 });
+          }
 
-        const text = await request.text();
-        const svixId = request.headers.get("svix-id");
-        const svixTimestamp = request.headers.get("svix-timestamp");
-        const svixSignature = request.headers.get("svix-signature");
+          const text = await request.text();
+          const svixId = request.headers.get("svix-id");
+          const svixTimestamp = request.headers.get("svix-timestamp");
+          const svixSignature = request.headers.get("svix-signature");
 
-        // Verify webhook signature if present
-        if (svixId && svixTimestamp && svixSignature) {
-          try {
-            const { Webhook } = await import("svix");
-            const wh = new Webhook(secretKey);
-            const payload = wh.verify(text, {
-              "svix-id": svixId,
-              "svix-timestamp": svixTimestamp,
-              "svix-signature": svixSignature,
-            }) as any;
+          // Verify webhook signature if present
+          if (svixId && svixTimestamp && svixSignature) {
+            try {
+              const { Webhook } = await import("svix");
+              const wh = new Webhook(secretKey);
+              const payload = wh.verify(text, {
+                "svix-id": svixId,
+                "svix-timestamp": svixTimestamp,
+                "svix-signature": svixSignature,
+              }) as any;
 
-            const eventType = payload.type;
+              const eventType = payload.type;
 
-            // user.created — send verification email with custom link
-            if (eventType === "user.created") {
-              const { id, email_addresses, first_name } = payload.data ?? {};
-              const email = email_addresses?.[0]?.email_address;
-              if (id && email) {
-                const name = first_name ?? email.split("@")[0];
-                // Clerk sends its own verification email — we send a welcome in case they verified elsewhere
-                // For custom verification, we'd send sendVerificationEmail here
+              // user.created — send verification email with custom link
+              if (eventType === "user.created") {
+                const { id, email_addresses, first_name } = payload.data ?? {};
+                const email = email_addresses?.[0]?.email_address;
+                if (id && email) {
+                  const name = first_name ?? email.split("@")[0];
+                  // Clerk sends its own verification email — we send a welcome in case they verified elsewhere
+                  // For custom verification, we'd send sendVerificationEmail here
+                }
               }
-            }
 
-            // user.updated — check if email was just verified, then send welcome
+              // user.updated — check if email was just verified, then send welcome
             if (eventType === "user.updated") {
               const { id, email_addresses, first_name } = payload.data ?? {};
               const email = email_addresses?.[0]?.email_address;
@@ -86,6 +88,7 @@ export const Route = createFileRoute("/api/clerk-webhook")({
         console.error("[clerk-webhook] Error:", err?.message ?? String(err));
         return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
       }
+      },
     },
   },
 });

@@ -3,9 +3,10 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
-import { scrubObject, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
-import { notifyToolCompleted } from "./mail-helper";
+import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
+import { inngest } from "./inngest/client";
+import { getUserEmail } from "./mail-helper";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
@@ -145,230 +146,39 @@ export const generateProposal = createServerFn({ method: "POST" })
       )
       .join("\n\n");
 
-    const timelineRule = isUndergrad
-      ? "DO NOT include a Timeline section. Return an empty string for the timeline field."
-      : "Include a realistic Timeline section organised by months or quarters covering the full study.";
-
-    const citationRules = data.citation_style === "harvard"
-      ? `CITATION RULES (Harvard style):
-- Only cite the references provided below. Never invent sources.
-- Inline parenthetical format: (Author, Year); (Author and Author, Year); for 4+ authors use (First et al., Year) after first use.
-- For narrative citations: Author (Year)...
-- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
-- Reference list is rendered separately — do NOT output a bibliography.`
-      : `CITATION RULES (APA 7th):
-- Only cite the references provided below. Never invent sources.
-- Inline format: (Author, Year); (Author & Author, Year); (First et al., Year) for 3+.
-- For narrative citations: Author (Year)...
-- Synthesise at least 12 references across background and literature review — argue themes, compare findings, identify gaps.
-- Reference list is rendered separately — do NOT output a bibliography.`;
-
-    const baseSystemRules = `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style. Write in clear, natural academic English with varied sentence structure.
-
-RULES:
-- Plain text only — NO markdown syntax (no *,**,#,>, -, backticks).
-- Vary sentence length: mix short declarative sentences with longer analytical ones.
-- Use specific, concrete details (numbers, methods, locations).
-- Do not copy phrasing from the provided references — write originally.
-- Each paragraph should be 3-6 sentences.
-- Never invent citations — only cite the references provided below.
-
-${citationRules}
-
-Return ONLY valid JSON. No preamble, no commentary, no markdown.`;
-
-    const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
-PROBLEM: ${topicCtx.problem_statement}
-RESEARCH GAP: ${topicCtx.research_gap}
-OBJECTIVES: ${topicCtx.objectives.join("; ")}
-DEPARTMENT: ${topicCtx.department ?? ""}
-CONTEXT/COUNTRY: ${topicCtx.country ?? "Not specified"}
-RESEARCH TYPE: ${topicCtx.research_type ?? "Not specified"}
-ACADEMIC LEVEL: ${data.level}
-
-VERIFIED SCHOLARLY REFERENCES (cite these only):
-${refContext}`;
-
-    // Parallel chunked generation — split into 3 logical groups + abstract.
-    const abstractTarget = Math.max(80, Math.round(target * 0.03));
-    const prelimTarget = Math.round(target * 0.28);
-    const litReviewTarget = Math.round(target * 0.44);
-    const methodTarget = Math.round(target * 0.25);
-
-    const genAbstractChunk = async () => {
-      const system = `${baseSystemRules}
-Write ONLY the abstract field. Return JSON: {"abstract": "..."}
-Target: EXACTLY ${abstractTarget} words. Single continuous paragraph.`;
-      const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
-      return raw?.abstract ?? "";
-    };
-
-    const genPreliminaryChunk = async () => {
-      const system = `${baseSystemRules}
-Write ONLY these fields as JSON:
-{"background_to_the_study":"...","statement_of_the_problem":"...","objectives":["Obj1","Obj2","Obj3"],"research_questions":["RQ1","RQ2"],"research_hypotheses":["H1","H2"],"significance":"...","scope_of_the_study":"...","definition_of_terms":"..."}
-Target total for these 8 fields: EXACTLY ${prelimTarget} words. Background and statement of problem longest.`;
-      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
-    };
-
-    const genLitReviewChunk = async () => {
-      const system = `${baseSystemRules}
-Write ONLY the literature review fields as JSON:
-{"conceptual_review":"...","empirical_review":"...","theoretical_review":"...","theoretical_framework":"...","summary_of_reviews":"...","gap_in_literature":"..."}
-Target total: EXACTLY ${litReviewTarget} words. Synthesise at least 8 references.`;
-      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
-    };
-
-    const genMethodologyChunk = async () => {
-      const system = `${baseSystemRules}
-Write ONLY the methodology fields as JSON:
-{"research_design":"...","area_of_the_study":"...","population_of_the_study":"...","sample_size":"...","sampling_technique":"...","instrumentation":"...","validity_of_instrument":"...","reliability_of_instrument":"...","method_of_collecting_data":"...","method_of_data_analysis":"..."}
-Target total: EXACTLY ${methodTarget} words.`;
-      return callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: topicContext });
-    };
-
-    let abstract: string;
-    let prelimData: any;
-    let litData: any;
-    let methodData: any;
-
-    try {
-      const results = await Promise.all([
-        genAbstractChunk(),
-        genPreliminaryChunk(),
-        genLitReviewChunk(),
-        genMethodologyChunk(),
-      ]);
-      abstract = results[0];
-      prelimData = results[1];
-      litData = results[2];
-      methodData = results[3];
-    } catch (e) {
-      console.error("Proposal parallel generation failed:", e instanceof Error ? e.message : String(e));
-      throw new Error("Proposal generation failed. Please try again.");
+    // Send processing started email (fire-and-forget)
+    const processingEmail = await getUserEmail(userId);
+    if (processingEmail) {
+      const { sendProcessingStartedEmail } = await import("./mail");
+      sendProcessingStartedEmail({
+        to: processingEmail,
+        name: processingEmail.split("@")[0],
+        tool: "Thesis",
+      });
     }
 
-    // Assemble full proposal from chunks
-    let parsed: any = {
-      abstract,
-      sections: { ...prelimData, ...litData, ...methodData },
-    };
-
-    const fullSections = SectionSchema.parse(parsed.sections);
-    parsed = ProposalSchema.parse({ abstract: parsed.abstract, sections: fullSections });
-
-    let total = countWordsDeep(parsed);
-    let attempts = 0;
-    const MAX_EXPAND_ATTEMPTS = 10;
-
-    while (total < target && attempts < MAX_EXPAND_ATTEMPTS) {
-      attempts++;
-      const diff = target - total;
-      const askFor = Math.max(diff, Math.round(target * 0.15));
-      try {
-        const refine = await callAI(apiKey, {
-          model: "deepseek-reasoner",
-          max_tokens: 64000,
-          system: baseSystemRules,
-          user: `Your previous draft is ${total} words. The user requires AT LEAST ${target} words — you are SHORT by ${diff} words. This is unacceptable.
-
-You MUST expand the draft to at least ${target + askFor} words by adding substantial depth, more synthesised citations, extended analysis, and concrete examples to conceptual_review, empirical_review, theoretical_review, and background_to_the_study.
-
-Keep ALL existing content — only ADD more. Do not summarise or condense anything.
-
-Return the COMPLETE updated JSON.
-
-CURRENT DRAFT (${total} words):
-${JSON.stringify(parsed)}`,
-        });
-        const refined = ProposalSchema.parse(refine);
-        const scrubbed = scrubObject(refined) as typeof parsed;
-        const newTotal = countWordsDeep(scrubbed);
-        if (newTotal > total) {
-          parsed = scrubbed;
-          total = newTotal;
-        } else {
-          // Model returned same or less — pad the shortest section
-          const sections = [
-            "conceptual_review",
-            "empirical_review",
-            "theoretical_review",
-            "background_to_the_study",
-            "statement_of_the_problem",
-          ] as const;
-          const shortest = sections
-            .map((k) => ({ key: k, len: countWords((parsed.sections as any)[k] ?? "") }))
-            .sort((a, b) => a.len - b.len)[0];
-          const toPad = (parsed.sections as any)[shortest.key] ?? "";
-          const padPrompt = `Write a single long analytical paragraph adding depth to a research proposal section "${shortest.key}".
-Target: approximately ${Math.min(diff + 200, 3000)} words of substantive academic prose with at least 2 synthesised citations.
-Write only the paragraph text — no headings, no JSON.`;
-          try {
-            const padText = await callAIText(apiKey, { model: "deepseek-chat", system: baseSystemRules, user: padPrompt });
-            (parsed.sections as any)[shortest.key] = toPad + "\n\n" + padText;
-            const newTotal2 = countWordsDeep(parsed);
-            if (newTotal2 > total) total = newTotal2;
-            else break;
-          } catch {
-            break;
-          }
-        }
-      } catch (e) {
-        console.error("Proposal refinement failed:", e);
-        break;
-      }
-    }
-
-    // Trim if over target
-    if (total > Math.round(target * 1.3)) {
-      parsed = trimProposalToExact(parsed, target);
-      total = countWordsDeep(parsed);
-    } else if (total > target) {
-      parsed = trimProposalToExact(parsed, target);
-      total = countWordsDeep(parsed);
-    }
-
-    // HARD ENFORCEMENT — never save below target
-    if (total < target) {
-      throw new Error(
-        `Proposal generation could only reach ${total} words (target: ${target}) after ${MAX_EXPAND_ATTEMPTS} attempts. Please try again with a slightly lower target.`,
-      );
-    }
-
-    const referencesList = refs.map((r) => ({ ...r, apa: formatAPA(r) }));
-
-    const { data: created, error: insErr } = await supabase
-      .from("proposals")
-      .insert({
-        user_id: userId,
-        topic_id: topicCtx.id,
-        title: topicCtx.title,
-        level: data.level,
-        department: topicCtx.department ?? null,
-        area_of_interest: topicCtx.area_of_interest ?? null,
-        country: topicCtx.country ?? null,
-        research_type: topicCtx.research_type ?? null,
-        abstract: parsed.abstract,
-        sections: parsed.sections,
-        references_list: referencesList,
-        word_count: total,
-        citation_style: data.citation_style,
-        status: "draft",
-      } as any)
-      .select()
-      .single();
-    if (insErr) throw new Error(insErr.message);
-
-    // Increment usage after successful generation
-    await incrementUsage(supabase, userId, "proposal");
-
-    // Fire-and-forget email notification
-    notifyToolCompleted(userId, "thesis", {
-      title: created.title,
-      downloadUrl: `https://www.mybrainpadi.com/proposal/${created.id}`,
+    // Enqueue background job
+    await inngest.send({
+      name: "mybrainpadi/proposal.generate",
+      data: {
+        userId,
+        data: {
+          level: data.level,
+          target_words: target,
+          citation_style: data.citation_style,
+          topicCtx,
+          refs: refs.slice(0, 20),
+          isPaid,
+        },
+      },
     });
 
-    return { proposal: created };
+    // Increment usage
+    if (!isPaid) {
+      await incrementUsage(supabase, userId, "proposal");
+    }
+
+    return { success: true, message: "Your proposal is being generated. You'll receive an email when it's ready." };
   });
 
 function trimProposalToExact(p: z.infer<typeof ProposalSchema>, target: number): z.infer<typeof ProposalSchema> {

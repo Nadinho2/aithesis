@@ -90,7 +90,7 @@ IMPORTANT: Each option in the "options" array must be the full text of the choic
 
     // Fire-and-forget email notification
     notifyToolCompleted(userId, "exam", {
-      title: data.notes?.slice(0, 80) ?? "Exam Prep",
+      title: data.subject_notes?.slice(0, 80) ?? "Exam Prep",
       downloadUrl: `https://www.mybrainpadi.com/tools/history`,
     });
 
