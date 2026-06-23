@@ -240,12 +240,12 @@ function NewThesisPage() {
           </div>
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
-              Target Words (6,000 – 15,000)
+              Target Words (6,000 – 80,000)
             </label>
             <input
               type="number"
               min={6000}
-              max={15000}
+              max={80000}
               step={500}
               value={form.target_words}
               onChange={(e) => setForm({ ...form, target_words: Number(e.target.value) })}

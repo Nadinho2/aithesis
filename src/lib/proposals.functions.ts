@@ -258,34 +258,80 @@ Target total: EXACTLY ${methodTarget} words.`;
 
     let total = countWordsDeep(parsed);
     let attempts = 0;
-    while (total < target && attempts < 5) {
+    const MAX_EXPAND_ATTEMPTS = 10;
+
+    while (total < target && attempts < MAX_EXPAND_ATTEMPTS) {
       attempts++;
       const diff = target - total;
+      const askFor = Math.max(diff, Math.round(target * 0.15));
       try {
         const refine = await callAI(apiKey, {
           model: "deepseek-reasoner",
           max_tokens: 64000,
           system: baseSystemRules,
-          user: `Your previous draft was ${total} words. Target: EXACTLY ${target} words (SHORT by ${diff}).
-Expand conceptual_review, empirical_review, theoretical_review, and background_to_the_study. Return COMPLETE updated JSON.
+          user: `Your previous draft is ${total} words. The user requires AT LEAST ${target} words — you are SHORT by ${diff} words. This is unacceptable.
 
-PREVIOUS DRAFT:
+You MUST expand the draft to at least ${target + askFor} words by adding substantial depth, more synthesised citations, extended analysis, and concrete examples to conceptual_review, empirical_review, theoretical_review, and background_to_the_study.
+
+Keep ALL existing content — only ADD more. Do not summarise or condense anything.
+
+Return the COMPLETE updated JSON.
+
+CURRENT DRAFT (${total} words):
 ${JSON.stringify(parsed)}`,
         });
         const refined = ProposalSchema.parse(refine);
         const scrubbed = scrubObject(refined) as typeof parsed;
         const newTotal = countWordsDeep(scrubbed);
-        if (newTotal > total) { parsed = scrubbed; total = newTotal; }
-        else break;
+        if (newTotal > total) {
+          parsed = scrubbed;
+          total = newTotal;
+        } else {
+          // Model returned same or less — pad the shortest section
+          const sections = [
+            "conceptual_review",
+            "empirical_review",
+            "theoretical_review",
+            "background_to_the_study",
+            "statement_of_the_problem",
+          ] as const;
+          const shortest = sections
+            .map((k) => ({ key: k, len: countWords((parsed.sections as any)[k] ?? "") }))
+            .sort((a, b) => a.len - b.len)[0];
+          const toPad = (parsed.sections as any)[shortest.key] ?? "";
+          const padPrompt = `Write a single long analytical paragraph adding depth to a research proposal section "${shortest.key}".
+Target: approximately ${Math.min(diff + 200, 3000)} words of substantive academic prose with at least 2 synthesised citations.
+Write only the paragraph text — no headings, no JSON.`;
+          try {
+            const padText = await callAIText(apiKey, { model: "deepseek-chat", system: baseSystemRules, user: padPrompt });
+            (parsed.sections as any)[shortest.key] = toPad + "\n\n" + padText;
+            const newTotal2 = countWordsDeep(parsed);
+            if (newTotal2 > total) total = newTotal2;
+            else break;
+          } catch {
+            break;
+          }
+        }
       } catch (e) {
         console.error("Proposal refinement failed:", e);
         break;
       }
     }
 
-    if (total > target) {
+    // Trim if over target
+    if (total > Math.round(target * 1.3)) {
       parsed = trimProposalToExact(parsed, target);
       total = countWordsDeep(parsed);
+    } else if (total > target) {
+      parsed = trimProposalToExact(parsed, target);
+      total = countWordsDeep(parsed);
+    }
+
+    // HARD ENFORCEMENT — never save below target
+    if (total < target) {
+      throw new Error(
+        `Proposal generation could only reach ${total} words (target: ${target}) after ${MAX_EXPAND_ATTEMPTS} attempts. Please try again with a slightly lower target.`,
+      );
     }
 
     const referencesList = refs.map((r) => ({ ...r, apa: formatAPA(r) }));

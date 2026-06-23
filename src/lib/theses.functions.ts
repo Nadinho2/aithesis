@@ -314,38 +314,32 @@ Write the abstract now — EXACTLY ${abstractTarget} words.`;
     }
     total += countWords(abstract);
 
-    // Strict word-count enforcement — regenerate short chapters until target is met
-    const maxRetries = 3;
+    // Strict word-count enforcement — never below target
+    const maxRetries = 8;
     let retries = 0;
     while (total < target && retries < maxRetries) {
       retries++;
       const diff = target - total;
-      // Find the shortest chapter to expand
       const sorted = chapterDefs
         .map((c) => ({ key: c.key, label: c.label, current: countWords(chapters[c.key] || ""), target: c.target }))
         .sort((a, b) => a.current - b.current);
 
-      // Pick the 2 shortest chapters that are most below target
-      const toExpand = sorted
-        .filter((c) => c.current < c.target * 1.1)
-        .slice(0, 2);
-
-      if (toExpand.length === 0) {
-        // All chapters are at/above target but total is still low (unlikely) — expand the shortest
-        toExpand.push(sorted[0]);
-      }
+      // Pick the 2 shortest chapters — expand aggressively
+      const toExpand = sorted.slice(0, 2);
 
       const expandPromises = toExpand.map(async (c) => {
         const def = chapterDefs.find((d) => d.key === c.key)!;
-        const newTarget = Math.max(def.target, c.current + Math.ceil(diff / toExpand.length));
-        const expandModel = newTarget > 6000 ? "deepseek-reasoner" : "deepseek-chat";
+        const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
+        const newTarget = c.current + overshoot;
         const systemPrompt = `You are a senior academic writing ${def.label} of a ${data.level} thesis.
 
 ${baseRules}
 
-You previously wrote a version of this chapter. EXPAND it with substantive additional content — more analysis, more synthesised citations, more concrete detail. Do NOT delete or summarise existing content. Keep all existing arguments and add depth.
+You previously wrote a version of this chapter. The user requires AT LEAST ${target} words total — the current draft is SHORT by ${diff} words. You MUST EXPAND this chapter with substantial additional content.
 
-Target: AT LEAST ${newTarget} words.
+Do NOT delete or summarise existing content. Keep all existing arguments and add depth with: more synthesised citations, extended analysis, concrete examples, additional sub-topics, and detailed discussion.
+
+Target for THIS chapter: AT LEAST ${newTarget} words (currently ${c.current}).
 Current word count: ${c.current} words.
 
 Use sub-headings on their own lines.
@@ -353,11 +347,11 @@ Use sub-headings on their own lines.
 Output the FULL updated chapter as plain text — NOT wrapped in JSON.`;
         const userPrompt = `${topicContext}
 
-Below is your current draft of ${def.label} (${c.current} words). Expand it to AT LEAST ${newTarget} words by adding more analysis, examples, citations, and detail.
+Below is your current draft of ${def.label} (${c.current} words). Expand it to AT LEAST ${newTarget} words by adding more analysis, examples, citations, and detail. Keep ALL existing text.
 
 CURRENT DRAFT:
 ${chapters[c.key]}`;
-        const content = await callAIText(apiKey, { max_tokens: 64000, model: expandModel, system: systemPrompt, user: userPrompt });
+        const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-reasoner", system: systemPrompt, user: userPrompt });
         return { key: c.key, content };
       });
 
@@ -371,6 +365,13 @@ ${chapters[c.key]}`;
     let parsed: z.infer<typeof ThesisSchema> = { abstract, chapters } as any;
     parsed = scrubObject(parsed) as typeof parsed;
     total = countWordsDeep(parsed);
+
+    // HARD ENFORCEMENT — never save below target
+    if (total < target) {
+      throw new Error(
+        `Thesis generation could only reach ${total} words (target: ${target}) after ${maxRetries} expansion attempts. Please try again with a slightly lower target.`,
+      );
+    }
 
     const referencesList = refs.map((r) => ({ ...r, apa: formatAPA(r) }));
 
