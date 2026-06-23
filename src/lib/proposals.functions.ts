@@ -153,7 +153,7 @@ export const generateProposal = createServerFn({ method: "POST" })
       sendProcessingStartedEmail({
         to: processingEmail,
         name: processingEmail.split("@")[0],
-        tool: "Thesis",
+        tool: "Proposal",
       });
     }
 
