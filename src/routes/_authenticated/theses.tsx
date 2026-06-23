@@ -49,7 +49,7 @@ function TheseListPage() {
       const bin = atob(r.base64);
       const arr = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      const blob = new Blob([arr], { type: r.mime });
+      const blob = new Blob([arr], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -70,7 +70,6 @@ function TheseListPage() {
     title: string;
     level: string;
     word_count: number;
-    target_words: number;
     created_at: string;
   }>;
 
@@ -123,7 +122,7 @@ function TheseListPage() {
             <Link to="/thesis/$id" params={{ id: t.id }} className="flex-1 min-w-0">
               <div className="font-serif text-base sm:text-lg truncate">{t.title}</div>
               <div className="text-xs text-ink/50 mt-1">
-                {t.level} · {t.word_count.toLocaleString()} / {t.target_words.toLocaleString()} words ·{" "}
+                {t.level} · {t.word_count.toLocaleString()} words ·{" "}
                 {new Date(t.created_at).toLocaleDateString()}
               </div>
             </Link>
