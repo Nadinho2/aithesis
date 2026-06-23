@@ -15,6 +15,7 @@ type ProviderOpts = {
   system: string;
   user: string;
   max_tokens?: number;
+  jsonMode?: boolean;
 };
 
 type ProviderResult = {
@@ -47,8 +48,8 @@ async function callDeepSeek(
       { role: "user", content: opts.user },
     ],
   };
-  // deepseek-reasoner does NOT support response_format
-  if (!isReasoner) body.response_format = { type: "json_object" };
+  // Only enforce JSON mode when explicitly requested (callAI), not for plain text (callAIText)
+  if (!isReasoner && opts.jsonMode) body.response_format = { type: "json_object" };
   if (opts.max_tokens) body.max_tokens = opts.max_tokens;
 
   const resp = await fetch("https://api.deepseek.com/chat/completions", {

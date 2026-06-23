@@ -125,7 +125,7 @@ export async function callAI(
     max_tokens?: number;
   },
 ): Promise<any> {
-  const result = await callProvider(apiKey, opts);
+  const result = await callProvider(apiKey, { ...opts, jsonMode: true });
   return extractJSON(result.content);
 }
 
