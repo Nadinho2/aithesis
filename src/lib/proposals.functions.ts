@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords, callAI } from "./ai-utils.server";
+import { notifyToolCompleted } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 
 const ManualTopic = z.object({
@@ -360,6 +361,12 @@ Write only the paragraph text — no headings, no JSON.`;
 
     // Increment usage after successful generation
     await incrementUsage(supabase, userId, "proposal");
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "thesis", {
+      title: created.title,
+      downloadUrl: `https://www.mybrainpadi.com/proposal/${created.id}`,
+    });
 
     return { proposal: created };
   });

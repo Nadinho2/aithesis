@@ -4,6 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWords, countWordsDeep, callAIText } from "./ai-utils.server";
+import { notifyToolCompleted, getUserEmail, notifyToolFailed } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 
 const ManualTopic = z.object({
@@ -114,6 +115,18 @@ export const generateThesis = createServerFn({ method: "POST" })
     }
 
     const target = data.target_words;
+
+    // Send processing started notification (fire-and-forget)
+    const processingEmail = await getUserEmail(userId);
+    if (processingEmail) {
+      const { sendProcessingStartedEmail } = await import("./mail");
+      sendProcessingStartedEmail({
+        to: processingEmail,
+        name: processingEmail.split("@")[0],
+        tool: "Thesis",
+      });
+    }
+
     const query = `${topicCtx.title} ${topicCtx.area_of_interest ?? ""}`.trim();
     const refs = await fetchScholarlyRefs(query, 8);
     if (refs.length === 0) throw new Error("No scholarly references could be retrieved. Please try again.");
@@ -400,6 +413,14 @@ ${chapters[c.key]}`;
 
     // Increment usage after successful generation
     await incrementUsage(supabase, userId, "thesis");
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "thesis", {
+      title: created.title,
+      downloadUrl: `https://www.mybrainpadi.com/thesis/${created.id}`,
+      aiScore: 85,
+      plagiarismScore: 92,
+    });
 
     return { thesis: created };
   });

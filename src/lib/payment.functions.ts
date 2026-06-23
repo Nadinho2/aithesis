@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { getPrice, type ProductType, type ThesisLevel } from "./pricing";
+import { sendPaymentConfirmedEmail, sendPaymentFailedEmail } from "./mail";
+import type { BrainPadiTool } from "./mail";
+import { getUserEmail, productToTool } from "./mail-helper";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -103,7 +106,38 @@ export const verifyPayment = createServerFn({ method: "POST" })
 
     if (txError) throw new Error("Failed to record payment");
 
+    // Send payment confirmed email (fire-and-forget)
+    const userEmail = await getUserEmail(userId);
+    const toolName = productToTool(metadata.product) as BrainPadiTool | null;
+    if (userEmail && toolName) {
+      const userName = userEmail.split("@")[0];
+      sendPaymentConfirmedEmail({
+        to: userEmail,
+        name: userName,
+        tool: toolName,
+        amount: amount.toLocaleString(),
+      });
+    }
+
     return { success: true, product: metadata.product, level: metadata.level };
+  });
+
+// --- Send payment failed email (called from Paystack webhook) ---
+
+export const handlePaymentFailed = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const email = await getUserEmail(userId);
+    if (!email) return { success: false };
+    const name = email.split("@")[0];
+    await sendPaymentFailedEmail({
+      to: email,
+      name,
+      tool: "Thesis",
+      amount: "0",
+    });
+    return { success: true };
   });
 
 // --- Check Access ---

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI } from "./ai-utils.server";
+import { notifyToolCompleted } from "./mail-helper";
 import { parseUploadedFile } from "./upload.server";
 
 export const ExamQuestionType = z.enum(["objectives", "theory", "both"]);
@@ -86,6 +87,12 @@ IMPORTANT: Each option in the "options" array must be the full text of the choic
         console.error("Failed to save exam to history:", e?.message ?? e);
       }
     }
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "exam", {
+      title: data.notes?.slice(0, 80) ?? "Exam Prep",
+      downloadUrl: `https://www.mybrainpadi.com/tools/history`,
+    });
 
     return parsed;
   });

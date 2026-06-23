@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI } from "./ai-utils.server";
+import { notifyToolCompleted } from "./mail-helper";
 import { parseUploadedFile } from "./upload.server";
 import { buildPresentationDocx, toBase64 } from "./docx.server";
 
@@ -57,6 +58,12 @@ Keep bullets concise — presentation style.`,
         console.error("Failed to save presentation to history:", e?.message ?? e);
       }
     }
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "presentation", {
+      title: data.topic,
+      downloadUrl: `https://www.mybrainpadi.com/tools/history`,
+    });
 
     return parsed;
   });

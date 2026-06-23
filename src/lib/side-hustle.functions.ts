@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI, callAIText } from "./ai-utils.server";
+import { notifyToolCompleted } from "./mail-helper";
 
 const SideHustleInput = z.object({
   skills: z.string().min(2).max(2000),
@@ -96,6 +97,11 @@ ${data.experience}`;
         console.error("Failed to save side-hustle to history:", e?.message ?? e);
       }
     }
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "side_hustle", {
+      downloadUrl: recordId ? `https://www.mybrainpadi.com/tools/history` : undefined,
+    });
 
     return { ...result, recordId, userAnswers: JSON.stringify(data) };
   });

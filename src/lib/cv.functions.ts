@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI } from "./ai-utils.server";
+import { notifyToolCompleted } from "./mail-helper";
 import { parseUploadedFile } from "./upload.server";
 import { buildCvDocx, toBase64 } from "./docx.server";
 
@@ -78,6 +79,11 @@ export const generateCv = createServerFn({ method: "POST" })
         console.error("Failed to save CV to history:", e?.message ?? e);
       }
     }
+
+    // Fire-and-forget email notification
+    notifyToolCompleted(userId, "cv", {
+      downloadUrl: `https://www.mybrainpadi.com/tools/history`,
+    });
 
     return { info: cvInfo, enhanced: cleanedEnhanced, headshot };
   });
