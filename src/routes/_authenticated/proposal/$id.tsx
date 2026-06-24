@@ -47,6 +47,13 @@ const SECTION_KEYS: { label: string; key: string }[] = [
   { label: "3.8 Reliability of Instrument", key: "reliability_of_instrument" },
   { label: "3.9 Method of Administering Data", key: "method_of_collecting_data" },
   { label: "3.10 Method of Presentation and Data Analysis", key: "method_of_data_analysis" },
+  { label: "4.1 Introduction", key: "introduction" },
+  { label: "4.2 Data Analysis and Presentation", key: "data_analysis_and_presentation" },
+  { label: "4.3 Discussion of Findings", key: "discussion_of_findings" },
+  { label: "5.1 Summary of Findings", key: "summary_of_findings" },
+  { label: "5.2 Conclusion", key: "conclusion" },
+  { label: "5.3 Limitations of the Study", key: "limitations" },
+  { label: "5.4 Recommendations", key: "recommendations" },
 ];
 
 const LIST_KEYS = new Set(["objectives", "research_questions", "research_hypotheses"]);
@@ -117,7 +124,9 @@ function ProposalPage() {
 
   const enterEdit = () => {
     if (!data) return;
-    const s = data.sections as Record<string, any>;
+    let parsed = data.sections;
+    if (typeof parsed === "string") try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    const s = (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, any>;
     setEditData({ ...s });
     setEditAbstract(data.abstract ?? "");
     setEditMode(true);
