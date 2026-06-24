@@ -1,141 +1,63 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
-import { Copy, Check, Share2, Wallet, TrendingUp, ArrowUpRight, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Copy, Check, Share2, Wallet, TrendingUp, ArrowUpRight, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { getReferralCodeForUser, getReferralLink } from "@/lib/referral";
-import { createClient } from "@supabase/supabase-js";
+import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks } from "@/lib/referral.functions";
+import { getReferralLink } from "@/lib/referral";
 
 export const Route = createFileRoute("/_authenticated/referral")({
   head: () => ({ meta: [{ title: "Referral Program — MyBrainPadi" }] }),
   component: ReferralPage,
 });
 
-function runtimeEnv(key: string): string | undefined {
-  try {
-    return (globalThis as any).process?.env?.[key];
-  } catch {
-    return undefined;
-  }
-}
-
-async function fetchWallet(userId: string) {
-  const url = runtimeEnv("SUPABASE_URL");
-  const key = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Server configuration error");
-  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data } = await supabase.from("wallets").select("*").eq("user_id", userId).maybeSingle();
-  return data as any;
-}
-
-async function fetchEarnings(userId: string) {
-  const url = runtimeEnv("SUPABASE_URL");
-  const key = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Server configuration error");
-  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data } = await supabase
-    .from("referral_earnings")
-    .select("*")
-    .eq("referrer_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  return (data ?? []) as any[];
-}
-
-async function fetchWithdrawals(userId: string) {
-  const url = runtimeEnv("SUPABASE_URL");
-  const key = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !key) throw new Error("Server configuration error");
-  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data } = await supabase
-    .from("withdrawal_requests")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  return (data ?? []) as any[];
-}
-
-async function fetchBanks() {
-  const paystackKey = runtimeEnv("PAYSTACK_SECRET_KEY");
-  if (!paystackKey) return [];
-  const res = await fetch("https://api.paystack.co/bank?currency=NGN", {
-    headers: { Authorization: `Bearer ${paystackKey}` },
-  });
-  const json = await res.json();
-  return (json.data ?? []) as { name: string; code: string }[];
-}
-
 function ReferralPage() {
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
-  const [refCode, setRefCode] = useState<string | null>(null);
-  const [refLink, setRefLink] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState(5000);
   const [selectedBank, setSelectedBank] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
 
-  // Get user ID from Clerk
-  const [userId, setUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Try to get the user ID from the Clerk session in Clerk's internal state
-    const win = window as any;
-    if (win.Clerk?.user?.id) {
-      setUserId(win.Clerk.user.id);
-    } else {
-      // Fallback: watch for Clerk to load
-      const interval = setInterval(() => {
-        if (win.Clerk?.user?.id) {
-          setUserId(win.Clerk.user.id);
-          clearInterval(interval);
-        }
-      }, 200);
-      return () => clearInterval(interval);
-    }
-  }, []);
+  const fnCode = useServerFn(getMyReferralCode);
+  const fnWallet = useServerFn(getMyWallet);
+  const fnEarnings = useServerFn(getMyEarnings);
+  const fnWithdrawals = useServerFn(getMyWithdrawals);
+  const fnBanks = useServerFn(getBanks);
 
   // Fetch referral code
-  useEffect(() => {
-    if (!userId) return;
-    getReferralCodeForUser(userId).then((code) => {
-      if (code) {
-        setRefCode(code);
-        setRefLink(getReferralLink(code));
-      }
-    }).catch(() => {});
-  }, [userId]);
+  const { data: refCode, isLoading: codeLoading } = useQuery({
+    queryKey: ["my-referral-code"],
+    queryFn: () => fnCode(),
+  });
+
+  const refLink = refCode ? getReferralLink(refCode) : "";
 
   // Fetch wallet
   const { data: wallet, isLoading: walletLoading } = useQuery({
-    queryKey: ["wallet", userId],
-    queryFn: () => fetchWallet(userId!),
-    enabled: !!userId,
+    queryKey: ["my-wallet"],
+    queryFn: () => fnWallet(),
     refetchInterval: 10000,
   });
 
   // Fetch earnings
   const { data: earnings = [], isLoading: earningsLoading } = useQuery({
-    queryKey: ["earnings", userId],
-    queryFn: () => fetchEarnings(userId!),
-    enabled: !!userId,
+    queryKey: ["my-earnings"],
+    queryFn: () => fnEarnings(),
   });
 
   // Fetch withdrawals
   const { data: withdrawals = [], isLoading: withdrawalsLoading } = useQuery({
-    queryKey: ["withdrawals", userId],
-    queryFn: () => fetchWithdrawals(userId!),
-    enabled: !!userId,
+    queryKey: ["my-withdrawals"],
+    queryFn: () => fnWithdrawals(),
   });
 
   // Fetch banks
   const { data: banks = [] } = useQuery({
     queryKey: ["banks"],
-    queryFn: fetchBanks,
-    staleTime: 86400000, // Cache for 24 hours
+    queryFn: () => fnBanks(),
+    staleTime: 86400000,
   });
 
   const balance = wallet?.balance ?? 0;
@@ -175,8 +97,8 @@ function ReferralPage() {
     },
     onSuccess: (data) => {
       toast.success(data.message ?? "Withdrawal initiated!");
-      qc.invalidateQueries({ queryKey: ["wallet"] });
-      qc.invalidateQueries({ queryKey: ["withdrawals"] });
+      qc.invalidateQueries({ queryKey: ["my-wallet"] });
+      qc.invalidateQueries({ queryKey: ["my-withdrawals"] });
       setWithdrawAmount(5000);
       setSelectedBank("");
       setAccountNumber("");
@@ -205,7 +127,10 @@ function ReferralPage() {
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="font-serif text-2xl sm:text-3xl font-semibold">Referral Program</h1>
+        <h1 className="font-serif text-2xl sm:text-3xl font-semibold flex items-center gap-3">
+          <Gift className="size-7 text-sage" />
+          Referral Program
+        </h1>
         <p className="text-ink/60 text-sm mt-1">
           Earn 20% lifetime commission on every payment made by users you refer
         </p>
@@ -214,7 +139,9 @@ function ReferralPage() {
       {/* Referral Link Section */}
       <div className="bg-card border border-ink/10 rounded-sm p-6 space-y-4">
         <h2 className="font-serif text-lg font-medium">Your Referral Link</h2>
-        {refCode ? (
+        {codeLoading ? (
+          <p className="text-sm text-ink/50">Loading your referral link...</p>
+        ) : refCode ? (
           <>
             <div className="flex items-center gap-2 bg-ink/5 rounded-sm px-4 py-3 border border-ink/10">
               <code className="flex-1 text-sm break-all">{refLink}</code>
@@ -244,7 +171,7 @@ function ReferralPage() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-ink/50">Loading your referral link...</p>
+          <p className="text-sm text-ink/50">No referral code found. Contact support.</p>
         )}
       </div>
 

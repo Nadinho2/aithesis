@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getAuth } from "@clerk/tanstack-start/server";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -26,22 +27,14 @@ export async function POST({ request }: { request: Request }) {
     });
 
     // Authenticate user from Clerk session
-    const authHeader = request.headers.get("Authorization") ?? "";
     let userId: string | null = null;
 
-    if (authHeader.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      // Verify the session with Supabase auth
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) userId = user.id;
-    }
-
-    // Also try Clerk session token (Clerk header from the client)
-    if (!userId) {
-      const clerkToken = request.headers.get("x-clerk-session") ?? "";
-      if (clerkToken) {
-        // We'll trust the passed userId from authorized session
-      }
+    // Try Clerk auth
+    try {
+      const auth = await getAuth(request);
+      if (auth?.userId) userId = auth.userId;
+    } catch {
+      // Fallback
     }
 
     if (!userId) {
@@ -75,7 +68,7 @@ export async function POST({ request }: { request: Request }) {
     // Check wallet balance
     const { data: wallet } = await supabase
       .from("wallets")
-      .select("balance")
+      .select("balance, total_withdrawn")
       .eq("user_id", userId)
       .maybeSingle();
 
