@@ -129,6 +129,16 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || import.meta.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_live_Y2xlcmsubXlicmFpbnBhZGkuY29tJA";
+
+  // Store referral code from URL on first page load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      sessionStorage.setItem("ref_code", ref);
+    }
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ClerkProvider publishableKey={publishableKey} signInUrl="/auth" signUpUrl="/auth">

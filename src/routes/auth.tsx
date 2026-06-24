@@ -71,15 +71,6 @@ function AuthForms() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
 
-  // Store ref code from URL on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("ref");
-    if (ref) {
-      sessionStorage.setItem("ref_code", ref);
-    }
-  }, []);
-
   // Track referral after successful signup
   const trackReferralIfNeeded = async (userId: string) => {
     const refCode = sessionStorage.getItem("ref_code");
