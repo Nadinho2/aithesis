@@ -36,7 +36,7 @@ const PATTERN_B_THESIS: ChapterTemplate[] = [
   { order: 5, title: "Chapter Five: Summary, Conclusion and Recommendations", sections: ["Summary", "Conclusion", "Recommendations", "Contributions to Knowledge", "Suggestions for Further Research"] },
 ];
 
-const PATTERN_B_PROPOSAL: ChapterTemplate[] = PATTERN_B_THESIS.slice(0, 3);
+const PATTERN_B_PROPOSAL: ChapterTemplate[] = PATTERN_B_THESIS.filter((c) => c.order <= 3);
 
 // ─── Pattern C: Engineering / Technology ───
 

@@ -90,7 +90,7 @@ async function upsertTemplate(
     font_size: 12,
     line_spacing: lineSpacing,
     thesis_chapters: JSON.parse(JSON.stringify(tmpl.thesis_chapters)),
-    proposal_chapters: JSON.parse(JSON.stringify(tmpl.proposal_chapters)),
+    proposal_chapters: JSON.parse(JSON.stringify(tmpl.proposal_chapters.filter((c) => c.order <= 3))),
   };
 
   const { error } = await supabase.from("university_templates").upsert(payload, {

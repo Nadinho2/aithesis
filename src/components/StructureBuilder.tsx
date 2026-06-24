@@ -41,7 +41,8 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
     if (!pattern) return;
     const tmpl = getTemplate(pattern);
     if (!tmpl) return;
-    const chs = documentType === "proposal" ? tmpl.proposal_chapters : tmpl.thesis_chapters;
+    const raw = documentType === "proposal" ? tmpl.proposal_chapters : tmpl.thesis_chapters;
+    const chs = documentType === "proposal" ? raw.filter((c) => c.order <= 3) : raw;
     setChapters(chs);
     onChaptersChange?.(chs);
   }, [selectedUni, selectedDept, documentType]);
@@ -50,7 +51,8 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
   useEffect(() => {
     if (isOther) {
       const tmpl = getTemplate("A");
-      const chs = documentType === "proposal" ? tmpl.proposal_chapters : tmpl.thesis_chapters;
+      const raw = documentType === "proposal" ? tmpl.proposal_chapters : tmpl.thesis_chapters;
+      const chs = documentType === "proposal" ? raw.filter((c) => c.order <= 3) : raw;
       setChapters(chs);
       onChaptersChange?.(chs);
     }

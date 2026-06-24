@@ -325,12 +325,10 @@ export async function generateProposalContent(payload: {
 
   const abstractTarget = Math.max(80, Math.round(target * 0.025));
 
-  // Proposal structure: 5 chapters + abstract
-  const prelimTarget = Math.round(target * 0.20);   // Chapter 1: Introduction
-  const litReviewTarget = Math.round(target * 0.25); // Chapter 2: Literature Review
-  const methodTarget = Math.round(target * 0.20);    // Chapter 3: Methodology
-  const resultsTarget = Math.round(target * 0.15);   // Chapter 4: Results
-  const discussionTarget = Math.round(target * 0.15); // Chapter 5: Discussion
+  // Proposal structure: 3 chapters + abstract
+  const prelimTarget = Math.round(target * 0.30);   // Chapter 1: Introduction
+  const litReviewTarget = Math.round(target * 0.35); // Chapter 2: Literature Review
+  const methodTarget = Math.round(target * 0.35);    // Chapter 3: Methodology
 
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
@@ -384,12 +382,10 @@ export async function generateProposalContent(payload: {
 
   const sections: Record<string, string> = {};
 
-  const proposalChapters = [
+  const proposalChapters: Array<{ label: string; sections: string[]; target: number }> = [
     { label: "Chapter 1: Introduction", sections: ["Background to the Study", "Statement of the Problem", "Objectives", "Research Questions", "Research Hypotheses", "Significance", "Scope of the Study", "Definition of Terms"], target: prelimTarget },
     { label: "Chapter 2: Literature Review", sections: ["Conceptual Review", "Empirical Review", "Theoretical Review", "Theoretical Framework", "Summary of Reviews", "Gap in Literature"], target: litReviewTarget },
     { label: "Chapter 3: Research Methodology", sections: ["Research Design", "Area of the Study", "Population of the Study", "Sample Size", "Sampling Technique", "Instrumentation", "Validity of Instrument", "Reliability of Instrument", "Method of Collecting Data", "Method of Data Analysis"], target: methodTarget },
-    { label: "Chapter 4: Results and Findings", sections: ["Introduction", "Data Analysis and Presentation", "Discussion of Findings"], target: resultsTarget },
-    { label: "Chapter 5: Discussion, Conclusion and Recommendations", sections: ["Summary of Findings", "Conclusion", "Limitations", "Recommendations"], target: discussionTarget },
   ];
 
   for (const ch of proposalChapters) {
@@ -408,7 +404,7 @@ CRITICAL RULES FOR PROPOSALS:
 - Sub-sections required in order: ${ch.sections.join(", ")}
 - Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
       const sectionNames = ch.sections.map((s) => s.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
-      const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76. For Chapter 4, include realistic data tables formatted like:\nTABLE 1: Sample Descriptive Statistics\n+-----------+-------+-------+\n| Variable  | Mean  | SD    |\n+-----------+-------+-------+\n| Age       | 28.5  | 4.2   |\n| Income    | 1,500 | 320   |\n+-----------+-------+-------+` });
+      const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
       Object.assign(sections, parseSections(text));
     } catch (e) {
       console.error(`[proposal] ${ch.label} failed:`, e);
