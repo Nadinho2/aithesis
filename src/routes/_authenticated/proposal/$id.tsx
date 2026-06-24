@@ -353,13 +353,14 @@ function Section({ title, body }: { title: string; body?: string }) {
 }
 
 function ListSection({ title, items, ordered }: { title: string; items?: string[]; ordered?: boolean }) {
-  if (!items || items.length === 0) return null;
+  const arr = Array.isArray(items) ? items : [];
+  if (arr.length === 0) return null;
   const Tag = ordered ? "ol" : "ul";
   return (
     <section className="mb-8 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
       <Tag className={`${ordered ? "list-decimal" : "list-disc"} list-inside space-y-2 text-[15px] text-ink/85 marker:text-sage [overflow-wrap:anywhere]`}>
-        {items.map((it, i) => <li key={i} className="break-words">{it}</li>)}
+        {arr.map((it, i) => <li key={i} className="break-words">{it}</li>)}
       </Tag>
     </section>
   );
