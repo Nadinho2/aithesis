@@ -158,7 +158,7 @@ export const generateProposal = createServerFn({ method: "POST" })
     }
 
     // Enqueue background job for queue worker
-    enqueueJob("proposal", {
+    await enqueueJob("proposal", {
       userId,
       data: {
         level: data.level,
@@ -168,7 +168,7 @@ export const generateProposal = createServerFn({ method: "POST" })
         refs: refs.slice(0, 20),
         isPaid,
       },
-    }).catch((err) => console.error("[proposal] Enqueue failed:", err));
+    });
 
     // Trigger GitHub Actions worker (fire-and-forget)
     const ghPat = typeof process !== "undefined" ? process.env?.GH_PAT : undefined;

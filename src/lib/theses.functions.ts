@@ -104,7 +104,7 @@ export const generateThesis = createServerFn({ method: "POST" })
     }
 
     // Enqueue background job for queue worker
-    enqueueJob("thesis", {
+    await enqueueJob("thesis", {
       userId,
       data: {
         level: data.level,
@@ -114,7 +114,7 @@ export const generateThesis = createServerFn({ method: "POST" })
         refs: refs.slice(0, 30),
         isPaid,
       },
-    }).catch((err) => console.error("[thesis] Enqueue failed:", err));
+    });
 
     // Trigger GitHub Actions worker (fire-and-forget)
     const ghPat = typeof process !== "undefined" ? process.env?.GH_PAT : undefined;
