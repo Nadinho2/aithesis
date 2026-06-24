@@ -65,6 +65,7 @@ function ProposalsListPage() {
           country: p.country ?? "",
           research_type: p.research_type ?? "",
           level: p.level ?? "undergraduate",
+          citation_style: (p as any).citation_style ?? "apa_7",
         }),
       );
       navigate({ to: "/new-thesis" });
@@ -163,7 +164,7 @@ function ProposalsListPage() {
             <button
               onClick={() => goToThesis(p.id)}
               disabled={thesisBusy === p.id}
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-sage text-sage rounded-sm hover:bg-sage hover:text-bone transition-colors disabled:opacity-50"
+              className="text-xs font-medium px-3 py-1.5 bg-ink text-bone rounded-sm hover:bg-sage transition-colors flex items-center gap-1.5 disabled:opacity-50"
               title="Draft full thesis from this proposal"
             >
               {thesisBusy === p.id ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}

@@ -166,6 +166,7 @@ function ProposalPage() {
           country: data.country ?? "",
           research_type: data.research_type ?? "",
           level: data.level ?? "undergraduate",
+          citation_style: (data as any).citation_style ?? "apa_7",
         }),
       );
       navigate({ to: "/new-thesis" });
@@ -237,7 +238,7 @@ function ProposalPage() {
               <button onClick={() => setShowRevise(true)} className="px-3 py-2 border border-amber-400 text-amber-700 rounded-sm text-sm flex items-center gap-2 hover:bg-amber-50">
                 <RefreshCw className="size-4" /> Revise with Feedback
               </button>
-              <button onClick={goToThesis} disabled={goThesisBusy} className="px-3 py-2 border border-sage text-sage rounded-sm text-sm hover:bg-sage hover:text-bone transition-colors flex items-center gap-2 disabled:opacity-50">
+              <button onClick={goToThesis} disabled={goThesisBusy} className="px-3 py-2 bg-ink text-bone rounded-sm text-sm hover:bg-sage transition-colors flex items-center gap-2 disabled:opacity-50">
                 {goThesisBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft Thesis
               </button>
               <button onClick={handleDownload} disabled={dlBusy} className="px-3 py-2 bg-ink text-bone rounded-sm text-sm flex items-center gap-2 disabled:opacity-60 hover:bg-sage transition-colors">
