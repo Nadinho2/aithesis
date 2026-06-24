@@ -299,7 +299,7 @@ function ProposalPage() {
           <BookOpen className="size-5 text-sage" /> References
         </h2>
         <ol className="space-y-3 text-sm text-ink/80">
-          {refs.map((r, i) => (
+          {refs.map((r: any, i) => (
             <li key={i} className="leading-relaxed">
               <span className="font-mono text-[10px] text-ink/40 mr-2">[{i + 1}]</span>
               {r.url ? (
