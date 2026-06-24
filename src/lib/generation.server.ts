@@ -239,37 +239,78 @@ export async function generateProposalContent(payload: {
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
 
-  // Helper: parse ## header-delimited sections from plain text output
   function parseSections(text: string): Record<string, string> {
     const result: Record<string, string> = {};
-    const parts = text.split(/(?=^#{1,3}\s+\w)/m);
-    for (const part of parts) {
-      const match = part.match(/^#{1,3}\s+(\w+)\s*\n([\s\S]*)$/m);
-      if (match) {
-        result[match[1].trim()] = match[2].trim();
+
+    // Try splitting by ## headers first
+    const lines = text.split("\n");
+    let currentKey: string | null = null;
+    let currentContent: string[] = [];
+
+    for (const line of lines) {
+      const headerMatch = line.match(/^#{1,4}\s+(.+)/);
+      if (headerMatch) {
+        // Save previous section
+        if (currentKey && currentContent.length > 0) {
+          result[currentKey] = currentContent.join("\n").trim();
+        }
+        // Start new section — normalize key: lowercase, replace spaces/special chars with underscores
+        currentKey = headerMatch[1]
+          .trim()
+          .toLowerCase()
+          .replace(/['']/g, "")
+          .replace(/[^a-z0-9_]+/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_|_$/g, "");
+        currentContent = [];
+      } else if (currentKey) {
+        currentContent.push(line);
       }
     }
-    // Fallback: if no headers found, treat entire text as the first expected section
+    // Save last section
+    if (currentKey && currentContent.length > 0) {
+      result[currentKey] = currentContent.join("\n").trim();
+    }
+
     return result;
   }
 
-  // Use deepseek-chat (faster, no reasoning overhead) for large sections
-  // and deepseek-reasoner only for the small abstract
-  const [abstract, prelimText, litText, methodText] = await Promise.all([
-    (async () => {
-      const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
-      return raw?.abstract ?? "";
-    })(),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — focus on explaining the ideas.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total. Focus on clearly presenting the research problem and its importance.`, user: topicContext }),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — explain the concepts, don't just list references.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total. Focus on explaining key concepts and identifying the research gap.`, user: topicContext }),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Keep citations minimal — focus on methodological detail.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total. Focus on describing exactly how the research will be conducted.`, user: topicContext }),
-  ]);
+  // Generate abstract + sections SEQUENTIALLY for reliability
+  let abstract = "";
 
-  const sections = {
-    ...parseSections(prelimText),
-    ...parseSections(litText),
-    ...parseSections(methodText),
-  };
+  // Abstract (short, uses reasoner for quality)
+  try {
+    const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, jsonMode: true, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
+    abstract = raw?.abstract ?? "";
+  } catch (e) {
+    console.error("[proposal] Abstract generation failed, continuing");
+  }
+
+  const sections: Record<string, string> = {};
+
+  // Generate prelim sections
+  try {
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — focus on explaining the ideas.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total.`, user: topicContext });
+    Object.assign(sections, parseSections(text));
+  } catch (e) {
+    console.error("[proposal] Prelim sections failed:", e);
+  }
+
+  // Generate literature review sections
+  try {
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — explain the concepts, don't just list references.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total.`, user: topicContext });
+    Object.assign(sections, parseSections(text));
+  } catch (e) {
+    console.error("[proposal] Literature sections failed:", e);
+  }
+
+  // Generate methodology sections
+  try {
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Keep citations minimal — focus on methodological detail.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total.`, user: topicContext });
+    Object.assign(sections, parseSections(text));
+  } catch (e) {
+    console.error("[proposal] Methodology sections failed:", e);
+  }
 
   // Word count enforcement — expand shortest sections if below target
   const { countWords } = await import("@/lib/ai-utils.server");
