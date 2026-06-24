@@ -157,8 +157,8 @@ export const generateProposal = createServerFn({ method: "POST" })
       });
     }
 
-    // Start background generation (fire-and-forget)
-    generateProposalContent({
+    // Enqueue background job for queue worker
+    enqueueJob("proposal", {
       userId,
       data: {
         level: data.level,
@@ -168,11 +168,17 @@ export const generateProposal = createServerFn({ method: "POST" })
         refs: refs.slice(0, 20),
         isPaid,
       },
-    }).catch(async (err) => {
-      console.error("[proposal] Background generation failed:", err);
-      const { notifyToolFailed } = await import("./mail-helper");
-      await notifyToolFailed(userId, "Proposal").catch(() => {});
-    });
+    }).catch((err) => console.error("[proposal] Enqueue failed:", err));
+
+    // Trigger GitHub Actions worker (fire-and-forget)
+    const ghPat = typeof process !== "undefined" ? process.env?.GH_PAT : undefined;
+    if (ghPat) {
+      fetch("https://api.github.com/repos/Nadinho2/aithesis/dispatches", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${ghPat}`, "Content-Type": "application/json", Accept: "application/vnd.github.v3+json" },
+        body: JSON.stringify({ event_type: "process-queue" }),
+      }).catch(() => {});
+    }
 
     // Increment usage
     if (!isPaid) {

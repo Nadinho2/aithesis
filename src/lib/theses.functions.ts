@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { generateThesisContent } from "./generation.server";
+import { enqueueJob } from "./queue";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
