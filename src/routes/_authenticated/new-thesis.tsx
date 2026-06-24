@@ -7,6 +7,7 @@ import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
+import { StructureBuilder } from "@/components/StructureBuilder";
 
 export const Route = createFileRoute("/_authenticated/new-thesis")({
   head: () => ({ meta: [{ title: "Draft Thesis — Mybrainpadi" }] }),
@@ -189,7 +190,21 @@ function NewThesisPage() {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-5">
-          <Text label="Department" value={form.department} onChange={(v) => setForm({ ...form, department: v })} placeholder="e.g. Public Health" />
+          <div className="sm:col-span-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 block mb-2">
+              University & Department
+            </label>
+            <StructureBuilder
+              documentType="thesis"
+              onSelectionChange={(sel) => {
+                setForm({
+                  ...form,
+                  department: sel.department,
+                  country: (sel.university && sel.university !== "__other__") ? (form.country || "Nigeria") : form.country,
+                });
+              }}
+            />
+          </div>
           <Text label="Area of Interest" value={form.area_of_interest} onChange={(v) => setForm({ ...form, area_of_interest: v })} placeholder="e.g. maternal health" />
           <Text label="Country / Context" value={form.country} onChange={(v) => setForm({ ...form, country: v })} placeholder="e.g. Nigeria" />
           <div>

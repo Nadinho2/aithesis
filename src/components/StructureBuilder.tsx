@@ -8,6 +8,7 @@ type Props = {
   documentType: "proposal" | "thesis";
   onChaptersChange?: (chapters: ChapterTemplate[]) => void;
   initialChapters?: ChapterTemplate[];
+  onSelectionChange?: (selection: { university: string; department: string }) => void;
 };
 
 // Shorten the full names for the dropdown display
@@ -18,7 +19,7 @@ for (const u of universities) {
 
 const UNLISTED_KEY = "__other__";
 
-export function StructureBuilder({ documentType, onChaptersChange, initialChapters }: Props) {
+export function StructureBuilder({ documentType, onChaptersChange, initialChapters, onSelectionChange }: Props) {
   const [selectedUni, setSelectedUni] = useState("");
   const [selectedDept, setSelectedDept] = useState("");
   const [chapters, setChapters] = useState<ChapterTemplate[]>(initialChapters ?? []);
@@ -96,6 +97,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
           onChange={(e) => {
             setSelectedUni(e.target.value);
             setSelectedDept("");
+            onSelectionChange?.({ university: e.target.value, department: "" });
           }}
         >
           <option value="">Select your university</option>
@@ -112,7 +114,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
       {selectedUni && !isOther && (
         <div>
           <label className="block text-sm font-medium mb-1 text-ink">Department</label>
-          <DepartmentSelector value={selectedDept} onChange={setSelectedDept} />
+          <DepartmentSelector value={selectedDept} onChange={(dept) => { setSelectedDept(dept); onSelectionChange?.({ university: selectedUni, department: dept }); }} />
         </div>
       )}
 
