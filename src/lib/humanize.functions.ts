@@ -3,31 +3,38 @@ import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { callAIText } from "./ai-utils.server";
 import { z } from "zod";
 
+const BASE_HUMANIZE_PROMPT = `You are rewriting academic text to make it indistinguishable from text written by a Nigerian university student. You must preserve every fact, citation, argument, and sub-section structure exactly.
+
+BANNED PATTERNS — never use any of the following:
+- Em dashes (—) in any form. Replace with commas, full stops, or restructure the sentence entirely
+- 'Not only... but also' sentence constructions
+- 'It is worth noting that' or 'It should be noted that'
+- 'Moreover,' 'Furthermore,' 'Additionally,' appearing more than once per paragraph — vary with: 'Also,' 'Beyond this,' 'At the same time,' 'In the same vein,' 'Relatedly,' or restructure so no transition word is needed
+- Perfectly uniform paragraph lengths — vary between 3 and 7 sentences per paragraph deliberately
+- Summary sentences at the end of sections that restate what was just said (e.g. 'In summary, this section has shown...') — cut these entirely
+- Consecutive sentences of similar length — after a long sentence, write a short one. Break rhythm deliberately
+- Overly formal openers like 'The foregoing analysis suggests...' or 'From the above, it is evident that...'
+- Repetition of the section title in the opening sentence
+- Semicolons used to join two independent clauses in an overly balanced way
+- Triplet lists: 'clarity, coherence, and consistency' style constructions used repeatedly
+
+REQUIRED PATTERNS — apply these:
+- Mix short sentences (under 12 words) and long sentences (over 25 words) within every paragraph
+- Occasionally begin a sentence with 'This' referring to the previous idea: 'This gap...' 'This relationship...'
+- Use hedging language naturally: 'suggests', 'appears to', 'tends to', 'in many cases', 'often'
+- Use first-person academic voice where appropriate: 'this study argues', 'this chapter examines', 'the researcher notes'
+- Vary citation placement — sometimes mid-sentence, sometimes at the end, sometimes at the start of a claim
+- Use Nigerian academic phrasing where natural: 'in the Nigerian context', 'within the Nigerian educational system', 'as obtained in developing economies'
+- Occasionally use a rhetorical question to open a paragraph, then immediately answer it in the same paragraph
+
+OUTPUT: return only the rewritten text. No explanation. No preamble. No markdown.`;
+
 const SYSTEM_PROMPTS: Record<string, string> = {
-  light:
-    "You are an academic editor. Rewrite the following thesis text to read as naturally human-written. " +
-    "Make subtle structural variations to sentence length and openers while preserving 100% of the factual content, " +
-    "citations, technical terms, and meaning. Use natural academic transitions. " +
-    "Do not use contractions or informal language. Do not add new claims, remove content, or alter citations. " +
-    "Do not include any preamble, explanation, or markdown — output only the rewritten text.",
+  light: BASE_HUMANIZE_PROMPT + "\n\nApply subtle improvements only — fix all em dashes, reduce consecutive similar-length sentences, and remove summary restatements. Do not restructure extensively.",
 
-  medium:
-    "You are an academic editor. Rewrite the following thesis text so it reads as naturally human-written, " +
-    "while preserving 100% of the factual content, citations, technical terms, and meaning. " +
-    "Vary sentence length and structure noticeably — mix short and long sentences. " +
-    "Avoid repetitive sentence openers and uniform paragraph rhythm. " +
-    "Use natural academic transitions and occasional hedging language (e.g. 'this suggests,' 'it appears that'). " +
-    "Do not use contractions or informal language. Do not add new claims, remove content, or alter citations. " +
-    "Do not include any preamble, explanation, or markdown — output only the rewritten text.",
+  medium: BASE_HUMANIZE_PROMPT,
 
-  aggressive:
-    "You are an academic editor. Rewrite the following thesis text to read as naturally human-written. " +
-    "This text was previously flagged by an AI detector — restructure paragraph order within each section where possible, " +
-    "break up long sentences more assertively, and introduce more first-person academic phrasing " +
-    "(e.g. 'this study finds,' 'we observe that') while keeping all facts and citations identical. " +
-    "Vary sentence length and structure noticeably. Avoid repetitive openers. " +
-    "Do not use contractions or informal language. Do not add new claims, remove content, or alter citations. " +
-    "Do not include any preamble, explanation, or markdown — output only the rewritten text.",
+  aggressive: BASE_HUMANIZE_PROMPT + "\n\nAdditionally: restructure at least 3 paragraph openings so they do not begin with a noun phrase. Start some with a dependent clause, some with a short adverbial, some with a direct statement of finding. This text has already been flagged by an AI detector — maximum variation is required while keeping all academic content 100% intact.",
 };
 
 const HumanizeInputSchema = z.object({

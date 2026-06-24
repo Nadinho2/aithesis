@@ -170,9 +170,27 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
   })();
 
   // Generate each chapter one at a time (using chat model for speed + reliability)
+  const thesisLevel = data.level === "undergraduate" ? "Undergraduate" : data.level === "masters" ? "Master's" : "PhD";
   for (const def of chapterDefs) {
     try {
-      const system = `You are a senior academic writing ${def.label} of a ${data.level} thesis.\n${baseRules}\n${def.instructions}\nTarget: APPROXIMATELY ${def.target} words.\nOutput each sub-section with its number (e.g. "1.1 Background to the study") as a heading on its own line. Write in plain text paragraphs.`;
+      // Extract sub-section titles from the instructions (lines matching "X.Y Title")
+      const sectionLines = def.instructions
+        .split("\n")
+        .filter((l) => /^\d+\.\d+\s+/.test(l))
+        .map((l) => l.replace(/^\d+\.\d+\s+/, "").trim())
+        .filter(Boolean);
+      const system = `You are an experienced Nigerian academic writing a completed research thesis at ${thesisLevel} level. Write ${def.label} for a study titled '${topicCtx.title}' on '${topicCtx.title}' conducted at a Nigerian university.
+
+CRITICAL RULES FOR THESIS:
+- Use past tense for methodology and findings: 'this study examined', 'data was collected', 'the researcher found'
+- Use present tense for literature review and established facts: 'communication is', 'scholars argue'
+- Chapter Four must present and analyse actual findings with statistical language appropriate to the study
+- Chapter Five must provide conclusions drawn FROM the findings, not restate the objectives
+- Write approximately ${def.target} words
+- Use ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} referencing style
+- Include in-text citations: (Surname, Year)
+- Sub-sections required in order: ${sectionLines.join(", ")}
+- Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
       chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
     } catch (e) {
       console.error(`[thesis] Failed to generate ${def.key}:`, e);
@@ -353,16 +371,7 @@ export async function generateProposalContent(payload: {
     return result;
   }
 
-  const citationStyleText = data.citation_style === "harvard" ? "Harvard" : "APA 7";
-  const baseRules = `Citation style: ${citationStyleText}. Plain text only, no HTML.
-Write natural academic English as a human researcher would. Vary sentence length and structure.
-RULES:
-- Never use phrases like "This chapter explores", "It is noteworthy", "In conclusion, it can be said", "This study aims to", "The following", "It is important to note".
-- Use only 1-2 key citations per section — focus on depth, not quantity.
-- Never invent citations.
-- Write in clear paragraphs, not bullet points.
-- For numbers above 999, use commas (1,500 not 1500).
-- Use ## headers for each section.`;
+  const proposalLevel = data.level === "undergraduate" ? "Undergraduate" : data.level === "masters" ? "Master's" : "PhD";
 
   // Generate abstract
   let abstract = "";
@@ -375,44 +384,35 @@ RULES:
 
   const sections: Record<string, string> = {};
 
-  // Chapter 1: Introduction
-  try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 1 (INTRODUCTION) of a research proposal. Include these sections with ## headers:\nbackground_to_the_study\nstatement_of_the_problem\nobjectives\nresearch_questions\nresearch_hypotheses\nsignificance\nscope_of_the_study\ndefinition_of_terms\nTarget: ${prelimTarget} words.`, user: topicContext });
-    Object.assign(sections, parseSections(text));
-  } catch (e) {
-    console.error("[proposal] Chapter 1 failed:", e);
-  }
+  const proposalChapters = [
+    { label: "Chapter 1: Introduction", sections: ["Background to the Study", "Statement of the Problem", "Objectives", "Research Questions", "Research Hypotheses", "Significance", "Scope of the Study", "Definition of Terms"], target: prelimTarget },
+    { label: "Chapter 2: Literature Review", sections: ["Conceptual Review", "Empirical Review", "Theoretical Review", "Theoretical Framework", "Summary of Reviews", "Gap in Literature"], target: litReviewTarget },
+    { label: "Chapter 3: Research Methodology", sections: ["Research Design", "Area of the Study", "Population of the Study", "Sample Size", "Sampling Technique", "Instrumentation", "Validity of Instrument", "Reliability of Instrument", "Method of Collecting Data", "Method of Data Analysis"], target: methodTarget },
+    { label: "Chapter 4: Results and Findings", sections: ["Introduction", "Data Analysis and Presentation", "Discussion of Findings"], target: resultsTarget },
+    { label: "Chapter 5: Discussion, Conclusion and Recommendations", sections: ["Summary of Findings", "Conclusion", "Limitations", "Recommendations"], target: discussionTarget },
+  ];
 
-  // Chapter 2: Literature Review
-  try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 2 (LITERATURE REVIEW) of a research proposal. Include these sections with ## headers:\nconceptual_review\nempirical_review\ntheoretical_review\ntheoretical_framework\nsummary_of_reviews\ngap_in_literature\nTarget: ${litReviewTarget} words. Focus on analysing existing research — don't just list references.`, user: topicContext });
-    Object.assign(sections, parseSections(text));
-  } catch (e) {
-    console.error("[proposal] Chapter 2 failed:", e);
-  }
+  for (const ch of proposalChapters) {
+    try {
+      const system = `You are an experienced Nigerian academic writing a research proposal at ${proposalLevel} level. Write ${ch.label} for a proposed study titled '${topicCtx.title}' on '${topicCtx.title}' for submission at a Nigerian university.
 
-  // Chapter 3: Methodology
-  try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 3 (RESEARCH METHODOLOGY) of a research proposal. Include these sections with ## headers:\nresearch_design\narea_of_the_study\npopulation_of_the_study\nsample_size\nsampling_technique\ninstrumentation\nvalidity_of_instrument\nreliability_of_instrument\nmethod_of_collecting_data\nmethod_of_data_analysis\nTarget: ${methodTarget} words. Describe exactly how the research will be conducted. For statistical formulas, use plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.`, user: topicContext });
-    Object.assign(sections, parseSections(text));
-  } catch (e) {
-    console.error("[proposal] Chapter 3 failed:", e);
-  }
-
-  // Chapter 4: Results and Findings
-  try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 4 (RESULTS AND FINDINGS) of a research proposal. Include these sections with ## headers:\nintroduction\ndata_analysis_and_presentation\ndiscussion_of_findings\nTarget: ${resultsTarget} words. Include realistic data tables formatted like:\nTABLE 1: Sample Descriptive Statistics\n+-----------+-------+-------+\n| Variable  | Mean  | SD    |\n+-----------+-------+-------+\n| Age       | 28.5  | 4.2   |\n| Income    | 1,500 | 320   |\n+-----------+-------+-------+`, user: topicContext });
-    Object.assign(sections, parseSections(text));
-  } catch (e) {
-    console.error("[proposal] Chapter 4 failed:", e);
-  }
-
-  // Chapter 5: Discussion, Conclusion and Recommendations
-  try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 5 (DISCUSSION, CONCLUSION AND RECOMMENDATIONS) of a research proposal. Include these sections with ## headers:\nsummary_of_findings\nconclusion\nlimitations\nrecommendations\nTarget: ${discussionTarget} words.`, user: topicContext });
-    Object.assign(sections, parseSections(text));
-  } catch (e) {
-    console.error("[proposal] Chapter 5 failed:", e);
+CRITICAL RULES FOR PROPOSALS:
+- Use future tense throughout: 'this study will examine', 'the researcher will use', 'data will be collected'
+- Frame everything as planned, not completed
+- Chapter One must establish a clear research gap that justifies why this study needs to be conducted
+- Chapter Two must review existing literature and show what is missing
+- Chapter Three must describe the exact methodology the researcher PLANS to use, not what was used
+- Write approximately ${ch.target} words
+- Use ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} referencing style
+- Include in-text citations: (Surname, Year) — do not fabricate specific page numbers
+- Sub-sections required in order: ${ch.sections.join(", ")}
+- Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
+      const sectionNames = ch.sections.map((s) => s.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
+      const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76. For Chapter 4, include realistic data tables formatted like:\nTABLE 1: Sample Descriptive Statistics\n+-----------+-------+-------+\n| Variable  | Mean  | SD    |\n+-----------+-------+-------+\n| Age       | 28.5  | 4.2   |\n| Income    | 1,500 | 320   |\n+-----------+-------+-------+` });
+      Object.assign(sections, parseSections(text));
+    } catch (e) {
+      console.error(`[proposal] ${ch.label} failed:`, e);
+    }
   }
 
   // Word count enforcement — expand shortest sections if below target
