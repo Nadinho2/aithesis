@@ -58,6 +58,10 @@ export const Route = createFileRoute("/api/clerk-webhook")({
                 const name = first_name ?? email.split("@")[0];
                 // Fire-and-forget welcome email
                 sendWelcomeEmail({ to: email, name });
+                // Create referral code for new user (fire-and-forget)
+                import("../../lib/referral").then(({ createReferralCodeForUser }) =>
+                  createReferralCodeForUser(id).catch(() => {}),
+                );
               }
             }
           } catch {

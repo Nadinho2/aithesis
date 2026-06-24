@@ -537,3 +537,45 @@ ${paragraph("Our team will review it shortly. You can check the status in your d
 ${ctaButton(`${SITE}/tools/history`, "Review in Dashboard")}`,
   );
 }
+
+export async function sendWithdrawalSuccessEmail({
+  to,
+  name,
+  amount,
+}: {
+  to: string;
+  name: string;
+  amount: number;
+}): Promise<SendResult> {
+  return send(
+    to,
+    "Withdrawal successful — MyBrainPadi",
+    `${heading("Withdrawal successful 🎉")}
+${greeting(name)}
+${paragraph(`Your withdrawal of <strong>₦${amount.toLocaleString()}</strong> has been processed successfully and should reflect in your bank account within minutes.`)}
+${ctaButton("https://www.mybrainpadi.com/dashboard", "View Dashboard")}`,
+  );
+}
+
+export async function sendWithdrawalFailedEmail({
+  to,
+  name,
+  amount,
+  reason,
+}: {
+  to: string;
+  name: string;
+  amount: number;
+  reason: string;
+}): Promise<SendResult> {
+  return send(
+    to,
+    "Withdrawal unsuccessful — MyBrainPadi",
+    `${heading("Withdrawal unsuccessful")}
+${greeting(name)}
+${paragraph(`Your withdrawal of <strong>₦${amount.toLocaleString()}</strong> was unsuccessful.`)}
+${paragraph(`Reason: ${reason}`)}
+${paragraph("The amount has been returned to your wallet balance.")}
+${ctaButton("https://www.mybrainpadi.com/dashboard", "Try Again")}`,
+  );
+}

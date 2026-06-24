@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   Zap,
+  Gift,
 } from "lucide-react";
 
 type NavItem = {
@@ -38,6 +39,7 @@ const baseNav: NavItem[] = [
   { to: "/new-thesis", label: "Draft Thesis", icon: Sparkles },
   { to: "/theses", label: "My Theses", icon: Library },
   { to: "/billing", label: "Billing", icon: CreditCard },
+  { to: "/referral", label: "Referral", icon: Gift },
 ];
 
 const toolsNav: NavItem[] = [

@@ -117,6 +117,16 @@ export const verifyPayment = createServerFn({ method: "POST" })
         tool: toolName,
         amount: amount.toLocaleString(),
       });
+
+      // Credit referral commission (fire-and-forget — never block payment flow)
+      import("./referral").then(({ creditReferralCommission }) =>
+        creditReferralCommission({
+          paymentId: data.reference,
+          referredUserId: userId,
+          paymentAmount: amount,
+          tool: metadata.product ?? toolName,
+        }).catch(() => {}),
+      ).catch(() => {});
     }
 
     return { success: true, product: metadata.product, level: metadata.level };

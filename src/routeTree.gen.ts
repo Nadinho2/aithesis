@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as AuthenticatedTopicGeneratorRouteImport } from './routes/_authenticated/topic-generator'
 import { Route as AuthenticatedThesesRouteImport } from './routes/_authenticated/theses'
+import { Route as AuthenticatedReferralRouteImport } from './routes/_authenticated/referral'
 import { Route as AuthenticatedQuickProposalRouteImport } from './routes/_authenticated/quick-proposal'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
 import { Route as AuthenticatedNewThesisRouteImport } from './routes/_authenticated/new-thesis'
@@ -97,6 +98,11 @@ const AuthenticatedTopicGeneratorRoute =
 const AuthenticatedThesesRoute = AuthenticatedThesesRouteImport.update({
   id: '/theses',
   path: '/theses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReferralRoute = AuthenticatedReferralRouteImport.update({
+  id: '/referral',
+  path: '/referral',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedQuickProposalRoute =
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/new-thesis': typeof AuthenticatedNewThesisRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/quick-proposal': typeof AuthenticatedQuickProposalRoute
+  '/referral': typeof AuthenticatedReferralRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/new-thesis': typeof AuthenticatedNewThesisRoute
   '/proposals': typeof AuthenticatedProposalsRoute
   '/quick-proposal': typeof AuthenticatedQuickProposalRoute
+  '/referral': typeof AuthenticatedReferralRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated/new-thesis': typeof AuthenticatedNewThesisRoute
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/quick-proposal': typeof AuthenticatedQuickProposalRoute
+  '/_authenticated/referral': typeof AuthenticatedReferralRoute
   '/_authenticated/theses': typeof AuthenticatedThesesRoute
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/new-thesis'
     | '/proposals'
     | '/quick-proposal'
+    | '/referral'
     | '/theses'
     | '/topic-generator'
     | '/api/clerk-webhook'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/new-thesis'
     | '/proposals'
     | '/quick-proposal'
+    | '/referral'
     | '/theses'
     | '/topic-generator'
     | '/api/clerk-webhook'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/_authenticated/new-thesis'
     | '/_authenticated/proposals'
     | '/_authenticated/quick-proposal'
+    | '/_authenticated/referral'
     | '/_authenticated/theses'
     | '/_authenticated/topic-generator'
     | '/api/clerk-webhook'
@@ -532,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/theses'
       fullPath: '/theses'
       preLoaderRoute: typeof AuthenticatedThesesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/referral': {
+      id: '/_authenticated/referral'
+      path: '/referral'
+      fullPath: '/referral'
+      preLoaderRoute: typeof AuthenticatedReferralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/quick-proposal': {
@@ -780,6 +799,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewThesisRoute: typeof AuthenticatedNewThesisRoute
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
   AuthenticatedQuickProposalRoute: typeof AuthenticatedQuickProposalRoute
+  AuthenticatedReferralRoute: typeof AuthenticatedReferralRoute
   AuthenticatedThesesRoute: typeof AuthenticatedThesesRoute
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedProposalIdRoute: typeof AuthenticatedProposalIdRoute
@@ -801,6 +821,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewThesisRoute: AuthenticatedNewThesisRoute,
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
   AuthenticatedQuickProposalRoute: AuthenticatedQuickProposalRoute,
+  AuthenticatedReferralRoute: AuthenticatedReferralRoute,
   AuthenticatedThesesRoute: AuthenticatedThesesRoute,
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedProposalIdRoute: AuthenticatedProposalIdRoute,

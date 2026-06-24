@@ -1,7 +1,7 @@
 import { createFileRoute, Navigate, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useSignIn, useSignUp } from "@clerk/clerk-react";
 import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -71,6 +71,31 @@ function AuthForms() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
 
+  // Store ref code from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      sessionStorage.setItem("ref_code", ref);
+    }
+  }, []);
+
+  // Track referral after successful signup
+  const trackReferralIfNeeded = async (userId: string) => {
+    const refCode = sessionStorage.getItem("ref_code");
+    if (!refCode) return;
+    sessionStorage.removeItem("ref_code");
+    try {
+      await fetch("/api/track-referral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referredUserId: userId, refCode }),
+      });
+    } catch {
+      // Silent failure
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signIn) return;
@@ -126,6 +151,8 @@ function AuthForms() {
       const result = await signUp.create({ emailAddress: email, password, username: username.trim() });
       if (result.status === "complete") {
         await setSignUpActive({ session: result.createdSessionId });
+        const userId = result.createdUserId;
+        if (userId) trackReferralIfNeeded(userId);
         navigate({ to: "/dashboard" });
       } else if (result.status === "missing_requirements") {
         setPendingVerification(true);
@@ -153,6 +180,8 @@ function AuthForms() {
       const result = await signUp.attemptEmailAddressVerification({ code: verificationCode.trim() });
       if (result.status === "complete") {
         await setSignUpActive({ session: result.createdSessionId });
+        const userId = result.createdUserId;
+        if (userId) trackReferralIfNeeded(userId);
         navigate({ to: "/dashboard" });
       } else {
         toast.error("Invalid or expired code. Please try again.");
