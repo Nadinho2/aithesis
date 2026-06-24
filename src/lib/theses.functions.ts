@@ -103,8 +103,8 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
-    // Start background generation (fire-and-forget)
-    generateThesisContent({
+    // Enqueue background job for queue worker
+    enqueueJob("thesis", {
       userId,
       data: {
         level: data.level,
@@ -114,11 +114,7 @@ export const generateThesis = createServerFn({ method: "POST" })
         refs: refs.slice(0, 30),
         isPaid,
       },
-    }).catch(async (err) => {
-      console.error("[thesis] Background generation failed:", err);
-      const { notifyToolFailed } = await import("./mail-helper");
-      await notifyToolFailed(userId, "Thesis").catch(() => {});
-    });
+    }).catch((err) => console.error("[thesis] Enqueue failed:", err));
 
     // Increment usage
     if (!isPaid) {

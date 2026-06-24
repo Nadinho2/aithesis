@@ -1,0 +1,20 @@
+# Background queue worker for AI generation
+# Handles thesis and proposal processing outside of Vercel's 10s limit.
+services:
+  - type: worker
+    name: mybrainpadi-worker
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npx tsx src/worker.ts
+    envVars:
+      - key: SUPABASE_URL
+        sync: false # Set in Render dashboard
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false

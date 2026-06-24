@@ -70,7 +70,7 @@ async function processJob(): Promise<boolean> {
 }
 
 async function main() {
-  console.log("[worker] Queue worker started. Polling every ${POLL_INTERVAL_MS}ms...");
+  console.log(`[worker] Queue worker started. Polling every ${POLL_INTERVAL_MS}ms...`);
 
   // Process loop
   while (true) {

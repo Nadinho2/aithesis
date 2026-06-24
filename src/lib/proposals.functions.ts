@@ -5,7 +5,7 @@ import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.se
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
-import { generateProposalContent } from "./generation.server";
+import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 
 const ManualTopic = z.object({
