@@ -2,15 +2,17 @@
  * Background queue worker — polls `generation_queue` and processes jobs.
  *
  * Run standalone:  npx tsx src/worker.ts
- * Or with PM2:    pm2 start --interpreter npx --interpreter-args tsx src/worker.ts
  *
- * In production (serverless), consider using a Supabase Edge Function
- * or cron-based trigger instead.
+ * NOTE: Designed for single-pass execution. Processes all pending jobs
+ * then exits. Suitable for GitHub Actions, cron, or one-shot invocations.
+ *
+ * For long-running mode, use: while true; do npx tsx src/worker.ts; sleep 2; done
  */
 import { claimNextJob, completeJob, failJob } from "./lib/queue";
 import { generateThesisContent, generateProposalContent } from "./lib/generation.server";
 
-const POLL_INTERVAL_MS = 2000; // 2 seconds
+const MAX_POLLS = 5;   // Poll up to 5 times for new jobs
+const POLL_DELAY_MS = 2000; // Wait 2s between polls
 
 async function processJob(): Promise<boolean> {
   const job = await claimNextJob();
@@ -33,7 +35,6 @@ async function processJob(): Promise<boolean> {
       await completeJob(job.id);
       console.log(`[worker] Job ${job.id} completed successfully`);
     } else {
-      // Save was partial/failed — still mark as completed (content saved as draft)
       await completeJob(job.id);
       console.warn(`[worker] Job ${job.id} completed with issues: ${result.error}`);
     }
@@ -41,7 +42,6 @@ async function processJob(): Promise<boolean> {
     const errMsg = err?.message ?? String(err);
     console.error(`[worker] Job ${job.id} failed:`, errMsg);
 
-    // Get current attempts from the job row
     let attempts = 0;
     let maxAttempts = 3;
     try {
@@ -70,22 +70,24 @@ async function processJob(): Promise<boolean> {
 }
 
 async function main() {
-  console.log(`[worker] Queue worker started. Polling every ${POLL_INTERVAL_MS}ms...`);
+  console.log(`[worker] Queue worker started`);
 
-  // Process loop
-  while (true) {
-    try {
-      const processed = await processJob();
-      if (!processed) {
-        // No jobs — wait before polling again
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  let processed = 0;
+  for (let i = 0; i < MAX_POLLS; i++) {
+    const didWork = await processJob();
+    if (didWork) {
+      processed++;
+      // If we processed a job, reset poll counter — there might be more
+      i = 0;
+    } else {
+      if (processed === 0 && i < MAX_POLLS - 1) {
+        // No jobs yet — wait before next poll
+        await new Promise((r) => setTimeout(r, POLL_DELAY_MS));
       }
-      // If a job was processed, immediately poll for the next one
-    } catch (err) {
-      console.error("[worker] Unexpected error in worker loop:", err);
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
     }
   }
+
+  console.log(`[worker] Done. Processed ${processed} job(s).`);
 }
 
 main().catch((err) => {
