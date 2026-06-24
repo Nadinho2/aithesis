@@ -72,11 +72,67 @@ ${refContext}`;
   const abstractTarget = Math.max(200, Math.round(target * 0.04));
   const chapterWeights = [0.15, 0.32, 0.18, 0.20, 0.15];
   const chapterDefs = [
-    { key: "chapter_1_introduction", label: "Chapter 1: Introduction", instructions: "Cover: Background to the Study, Statement of the Problem, Objectives, Research Questions, Hypotheses, Significance, Scope, Definition of Terms. Focus on clearly explaining the research problem and why this study matters." },
-    { key: "chapter_2_literature_review", label: "Chapter 2: Literature Review", instructions: "Cover: Conceptual Review, Empirical Review, Theoretical Review, Theoretical Framework, Summary/Gap. For each area, explain the key ideas and debates — use 1-2 citations where they genuinely support a point. Focus on synthesis and analysis, not listing references." },
-    { key: "chapter_3_methodology", label: "Chapter 3: Research Methodology", instructions: "Cover: Research Design, Area of Study, Population, Sample Size & Technique, Instrumentation, Validity/Reliability, Data Collection, Data Analysis. Describe exactly how the research was carried out with methodological detail." },
-    { key: "chapter_4_results_findings", label: "Chapter 4: Results and Findings", instructions: "Present findings using tables, percentages, and charts described in text. Cover both descriptive and inferential statistics. Focus on what the data shows." },
-    { key: "chapter_5_discussion_conclusion", label: "Chapter 5: Discussion, Conclusion and Recommendations", instructions: "Discuss findings in relation to the literature, conclude, recommend, suggest further studies, and note limitations. Focus on the meaning and implications of the results." },
+    {
+      key: "chapter_1_introduction",
+      label: "Chapter 1: Introduction",
+      instructions: `Use these numbered sub-sections:
+1.1 Background to the study
+1.2 Statement of problem
+1.3 Objective of the study
+1.4 Research questions
+1.5 Research hypothesis
+1.6 Significant of the study
+1.7 Scope of the study
+1.8 Definition of terms
+Focus on clearly explaining the research problem and why this study matters.`,
+    },
+    {
+      key: "chapter_2_literature_review",
+      label: "Chapter 2: Literature Review",
+      instructions: `Use these numbered sub-sections:
+2.1 Conceptual review
+2.2 Empirical Review
+2.3 Theoretical review
+2.4 Theoretical framework
+2.5 Summary of Reviews
+2.6 Gap in literature
+For each area, explain the key ideas and debates — use 1-2 citations where they genuinely support a point. Focus on synthesis and analysis, not listing references.`,
+    },
+    {
+      key: "chapter_3_methodology",
+      label: "Chapter 3: Research Methodology",
+      instructions: `Use these numbered sub-sections:
+3.1 Research design
+3.2 Area of the study
+3.3 Population of the study
+3.4 Sample size
+3.5 Sample techniques
+3.6 Instrument for data collection
+3.7 Validity of instrument
+3.8 Reliability of instrument
+3.9 Method of administering data
+3.10 Method of presentation and data analysis
+Describe exactly how the research was carried out with methodological detail.`,
+    },
+    {
+      key: "chapter_4_results_findings",
+      label: "Chapter 4: Results and Findings",
+      instructions: `Use these numbered sub-sections:
+4.1 Introduction
+4.2 Data analysis and presentation
+4.3 Discussion of findings
+Present findings using tables, percentages, and charts described in text. Cover both descriptive and inferential statistics.`,
+    },
+    {
+      key: "chapter_5_discussion_conclusion",
+      label: "Chapter 5: Discussion, Conclusion and Recommendations",
+      instructions: `Use these numbered sub-sections:
+5.1 Summary of findings
+5.2 Conclusion
+5.3 Limitations of the study
+5.4 Recommendations
+Discuss findings in relation to the literature, conclude, recommend, suggest further studies, and note limitations.`,
+    },
   ].map((d, i) => ({ ...d, target: Math.max(500, Math.round(target * chapterWeights[i])) }));
 
   const { callAIText } = await import("@/lib/ai-utils.server");
@@ -98,8 +154,8 @@ ${refContext}`;
   // Generate each chapter one at a time (using chat model for speed + reliability)
   for (const def of chapterDefs) {
     try {
-      const system = `You are a senior academic writing ${def.label} of a ${data.level} thesis.\n${baseRules}\n${def.instructions}\nTarget: APPROXIMATELY ${def.target} words.\nUse sub-headings on their own lines. Output plain text.`;
-      chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words.` });
+      const system = `You are a senior academic writing ${def.label} of a ${data.level} thesis.\n${baseRules}\n${def.instructions}\nTarget: APPROXIMATELY ${def.target} words.\nOutput each sub-section with its number (e.g. "1.1 Background to the study") as a heading on its own line. Write in plain text paragraphs.`;
+      chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
     } catch (e) {
       console.error(`[thesis] Failed to generate ${def.key}:`, e);
       chapters[def.key] = "";
@@ -231,37 +287,42 @@ export async function generateProposalContent(payload: {
 
   const topicContext = `RESEARCH TOPIC: ${topicCtx.title}\nPROBLEM: ${topicCtx.problem_statement}\nGAP: ${topicCtx.research_gap}\nOBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}\nLEVEL: ${data.level}\n\nAVAILABLE REFERENCES (cite sparingly — only where relevant):\n${refContext}`;
 
-  const abstractTarget = Math.max(80, Math.round(target * 0.03));
-  const prelimTarget = Math.round(target * 0.28);
-  const litReviewTarget = Math.round(target * 0.44);
-  const methodTarget = Math.round(target * 0.25);
+  const abstractTarget = Math.max(80, Math.round(target * 0.025));
+
+  // Proposal structure: 5 chapters + abstract
+  const prelimTarget = Math.round(target * 0.20);   // Chapter 1: Introduction
+  const litReviewTarget = Math.round(target * 0.25); // Chapter 2: Literature Review
+  const methodTarget = Math.round(target * 0.20);    // Chapter 3: Methodology
+  const resultsTarget = Math.round(target * 0.15);   // Chapter 4: Results
+  const discussionTarget = Math.round(target * 0.15); // Chapter 5: Discussion
 
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
 
   function parseSections(text: string): Record<string, string> {
     const result: Record<string, string> = {};
-
-    // Try splitting by ## headers first
     const lines = text.split("\n");
     let currentKey: string | null = null;
     let currentContent: string[] = [];
 
     for (const line of lines) {
-      const headerMatch = line.match(/^#{1,4}\s+(.+)/);
-      if (headerMatch) {
-        // Save previous section
+      // Match ## headers (markdown) OR numbered headers like "1.1 Background to the study"
+      const mdMatch = line.match(/^#{1,4}\s+(.+)/);
+      const numMatch = line.match(/^\d+\.\d+\s+(.+)/i);
+
+      if (mdMatch) {
+        // Save previous
         if (currentKey && currentContent.length > 0) {
           result[currentKey] = currentContent.join("\n").trim();
         }
-        // Start new section — normalize key: lowercase, replace spaces/special chars with underscores
-        currentKey = headerMatch[1]
-          .trim()
-          .toLowerCase()
-          .replace(/['']/g, "")
-          .replace(/[^a-z0-9_]+/g, "_")
-          .replace(/_+/g, "_")
-          .replace(/^_|_$/g, "");
+        currentKey = mdMatch[1].trim().toLowerCase().replace(/['']/g, "").replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+        currentContent = [];
+      } else if (numMatch) {
+        // Save previous
+        if (currentKey && currentContent.length > 0) {
+          result[currentKey] = currentContent.join("\n").trim();
+        }
+        currentKey = numMatch[1].trim().toLowerCase().replace(/['']/g, "").replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
         currentContent = [];
       } else if (currentKey) {
         currentContent.push(line);
@@ -271,45 +332,61 @@ export async function generateProposalContent(payload: {
     if (currentKey && currentContent.length > 0) {
       result[currentKey] = currentContent.join("\n").trim();
     }
-
     return result;
   }
 
-  // Generate abstract + sections SEQUENTIALLY for reliability
-  let abstract = "";
+  const citationStyleText = data.citation_style === "harvard" ? "Harvard" : "APA 7";
+  const baseRules = `Citation style: ${citationStyleText}. Plain text only, no markdown, no HTML. Write in detailed paragraphs with substantive analysis. Use ## headers for each section. Keep citations minimal (1-2 per section) — focus on depth, not quantity. Never invent citations.`;
 
-  // Abstract (short, uses reasoner for quality)
+  // Generate abstract
+  let abstract = "";
   try {
     const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, jsonMode: true, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
     abstract = raw?.abstract ?? "";
   } catch (e) {
-    console.error("[proposal] Abstract generation failed, continuing");
+    console.error("[proposal] Abstract failed, continuing");
   }
 
   const sections: Record<string, string> = {};
 
-  // Generate prelim sections
+  // Chapter 1: Introduction
   try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — focus on explaining the ideas.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total.`, user: topicContext });
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 1 (INTRODUCTION) of a research proposal. Include these sections with ## headers:\nbackground_to_the_study\nstatement_of_the_problem\nobjectives\nresearch_questions\nresearch_hypotheses\nsignificance\nscope_of_the_study\ndefinition_of_terms\nTarget: ${prelimTarget} words.`, user: topicContext });
     Object.assign(sections, parseSections(text));
   } catch (e) {
-    console.error("[proposal] Prelim sections failed:", e);
+    console.error("[proposal] Chapter 1 failed:", e);
   }
 
-  // Generate literature review sections
+  // Chapter 2: Literature Review
   try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — explain the concepts, don't just list references.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total.`, user: topicContext });
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 2 (LITERATURE REVIEW) of a research proposal. Include these sections with ## headers:\nconceptual_review\nempirical_review\ntheoretical_review\ntheoretical_framework\nsummary_of_reviews\ngap_in_literature\nTarget: ${litReviewTarget} words. Focus on analysing existing research — don't just list references.`, user: topicContext });
     Object.assign(sections, parseSections(text));
   } catch (e) {
-    console.error("[proposal] Literature sections failed:", e);
+    console.error("[proposal] Chapter 2 failed:", e);
   }
 
-  // Generate methodology sections
+  // Chapter 3: Methodology
   try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Keep citations minimal — focus on methodological detail.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total.`, user: topicContext });
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 3 (RESEARCH METHODOLOGY) of a research proposal. Include these sections with ## headers:\nresearch_design\narea_of_the_study\npopulation_of_the_study\nsample_size\nsampling_technique\ninstrumentation\nvalidity_of_instrument\nreliability_of_instrument\nmethod_of_collecting_data\nmethod_of_data_analysis\nTarget: ${methodTarget} words. Describe exactly how the research will be conducted.`, user: topicContext });
     Object.assign(sections, parseSections(text));
   } catch (e) {
-    console.error("[proposal] Methodology sections failed:", e);
+    console.error("[proposal] Chapter 3 failed:", e);
+  }
+
+  // Chapter 4: Results and Findings
+  try {
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 4 (RESULTS AND FINDINGS) of a research proposal. Include these sections with ## headers:\nintroduction\ndata_analysis_and_presentation\ndiscussion_of_findings\nTarget: ${resultsTarget} words. Describe what data analysis would be performed and how findings would be presented.`, user: topicContext });
+    Object.assign(sections, parseSections(text));
+  } catch (e) {
+    console.error("[proposal] Chapter 4 failed:", e);
+  }
+
+  // Chapter 5: Discussion, Conclusion and Recommendations
+  try {
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 5 (DISCUSSION, CONCLUSION AND RECOMMENDATIONS) of a research proposal. Include these sections with ## headers:\nsummary_of_findings\nconclusion\nlimitations\nrecommendations\nTarget: ${discussionTarget} words.`, user: topicContext });
+    Object.assign(sections, parseSections(text));
+  } catch (e) {
+    console.error("[proposal] Chapter 5 failed:", e);
   }
 
   // Word count enforcement — expand shortest sections if below target
