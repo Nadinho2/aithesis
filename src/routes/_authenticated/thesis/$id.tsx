@@ -229,7 +229,7 @@ function Section({ title, body }: { title: string; body?: string }) {
     <section className="mb-10">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
       {blocks.map((block, i) => {
-        if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4">{block.content}</p>;
+        if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4 break-words">{block.content}</p>;
         if (block.type === "table") return (
           <div key={i} className="mb-6 overflow-x-auto">
             <table className="w-full text-sm border-collapse">
@@ -255,7 +255,7 @@ function EditableSection({ title, value, onChange }: { title: string; value: str
   return (
     <section className="mb-8">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={8} className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-[15px] leading-relaxed focus:outline-none focus:border-sage resize-y" />
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={8} className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-[15px] leading-relaxed focus:outline-none focus:border-sage resize-y font-mono text-sm" />
     </section>
   );
 }

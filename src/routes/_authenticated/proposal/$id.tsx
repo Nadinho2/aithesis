@@ -338,7 +338,7 @@ function Section({ title, body }: { title: string; body?: string }) {
   return (
     <section className="mb-8">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap">{body}</div>
+      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap break-words overflow-x-auto max-w-full">{body}</div>
     </section>
   );
 }
