@@ -294,18 +294,18 @@ function ProposalPage() {
       })}
 
       {/* References */}
-      <div className="mt-12 pt-6 border-t border-ink/10">
+      <div className="mt-12 pt-6 border-t border-ink/10 max-w-full">
         <h2 className="font-serif text-2xl mb-4 flex items-center gap-2">
           <BookOpen className="size-5 text-sage" /> References
         </h2>
-        <ol className="space-y-3 text-sm text-ink/80">
+        <ol className="space-y-3 text-sm text-ink/80 break-words [overflow-wrap:anywhere]">
           {refs.map((r: any, i) => (
-            <li key={i} className="leading-relaxed">
+            <li key={i} className="leading-relaxed break-words">
               <span className="font-mono text-[10px] text-ink/40 mr-2">[{i + 1}]</span>
               {r.url ? (
-                <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-sage underline-offset-2 hover:underline">{r.apa}</a>
-              ) : r.apa}
-              <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40">{SOURCE_LABELS[r.source] ?? r.source}</span>
+                <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-sage underline-offset-2 hover:underline break-words [overflow-wrap:anywhere]">{r.apa}</a>
+              ) : <span className="break-words [overflow-wrap:anywhere]">{r.apa}</span>}
+              <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40 whitespace-nowrap">{SOURCE_LABELS[r.source] ?? r.source}</span>
             </li>
           ))}
         </ol>
@@ -345,9 +345,9 @@ function ProposalPage() {
 function Section({ title, body }: { title: string; body?: string }) {
   if (!body) return null;
   return (
-    <section className="mb-8">
+    <section className="mb-8 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap break-words overflow-x-auto max-w-full">{body}</div>
+      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap break-words overflow-x-auto max-w-full [overflow-wrap:anywhere]">{body}</div>
     </section>
   );
 }

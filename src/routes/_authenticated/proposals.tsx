@@ -157,7 +157,7 @@ function ProposalsListPage() {
             <Link to="/proposal/$id" params={{ id: p.id }} className="flex-1 min-w-0">
               <div className="font-serif text-base sm:text-lg truncate">{p.title}</div>
               <div className="text-xs text-ink/50 mt-1">
-                {p.level} · {p.word_count.toLocaleString()} words ·{" "}
+                {p.level} · {(p.word_count ?? 0).toLocaleString()} words ·{" "}
                 {new Date(p.created_at).toLocaleDateString()}
               </div>
             </Link>

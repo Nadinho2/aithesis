@@ -179,14 +179,14 @@ function ThesisPage() {
       )}
 
       {/* References */}
-      <div className="mt-12 pt-6 border-t border-ink/10">
+      <div className="mt-12 pt-6 border-t border-ink/10 max-w-full">
         <h2 className="font-serif text-2xl mb-4 flex items-center gap-2"><BookOpen className="size-5 text-sage" /> References</h2>
-        <ol className="space-y-3 text-sm text-ink/80">
+        <ol className="space-y-3 text-sm text-ink/80 break-words [overflow-wrap:anywhere]">
           {refs.map((r, i) => (
-            <li key={i} className="leading-relaxed">
+            <li key={i} className="leading-relaxed break-words">
               <span className="font-mono text-[10px] text-ink/40 mr-2">[{i + 1}]</span>
-              {r.url ? <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-sage underline-offset-2 hover:underline">{r.apa}</a> : r.apa}
-              <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40">{SOURCE_LABELS[r.source] ?? r.source}</span>
+              {r.url ? <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-sage underline-offset-2 hover:underline break-words [overflow-wrap:anywhere]">{r.apa}</a> : <span className="break-words [overflow-wrap:anywhere]">{r.apa}</span>}
+              <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40 whitespace-nowrap">{SOURCE_LABELS[r.source] ?? r.source}</span>
             </li>
           ))}
         </ol>
@@ -226,15 +226,15 @@ function Section({ title, body }: { title: string; body?: string }) {
   if (!body) return null;
   const blocks = parseRichBlocks(body);
   return (
-    <section className="mb-10">
+    <section className="mb-10 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
       {blocks.map((block, i) => {
         if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4 break-words">{block.content}</p>;
         if (block.type === "table") return (
-          <div key={i} className="mb-6 overflow-x-auto">
+          <div key={i} className="mb-6 overflow-x-auto max-w-full">
             <table className="w-full text-sm border-collapse">
-              <thead><tr>{block.headers.map((h, ci) => <th key={ci} className="border border-ink/20 bg-ink/5 px-3 py-2 text-left font-semibold">{h}</th>)}</tr></thead>
-              <tbody>{block.rows.map((row, ri) => <tr key={ri} className="even:bg-ink/[0.02]">{row.map((cell, ci) => <td key={ci} className="border border-ink/20 px-3 py-2">{cell}</td>)}</tr>)}</tbody>
+              <thead><tr>{block.headers.map((h, ci) => <th key={ci} className="border border-ink/20 bg-ink/5 px-3 py-2 text-left font-semibold break-words [overflow-wrap:anywhere]">{h}</th>)}</tr></thead>
+              <tbody>{block.rows.map((row, ri) => <tr key={ri} className="even:bg-ink/[0.02]">{row.map((cell, ci) => <td key={ci} className="border border-ink/20 px-3 py-2 break-words [overflow-wrap:anywhere]">{cell}</td>)}</tr>)}</tbody>
             </table>
             {block.caption && <p className="text-xs text-ink/60 mt-1 italic">{block.caption}</p>}
           </div>

@@ -122,7 +122,7 @@ function TheseListPage() {
             <Link to="/thesis/$id" params={{ id: t.id }} className="flex-1 min-w-0">
               <div className="font-serif text-base sm:text-lg truncate">{t.title}</div>
               <div className="text-xs text-ink/50 mt-1">
-                {t.level} · {t.word_count.toLocaleString()} words ·{" "}
+                {t.level} · {(t.word_count ?? 0).toLocaleString()} words ·{" "}
                 {new Date(t.created_at).toLocaleDateString()}
               </div>
             </Link>
