@@ -116,6 +116,16 @@ export const generateThesis = createServerFn({ method: "POST" })
       },
     }).catch((err) => console.error("[thesis] Enqueue failed:", err));
 
+    // Trigger GitHub Actions worker (fire-and-forget)
+    const ghPat = typeof process !== "undefined" ? process.env?.GH_PAT : undefined;
+    if (ghPat) {
+      fetch("https://api.github.com/repos/Nadinho2/aithesis/dispatches", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${ghPat}`, "Content-Type": "application/json", Accept: "application/vnd.github.v3+json" },
+        body: JSON.stringify({ event_type: "process-queue" }),
+      }).catch(() => {});
+    }
+
     // Increment usage
     if (!isPaid) {
       await incrementUsage(supabase, userId, "thesis", data.level);
