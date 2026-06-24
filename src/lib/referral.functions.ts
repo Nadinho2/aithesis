@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { createClient } from "@supabase/supabase-js";
+import { generateReferralCode } from "./referral";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -10,7 +11,7 @@ function runtimeEnv(key: string): string | undefined {
   }
 }
 
-// --- Get referral code for current user ---
+// --- Get referral code for current user (auto-creates if missing) ---
 
 export const getMyReferralCode = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
@@ -24,13 +25,34 @@ export const getMyReferralCode = createServerFn({ method: "GET" })
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data } = await supabase
+    // Check if user already has a code
+    const { data: existing } = await supabase
       .from("referral_codes")
       .select("code")
       .eq("user_id", userId)
       .maybeSingle();
 
-    return data ? (data as any).code : null;
+    if (existing) return (existing as any).code;
+
+    // Auto-create referral code + wallet
+    let code = generateReferralCode(userId);
+    let attempts = 0;
+    while (attempts < 10) {
+      const { error } = await supabase
+        .from("referral_codes")
+        .insert({ user_id: userId, code });
+      if (!error) break;
+      code = generateReferralCode(userId);
+      attempts++;
+    }
+
+    // Create wallet if not exists
+    await supabase
+      .from("wallets")
+      .upsert({ user_id: userId, balance: 0, total_earned: 0, total_withdrawn: 0 }, { onConflict: "user_id" })
+      .then(() => {});
+
+    return code;
   });
 
 // --- Get wallet for current user ---
