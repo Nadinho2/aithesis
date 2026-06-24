@@ -67,6 +67,7 @@ function ProposalPage() {
   const revFileRef = useRef<HTMLInputElement>(null);
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [editAbstract, setEditAbstract] = useState("");
+  const [goThesisBusy, setGoThesisBusy] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["proposal", id],
@@ -145,6 +146,36 @@ function ProposalPage() {
     }
   };
 
+  const goToThesis = async () => {
+    if (!data) return;
+    setGoThesisBusy(true);
+    try {
+      const s = (typeof data.sections === "string" ? JSON.parse(data.sections) : data.sections ?? {}) as Record<string, any>;
+      const objectives: string[] = Array.isArray(s.objectives) && s.objectives.length
+        ? s.objectives
+        : ["Investigate the central problem identified in the proposal."];
+      sessionStorage.setItem(
+        "thesis_prefill",
+        JSON.stringify({
+          title: data.title ?? "",
+          problem_statement: (s.statement_of_the_problem as string) ?? "",
+          research_gap: (s.gap_in_literature as string)?.slice(0, 800) ?? "",
+          objectives,
+          department: data.department ?? "",
+          area_of_interest: data.area_of_interest ?? "",
+          country: data.country ?? "",
+          research_type: data.research_type ?? "",
+          level: data.level ?? "undergraduate",
+        }),
+      );
+      navigate({ to: "/new-thesis" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open thesis draft");
+    } finally {
+      setGoThesisBusy(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-ink/50 p-10">
@@ -206,8 +237,8 @@ function ProposalPage() {
               <button onClick={() => setShowRevise(true)} className="px-3 py-2 border border-amber-400 text-amber-700 rounded-sm text-sm flex items-center gap-2 hover:bg-amber-50">
                 <RefreshCw className="size-4" /> Revise with Feedback
               </button>
-              <button onClick={() => navigate({ to: "/new-thesis" })} className="px-3 py-2 border border-sage text-sage rounded-sm text-sm hover:bg-sage hover:text-bone transition-colors flex items-center gap-2">
-                <Sparkles className="size-4" /> Draft Thesis
+              <button onClick={goToThesis} disabled={goThesisBusy} className="px-3 py-2 border border-sage text-sage rounded-sm text-sm hover:bg-sage hover:text-bone transition-colors flex items-center gap-2 disabled:opacity-50">
+                {goThesisBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Draft Thesis
               </button>
               <button onClick={handleDownload} disabled={dlBusy} className="px-3 py-2 bg-ink text-bone rounded-sm text-sm flex items-center gap-2 disabled:opacity-60 hover:bg-sage transition-colors">
                 {dlBusy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
