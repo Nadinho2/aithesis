@@ -54,11 +54,11 @@ export async function generateThesisContent(payload: {
   const refs = data.refs ?? [];
   const target = data.target_words;
   const refContext = refs
-    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"} by ${r.authors || "Unknown"} (${r.year || "n.d."}) – ${r.journal || r.publisher || ""}`)
+    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"}`)
     .join("\n");
 
   const baseRules = `CITATION STYLE: ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}
-Write in clear, natural academic English. Do NOT use markdown syntax. Do NOT invent citations — only cite the provided references.`;
+Write detailed academic analysis. Use only 1-2 key citations per section — focus on depth, not quantity. Never invent citations. Write in clear paragraphs, not bullet points.`;
 
   const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
 PROBLEM: ${topicCtx.problem_statement}
@@ -66,17 +66,17 @@ GAP: ${topicCtx.research_gap}
 OBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}
 LEVEL: ${data.level}
 
-REFERENCES:
+AVAILABLE REFERENCES (cite sparingly — only where relevant):
 ${refContext}`;
 
   const abstractTarget = Math.max(200, Math.round(target * 0.04));
   const chapterWeights = [0.15, 0.32, 0.18, 0.20, 0.15];
   const chapterDefs = [
-    { key: "chapter_1_introduction", label: "Chapter 1: Introduction", instructions: "Cover: Background to the Study, Statement of the Problem, Objectives, Research Questions, Hypotheses, Significance, Scope, Definition of Terms." },
-    { key: "chapter_2_literature_review", label: "Chapter 2: Literature Review", instructions: "Cover: Conceptual Review, Empirical Review, Theoretical Review, Theoretical Framework, Summary/Gap. Synthesise at least 10 references." },
-    { key: "chapter_3_methodology", label: "Chapter 3: Research Methodology", instructions: "Cover: Research Design, Area of Study, Population, Sample Size & Technique, Instrumentation, Validity/Reliability, Data Collection, Data Analysis." },
-    { key: "chapter_4_results_findings", label: "Chapter 4: Results and Findings", instructions: "Present findings using tables, percentages, and charts described in text. Cover both descriptive and inferential statistics." },
-    { key: "chapter_5_discussion_conclusion", label: "Chapter 5: Discussion, Conclusion and Recommendations", instructions: "Discuss findings, conclude, recommend, suggest further studies, and note limitations." },
+    { key: "chapter_1_introduction", label: "Chapter 1: Introduction", instructions: "Cover: Background to the Study, Statement of the Problem, Objectives, Research Questions, Hypotheses, Significance, Scope, Definition of Terms. Focus on clearly explaining the research problem and why this study matters." },
+    { key: "chapter_2_literature_review", label: "Chapter 2: Literature Review", instructions: "Cover: Conceptual Review, Empirical Review, Theoretical Review, Theoretical Framework, Summary/Gap. For each area, explain the key ideas and debates — use 1-2 citations where they genuinely support a point. Focus on synthesis and analysis, not listing references." },
+    { key: "chapter_3_methodology", label: "Chapter 3: Research Methodology", instructions: "Cover: Research Design, Area of Study, Population, Sample Size & Technique, Instrumentation, Validity/Reliability, Data Collection, Data Analysis. Describe exactly how the research was carried out with methodological detail." },
+    { key: "chapter_4_results_findings", label: "Chapter 4: Results and Findings", instructions: "Present findings using tables, percentages, and charts described in text. Cover both descriptive and inferential statistics. Focus on what the data shows." },
+    { key: "chapter_5_discussion_conclusion", label: "Chapter 5: Discussion, Conclusion and Recommendations", instructions: "Discuss findings in relation to the literature, conclude, recommend, suggest further studies, and note limitations. Focus on the meaning and implications of the results." },
   ].map((d, i) => ({ ...d, target: Math.max(500, Math.round(target * chapterWeights[i])) }));
 
   const { callAIText } = await import("@/lib/ai-utils.server");
@@ -84,24 +84,26 @@ ${refContext}`;
 
   const chapters: Record<string, string> = {};
 
-  // Generate abstract + chapters in parallel
-  const genPromises = [
-    (async () => {
+  // Generate abstract + chapters SEQUENTIALLY to avoid rate limits
+  // Abstract first (using reasoner for quality)
+  const abstract = await (async () => {
+    try {
       const system = `You are a senior academic writing the abstract of a ${data.level} thesis.\n${baseRules}\nTarget: EXACTLY ${abstractTarget} words. Single paragraph.`;
-      return callAIText(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: `${topicContext}\n\nWrite the abstract.` });
-    })(),
-    ...chapterDefs.map((def) =>
-      (async () => {
-        const system = `You are a senior academic writing ${def.label} of a ${data.level} thesis.\n${baseRules}\n${def.instructions}\nTarget: EXACTLY ${def.target} words.\nUse sub-headings on their own lines. Output plain text.`;
-        return callAIText(apiKey, { model: "deepseek-reasoner", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — EXACTLY ${def.target} words.` });
-      })()
-    ),
-  ];
+      return await callAIText(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system, user: `${topicContext}\n\nWrite the abstract.` });
+    } catch (e) {
+      return "";
+    }
+  })();
 
-  const results = await Promise.all(genPromises);
-  const abstract = results[0];
-  for (let i = 0; i < chapterDefs.length; i++) {
-    chapters[chapterDefs[i].key] = results[i + 1];
+  // Generate each chapter one at a time (using chat model for speed + reliability)
+  for (const def of chapterDefs) {
+    try {
+      const system = `You are a senior academic writing ${def.label} of a ${data.level} thesis.\n${baseRules}\n${def.instructions}\nTarget: APPROXIMATELY ${def.target} words.\nUse sub-headings on their own lines. Output plain text.`;
+      chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words.` });
+    } catch (e) {
+      console.error(`[thesis] Failed to generate ${def.key}:`, e);
+      chapters[def.key] = "";
+    }
   }
 
   // Word count enforcement — expand shortest chapters
@@ -117,15 +119,17 @@ ${refContext}`;
       .sort((a, b) => a.current - b.current);
     const toExpand = sorted.slice(0, 2);
 
-    const expandResults = await Promise.all(toExpand.map(async (c) => {
-      const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
-      const newTarget = c.current + overshoot;
-      const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially. Keep ALL existing content. Target for this chapter: AT LEAST ${newTarget} words (currently ${c.current}). Output FULL updated chapter as plain text.`;
-      const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-reasoner", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
-      return { key: c.key, content };
-    }));
-
-    for (const e of expandResults) chapters[e.key] = e.content;
+    for (const c of toExpand) {
+      try {
+        const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
+        const newTarget = c.current + overshoot;
+        const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially. Keep ALL existing content. Target for this chapter: AT LEAST ${newTarget} words (currently ${c.current}). Output FULL updated chapter as plain text.`;
+        const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-chat", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
+        chapters[c.key] = content;
+      } catch (e) {
+        // Skip expansion if it fails
+      }
+    }
     total = abstractTarget + chapterDefs.reduce((s, d) => s + countWords(chapters[d.key] ?? ""), 0);
   }
 
@@ -222,12 +226,10 @@ export async function generateProposalContent(payload: {
   const refs = data.refs ?? [];
   const target = data.target_words;
   const refContext = refs
-    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"} by ${r.authors || "Unknown"} (${r.year || "n.d."})`)
+    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"}`)
     .join("\n");
 
-  const baseSystemRules = `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Return ONLY valid JSON.`;
-
-  const topicContext = `RESEARCH TOPIC: ${topicCtx.title}\nPROBLEM: ${topicCtx.problem_statement}\nGAP: ${topicCtx.research_gap}\nOBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}\nLEVEL: ${data.level}\nREFERENCES:\n${refContext}`;
+  const topicContext = `RESEARCH TOPIC: ${topicCtx.title}\nPROBLEM: ${topicCtx.problem_statement}\nGAP: ${topicCtx.research_gap}\nOBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}\nLEVEL: ${data.level}\n\nAVAILABLE REFERENCES (cite sparingly — only where relevant):\n${refContext}`;
 
   const abstractTarget = Math.max(80, Math.round(target * 0.03));
   const prelimTarget = Math.round(target * 0.28);
@@ -258,9 +260,9 @@ export async function generateProposalContent(payload: {
       const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
       return raw?.abstract ?? "";
     })(),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total.`, user: topicContext }),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total. Synthesise 8+ refs.`, user: topicContext }),
-    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Vary sentence length.\n- Never invent citations — only cite provided references.\n- Use ## headers for each section.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — focus on explaining the ideas.\nSections to write: background_to_the_study, statement_of_the_problem, objectives, research_questions, research_hypotheses, significance, scope_of_the_study, definition_of_terms.\nTarget: ${prelimTarget} words total. Focus on clearly presenting the research problem and its importance.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Use only 1-2 key citations max — explain the concepts, don't just list references.\nSections to write: conceptual_review, empirical_review, theoretical_review, theoretical_framework, summary_of_reviews, gap_in_literature.\nTarget: ${litReviewTarget} words total. Focus on explaining key concepts and identifying the research gap.`, user: topicContext }),
+    callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `You are a senior academic writing a graduate-level research proposal in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} citation style.\nRULES:\n- Plain text only, no markdown.\n- Write in detailed paragraphs with substantive analysis.\n- Use ## headers for each section.\n- Keep citations minimal — focus on methodological detail.\nSections to write: research_design, area_of_the_study, population_of_the_study, sample_size, sampling_technique, instrumentation, validity_of_instrument, reliability_of_instrument, method_of_collecting_data, method_of_data_analysis.\nTarget: ${methodTarget} words total. Focus on describing exactly how the research will be conducted.`, user: topicContext }),
   ]);
 
   const sections = {
