@@ -58,7 +58,14 @@ export async function generateThesisContent(payload: {
     .join("\n");
 
   const baseRules = `CITATION STYLE: ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}
-Write detailed academic analysis. Use only 1-2 key citations per section — focus on depth, not quantity. Never invent citations. Write in clear paragraphs, not bullet points.`;
+Write natural academic English as a human researcher would. Vary sentence length and structure.
+RULES:
+- Never use phrases like "This chapter explores", "It is noteworthy", "In conclusion, it can be said", "This study aims to", "The following", "It is important to note".
+- Use only 1-2 key citations per section — focus on depth, not quantity.
+- Never invent citations.
+- Write in clear paragraphs, not bullet points.
+- For numbers above 999, use commas (1,500 not 1500).
+- For equations, use plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, F = MSB/MSW, r = 0.76.`;
 
   const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
 PROBLEM: ${topicCtx.problem_statement}
@@ -121,7 +128,18 @@ Describe exactly how the research was carried out with methodological detail.`,
 4.1 Introduction
 4.2 Data analysis and presentation
 4.3 Discussion of findings
-Present findings using tables, percentages, and charts described in text. Cover both descriptive and inferential statistics.`,
+Present findings with data. Use plain text tables formatted like:
+TABLE 1: Distribution of Respondents by Age
++--------+----------+----------+
+| Age    | Frequency| Percent  |
++--------+----------+----------+
+| 18-25  | 45       | 30.0%    |
+| 26-35  | 60       | 40.0%    |
+| 36+    | 45       | 30.0%    |
++--------+----------+----------+
+| Total  | 150      | 100.0%   |
++--------+----------+----------+
+Include descriptive statistics (mean, standard deviation) and inferential statistics (t-test, ANOVA, chi-square, correlation) as relevant. Show actual computed values.`,
     },
     {
       key: "chapter_5_discussion_conclusion",
@@ -179,7 +197,7 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
       try {
         const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
         const newTarget = c.current + overshoot;
-        const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially. Keep ALL existing content. Target for this chapter: AT LEAST ${newTarget} words (currently ${c.current}). Output FULL updated chapter as plain text.`;
+        const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially with NEW content and examples. Keep ALL existing content. Do NOT use phrases like "This section", "Furthermore", "It is important". Write naturally. Target for this chapter: AT LEAST ${newTarget} words (currently ${c.current}). Output FULL updated chapter as plain text.`;
         const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-chat", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
         chapters[c.key] = content;
       } catch (e) {
@@ -336,7 +354,15 @@ export async function generateProposalContent(payload: {
   }
 
   const citationStyleText = data.citation_style === "harvard" ? "Harvard" : "APA 7";
-  const baseRules = `Citation style: ${citationStyleText}. Plain text only, no markdown, no HTML. Write in detailed paragraphs with substantive analysis. Use ## headers for each section. Keep citations minimal (1-2 per section) — focus on depth, not quantity. Never invent citations.`;
+  const baseRules = `Citation style: ${citationStyleText}. Plain text only, no HTML.
+Write natural academic English as a human researcher would. Vary sentence length and structure.
+RULES:
+- Never use phrases like "This chapter explores", "It is noteworthy", "In conclusion, it can be said", "This study aims to", "The following", "It is important to note".
+- Use only 1-2 key citations per section — focus on depth, not quantity.
+- Never invent citations.
+- Write in clear paragraphs, not bullet points.
+- For numbers above 999, use commas (1,500 not 1500).
+- Use ## headers for each section.`;
 
   // Generate abstract
   let abstract = "";
@@ -367,7 +393,7 @@ export async function generateProposalContent(payload: {
 
   // Chapter 3: Methodology
   try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 3 (RESEARCH METHODOLOGY) of a research proposal. Include these sections with ## headers:\nresearch_design\narea_of_the_study\npopulation_of_the_study\nsample_size\nsampling_technique\ninstrumentation\nvalidity_of_instrument\nreliability_of_instrument\nmethod_of_collecting_data\nmethod_of_data_analysis\nTarget: ${methodTarget} words. Describe exactly how the research will be conducted.`, user: topicContext });
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 3 (RESEARCH METHODOLOGY) of a research proposal. Include these sections with ## headers:\nresearch_design\narea_of_the_study\npopulation_of_the_study\nsample_size\nsampling_technique\ninstrumentation\nvalidity_of_instrument\nreliability_of_instrument\nmethod_of_collecting_data\nmethod_of_data_analysis\nTarget: ${methodTarget} words. Describe exactly how the research will be conducted. For statistical formulas, use plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.`, user: topicContext });
     Object.assign(sections, parseSections(text));
   } catch (e) {
     console.error("[proposal] Chapter 3 failed:", e);
@@ -375,7 +401,7 @@ export async function generateProposalContent(payload: {
 
   // Chapter 4: Results and Findings
   try {
-    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 4 (RESULTS AND FINDINGS) of a research proposal. Include these sections with ## headers:\nintroduction\ndata_analysis_and_presentation\ndiscussion_of_findings\nTarget: ${resultsTarget} words. Describe what data analysis would be performed and how findings would be presented.`, user: topicContext });
+    const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: `${baseRules}\nWrite Chapter 4 (RESULTS AND FINDINGS) of a research proposal. Include these sections with ## headers:\nintroduction\ndata_analysis_and_presentation\ndiscussion_of_findings\nTarget: ${resultsTarget} words. Include realistic data tables formatted like:\nTABLE 1: Sample Descriptive Statistics\n+-----------+-------+-------+\n| Variable  | Mean  | SD    |\n+-----------+-------+-------+\n| Age       | 28.5  | 4.2   |\n| Income    | 1,500 | 320   |\n+-----------+-------+-------+`, user: topicContext });
     Object.assign(sections, parseSections(text));
   } catch (e) {
     console.error("[proposal] Chapter 4 failed:", e);
