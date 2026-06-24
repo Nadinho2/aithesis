@@ -185,11 +185,24 @@ function ProposalPage() {
     );
   }
   if (error || !data) {
-    return <div className="p-10 text-ink/60">Proposal not found.</div>;
+    return (
+      <div className="p-10 text-center">
+        <p className="text-ink/60">Proposal not found or could not be loaded.</p>
+        <Link to="/proposals" className="text-sage underline text-sm mt-2 inline-block">Back to proposals</Link>
+      </div>
+    );
   }
 
-  const s = (editMode ? editData : data.sections) as Record<string, any>;
-  const refs = (data.references_list as Array<{ apa: string; url: string | null; source: string }>) ?? [];
+  let rawSections: Record<string, any> = {};
+  try {
+    const parsed = typeof data.sections === "string" ? JSON.parse(data.sections) : data.sections;
+    rawSections = (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, any>;
+  } catch {
+    rawSections = {};
+  }
+  const s = (editMode ? editData : rawSections) as Record<string, any>;
+  const rawRefs = data.references_list;
+  const refs = Array.isArray(rawRefs) ? rawRefs : [];
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
