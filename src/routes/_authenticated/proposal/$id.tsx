@@ -225,7 +225,7 @@ function ProposalPage() {
       <div className="mb-8 pb-6 border-b border-ink/10 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
-            {data.level} Research Proposal · {data.word_count.toLocaleString()} words ·{" "}
+            {data.level} Research Proposal · {(data.word_count ?? 0).toLocaleString()} words ·{" "}
             {(data as any).citation_style === "harvard" ? "Harvard" : "APA 7th"}
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl leading-tight mb-3">
@@ -356,10 +356,10 @@ function ListSection({ title, items, ordered }: { title: string; items?: string[
   if (!items || items.length === 0) return null;
   const Tag = ordered ? "ol" : "ul";
   return (
-    <section className="mb-8">
+    <section className="mb-8 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <Tag className={`${ordered ? "list-decimal" : "list-disc"} list-inside space-y-2 text-[15px] text-ink/85 marker:text-sage`}>
-        {items.map((it, i) => <li key={i}>{it}</li>)}
+      <Tag className={`${ordered ? "list-decimal" : "list-disc"} list-inside space-y-2 text-[15px] text-ink/85 marker:text-sage [overflow-wrap:anywhere]`}>
+        {items.map((it, i) => <li key={i} className="break-words">{it}</li>)}
       </Tag>
     </section>
   );
