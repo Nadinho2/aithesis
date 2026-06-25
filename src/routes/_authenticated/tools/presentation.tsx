@@ -50,8 +50,8 @@ function PresentationPage() {
 
   const markUsedFn = useServerFn(markTransactionUsed);
 
-  // Handle Paystack redirect back after payment
-  usePaymentCallback(() => { mut.mutate(); });
+  // Handle Paystack redirect back after payment — just verify silently
+  usePaymentCallback();
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);

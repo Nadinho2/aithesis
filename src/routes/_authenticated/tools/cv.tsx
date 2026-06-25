@@ -66,8 +66,8 @@ function CvPage() {
 
   const markUsedFn = useServerFn(markTransactionUsed);
 
-  // Handle Paystack redirect back after payment
-  usePaymentCallback(() => { mut.mutate(); });
+  // Handle Paystack redirect back after payment — just verify silently
+  usePaymentCallback();
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

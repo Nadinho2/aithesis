@@ -29,11 +29,8 @@ function BillingPage() {
     setPayLevel(level);
   };
 
-  // Handle Paystack redirect back after payment
-  usePaymentCallback(() => {
-    setPayProduct(null);
-    window.location.reload();
-  });
+  // Handle Paystack redirect back after payment — just verify silently
+  usePaymentCallback();
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">

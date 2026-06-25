@@ -86,13 +86,8 @@ function NewThesisPage() {
   const checkAccessFn = useServerFn(checkAccess);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Handle Paystack redirect back after payment
-  usePaymentCallback(() => {
-    sessionStorage.setItem("draft_in_progress", Date.now().toString());
-    mut.mutate();
-    toast.info("Drafting your thesis in the background…");
-    navigate({ to: "/theses" });
-  });
+  // Handle Paystack redirect back after payment — just verify silently
+  usePaymentCallback();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
