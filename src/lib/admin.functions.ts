@@ -267,3 +267,47 @@ export const adminSetRole = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+// --- List transactions for a user (by email or user_id) ---
+
+export const adminListTransactions = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ search: z.string().min(1).max(200) }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Resolve user_id from search string (could be email or user_id)
+    let userIds: string[] = [];
+    if (data.search.includes("@")) {
+      const auth = await loadAuthUsers();
+      for (const [id, user] of auth) {
+        if (user.email?.toLowerCase() === data.search.toLowerCase()) {
+          userIds.push(id);
+          break;
+        }
+      }
+    } else {
+      userIds = [data.search];
+    }
+
+    if (userIds.length === 0) return [];
+
+    const { data: txs, error } = await (supabaseAdmin as any)
+      .from("transactions")
+      .select("*")
+      .in("user_id", userIds)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) throw new Error(error.message);
+
+    // Enrich with user email
+    const auth = await loadAuthUsers();
+    return (txs ?? []).map((tx: any) => ({
+      ...tx,
+      user_email: auth.get(tx.user_id)?.email ?? null,
+    }));
+  });
