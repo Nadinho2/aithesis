@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPaymentHistory } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
+import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { getPrice } from "@/lib/pricing";
 import { CreditCard, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
@@ -27,6 +28,12 @@ function BillingPage() {
     setPayProduct(product);
     setPayLevel(level);
   };
+
+  // Handle Paystack redirect back after payment
+  usePaymentCallback(() => {
+    setPayProduct(null);
+    window.location.reload();
+  });
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
@@ -145,6 +152,7 @@ function BillingPage() {
           onClose={() => setPayProduct(null)}
           product={payProduct}
           level={payLevel}
+          callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
           onPaid={() => {
             setPayProduct(null);
             window.location.reload();

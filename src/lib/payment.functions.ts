@@ -21,6 +21,7 @@ const InitPaymentInput = z.object({
   product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
   email: z.string().email(),
+  callbackUrl: z.string().optional(),
 });
 
 export const initPayment = createServerFn({ method: "POST" })
@@ -41,9 +42,11 @@ export const initPayment = createServerFn({ method: "POST" })
     };
 
     const callbackUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://mybrainpadi.com";
-    const redirectUrl = data.level
-      ? `${callbackUrl}/dashboard?payment_verify=thesis&level=${data.level}`
-      : `${callbackUrl}/dashboard?payment_verify=proposal`;
+    const redirectUrl = data.callbackUrl
+      ? data.callbackUrl
+      : data.level
+        ? `${callbackUrl}/dashboard?payment_verify=thesis&level=${data.level}`
+        : `${callbackUrl}/dashboard?payment_verify=proposal`;
 
     const resp = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",

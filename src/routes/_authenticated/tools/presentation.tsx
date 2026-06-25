@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generatePresentation, exportPresentationDocx, exportPresentationPptx } from "@/lib/presentation.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
+import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,9 @@ function PresentationPage() {
     onSuccess: (data) => setResult(data as any),
     onError: (e) => toast.error(String(e)),
   });
+
+  // Handle Paystack redirect back after payment
+  usePaymentCallback(() => { mut.mutate(); });
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);
@@ -410,6 +414,7 @@ function PresentationPage() {
         open={showPayment}
         onClose={() => setShowPayment(false)}
         product="presentation"
+        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
         onPaid={() => {
           setShowPayment(false);
           mut.mutate();

@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateExam } from "@/lib/exam.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
+import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, ImageIcon, Info, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,6 +51,9 @@ function ExamPage() {
     onSuccess: (data) => setResult(data as any),
     onError: (e) => toast.error(String(e)),
   });
+
+  // Handle Paystack redirect back after payment
+  usePaymentCallback(() => { mut.mutate(); });
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);
@@ -564,6 +568,7 @@ function ExamPage() {
         open={showPayment}
         onClose={() => setShowPayment(false)}
         product="exam"
+        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
         onPaid={() => {
           setShowPayment(false);
           mut.mutate();

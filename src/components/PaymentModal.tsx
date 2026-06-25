@@ -14,6 +14,7 @@ type Props = {
   product: ProductType;
   level?: ThesisLevel;
   onPaid: () => void;
+  callbackPath?: string;
 };
 
 const toolLabels: Record<string, string> = {
@@ -23,7 +24,7 @@ const toolLabels: Record<string, string> = {
   cv: "CV Maker",
 };
 
-export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
+export function PaymentModal({ open, onClose, product, level, onPaid, callbackPath }: Props) {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const price = getPrice(product, level);
@@ -33,7 +34,13 @@ export function PaymentModal({ open, onClose, product, level, onPaid }: Props) {
   const verifyPay = useServerFn(verifyPaymentFn);
 
   const initMut = useMutation({
-    mutationFn: () => initPay({ data: { product, level, email } }),
+    mutationFn: () => {
+      const appUrl = typeof window !== "undefined"
+        ? `${window.location.protocol}//${window.location.host}`
+        : "https://mybrainpadi.com";
+      const callbackUrl = callbackPath ? `${appUrl}${callbackPath}` : undefined;
+      return initPay({ data: { product, level, email, callbackUrl } });
+    },
     onSuccess: (res) => {
       setReference(res.reference);
       window.location.href = res.authorization_url;

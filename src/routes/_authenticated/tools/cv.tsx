@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateCv, exportCvDocx } from "@/lib/cv.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
+import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import {
   Loader2,
   Upload,
@@ -59,6 +60,9 @@ function CvPage() {
     onSuccess: (data) => setResult(data),
     onError: (e) => toast.error(String(e)),
   });
+
+  // Handle Paystack redirect back after payment
+  usePaymentCallback(() => { mut.mutate(); });
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -289,6 +293,7 @@ function CvPage() {
         open={showPayment}
         onClose={() => setShowPayment(false)}
         product="cv"
+        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
         onPaid={() => {
           setShowPayment(false);
           mut.mutate();

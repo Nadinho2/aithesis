@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateThesis } from "@/lib/theses.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
+import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
@@ -84,6 +85,14 @@ function NewThesisPage() {
 
   const checkAccessFn = useServerFn(checkAccess);
   const [showPayment, setShowPayment] = useState(false);
+
+  // Handle Paystack redirect back after payment
+  usePaymentCallback(() => {
+    sessionStorage.setItem("draft_in_progress", Date.now().toString());
+    mut.mutate();
+    toast.info("Drafting your thesis in the background…");
+    navigate({ to: "/theses" });
+  });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,6 +300,7 @@ function NewThesisPage() {
         onClose={() => setShowPayment(false)}
         product="thesis"
         level={form.level}
+        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
         onPaid={() => {
           setShowPayment(false);
           sessionStorage.setItem("draft_in_progress", Date.now().toString());
