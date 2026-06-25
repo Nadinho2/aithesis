@@ -231,24 +231,7 @@ CRITICAL RULES FOR THESIS:
     const { notifyToolFailed } = await import("@/lib/mail-helper");
     await notifyToolFailed(userId, "Thesis");
 
-    // Save as draft with partial content
-    await supabase
-      .from("theses")
-      .insert({
-        user_id: userId,
-        title: topicCtx.title,
-        level: data.level,
-        abstract: abstract ?? "",
-        chapters: chapters ?? {},
-        references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}. ${r.journal ?? ""}` })),
-        word_count: total,
-        citation_style: data.citation_style,
-        status: "draft",
-      } as any)
-      .select()
-      .single();
-
-    return { success: false, error: `Only reached ${total} words (target: ${target})` };
+    return { success: false, error: `Only reached ${total} words (target: ${target}). Please try again.` };
   }
 
   // Save completed thesis
@@ -447,24 +430,7 @@ Write only the paragraph text — no headings, no JSON.`;
     const { notifyToolFailed } = await import("@/lib/mail-helper");
     await notifyToolFailed(userId, "Proposal");
 
-    await supabase
-      .from("proposals")
-      .insert({
-        user_id: userId,
-        topic_id: topicCtx.id ?? null,
-        title: topicCtx.title,
-        level: data.level,
-        abstract,
-        sections,
-        references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}` })),
-        word_count: totalWords,
-        citation_style: data.citation_style,
-        status: "draft",
-      } as any)
-      .select()
-      .single();
-
-    return { success: false, error: `Only reached ${totalWords} words (target: ${target})` };
+    return { success: false, error: `Only reached ${totalWords} words (target: ${target}). Please try again.` };
   }
 
   // Save completed proposal

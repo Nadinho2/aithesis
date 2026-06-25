@@ -184,13 +184,15 @@ export const checkAccess = createServerFn({ method: "POST" })
         const { count } = await (supabase as any)
           .from("proposals")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .eq("status", "completed");
         usageCount = count ?? 0;
       } else {
         const thesisQuery = (supabase as any)
           .from("theses")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", userId);
+          .eq("user_id", userId)
+          .eq("status", "completed");
         if (data.level) thesisQuery.eq("level", data.level);
         const { count } = await thesisQuery;
         usageCount = count ?? 0;
