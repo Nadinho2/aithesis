@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCv, exportCvDocx } from "@/lib/cv.functions";
-import { checkAccess } from "@/lib/payment.functions";
+import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import {
@@ -57,9 +57,14 @@ function CvPage() {
           ...(useForm || !file ? { manual } : {}),
         },
       }),
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      setResult(data);
+      markUsedFn({ data: { product: "cv" } }).catch(() => {});
+    },
     onError: (e) => toast.error(String(e)),
   });
+
+  const markUsedFn = useServerFn(markTransactionUsed);
 
   // Handle Paystack redirect back after payment
   usePaymentCallback(() => { mut.mutate(); });

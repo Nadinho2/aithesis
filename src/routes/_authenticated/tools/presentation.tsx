@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generatePresentation, exportPresentationDocx, exportPresentationPptx } from "@/lib/presentation.functions";
-import { checkAccess } from "@/lib/payment.functions";
+import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info } from "lucide-react";
@@ -41,9 +41,14 @@ function PresentationPage() {
           ...(imageFile ? { image_base64: `data:${imageFile.mime};base64,${imageFile.base64}` } : {}),
         },
       }),
-    onSuccess: (data) => setResult(data as any),
+    onSuccess: (data) => {
+      setResult(data as any);
+      markUsedFn({ data: { product: "presentation" } }).catch(() => {});
+    },
     onError: (e) => toast.error(String(e)),
   });
+
+  const markUsedFn = useServerFn(markTransactionUsed);
 
   // Handle Paystack redirect back after payment
   usePaymentCallback(() => { mut.mutate(); });

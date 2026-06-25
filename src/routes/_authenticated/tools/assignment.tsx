@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateAssignment, exportAssignmentDocx } from "@/lib/assignments.functions";
-import { checkAccess } from "@/lib/payment.functions";
+import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import {
@@ -43,9 +43,14 @@ function AssignmentPage() {
           ...(imageFile ? { file_base64: imageFile.base64, file_mime: imageFile.mime, file_name: imageFile.name } : {}),
         },
       }),
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      setResult(data);
+      markUsedFn({ data: { product: "assignment" } }).catch(() => {});
+    },
     onError: (e) => toast.error(String(e)),
   });
+
+  const markUsedFn = useServerFn(markTransactionUsed);
 
   // Handle Paystack redirect back after payment
   usePaymentCallback(() => { mut.mutate(); });

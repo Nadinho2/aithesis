@@ -156,7 +156,7 @@ export const handlePaymentFailed = createServerFn({ method: "POST" })
 // --- Check Access ---
 
 const CheckAccessInput = z.object({
-  product: z.enum(["proposal", "thesis"]),
+  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
 });
 
@@ -168,21 +168,52 @@ export const checkAccess = createServerFn({ method: "POST" })
 
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // Check 1: Completed payment transaction
-    const query = (supabase as any)
-      .from("transactions")
-      .select("id, created_at")
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("product", data.product);
+    // For proposal/thesis: count completed transactions vs documents generated
+    if (data.product === "proposal" || data.product === "thesis") {
+      const txQuery = (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", data.product);
+      if (data.level) txQuery.eq("level", data.level);
+      const { count: txCount } = await txQuery;
 
-    if (data.level) {
-      query.eq("level", data.level);
+      let usageCount = 0;
+      if (data.product === "proposal") {
+        const { count } = await (supabase as any)
+          .from("proposals")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId);
+        usageCount = count ?? 0;
+      } else {
+        const thesisQuery = (supabase as any)
+          .from("theses")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId);
+        if (data.level) thesisQuery.eq("level", data.level);
+        const { count } = await thesisQuery;
+        usageCount = count ?? 0;
+      }
+
+      const unused = (txCount ?? 0) - usageCount;
+      if (unused > 0) {
+        return { allowed: true, price };
+      }
     }
 
-    const { data: txs } = await query.order("created_at", { ascending: false }).limit(1);
-    if ((txs?.length ?? 0) > 0) {
-      return { allowed: true, price };
+    // For non-document tools: count only unused (consumable) transactions
+    if (["assignment", "exam", "presentation", "cv"].includes(data.product)) {
+      const { count: unusedCount } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", data.product)
+        .eq("used", false);
+      if ((unusedCount ?? 0) > 0) {
+        return { allowed: true, price };
+      }
     }
 
     // Check 2: Admin-allocated limit from user_limits table (per-level for thesis)
@@ -210,6 +241,36 @@ export const checkAccess = createServerFn({ method: "POST" })
     }
 
     return { allowed: false, price };
+  });
+
+// --- Mark transaction as used (for non-document tools) ---
+
+const MarkUsedInput = z.object({
+  product: z.enum(["assignment", "exam", "presentation", "cv"]),
+});
+
+export const markTransactionUsed = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((input: unknown) => MarkUsedInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    // Mark the most recent unused transaction for this product as used
+    const { data: tx } = await (supabase as any)
+      .from("transactions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("product", data.product)
+      .eq("status", "completed")
+      .eq("used", false)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (tx) {
+      await (supabase as any)
+        .from("transactions")
+        .update({ used: true })
+        .eq("id", tx.id);
+    }
   });
 
 // --- Get payment history ---
