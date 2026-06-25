@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
 import { adminListTransactions } from "@/lib/admin.functions";
-import { Loader2, Shield, Save, X, Search, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminPage() {
   const [tab, setTab] = useState<"limits" | "transactions">("limits");
+  const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
   const up = useServerFn(updateUserLimits);
@@ -151,7 +152,18 @@ function AdminPage() {
                       return (
                         <tr key={user.user_id} className="border-b border-ink/5 hover:bg-ink/[0.02]">
                           <td className="py-3 pr-4">
-                            <span className="text-xs font-mono text-ink/60">{user.email ?? user.user_id.slice(0, 12)}</span>
+                            <button
+                              onClick={() => {
+                                if (user.email) {
+                                  setTxSearchEmail(user.email);
+                                  setTab("transactions");
+                                }
+                              }}
+                              className="text-xs font-mono text-ink/60 hover:text-verde transition-colors text-left"
+                              title="View transactions for this user"
+                            >
+                              {user.email ?? user.user_id.slice(0, 12)}
+                            </button>
                           </td>
                           <td className="py-3 px-2 text-center">
                             {isEditing ? (
@@ -255,7 +267,7 @@ function AdminPage() {
           </>
         )}
 
-        {tab === "transactions" && <TransactionSearch />}
+        {tab === "transactions" && <TransactionSearch initialSearch={txSearchEmail} />}
       </div>
     </div>
   );
@@ -280,17 +292,18 @@ function Input({
   );
 }
 
-function TransactionSearch() {
+function TransactionSearch({ initialSearch = "" }: { initialSearch?: string }) {
   const txnFn = useServerFn(adminListTransactions);
-  const [searchEmail, setSearchEmail] = useState("");
+  const [searchEmail, setSearchEmail] = useState(initialSearch);
   const [txData, setTxData] = useState<any[] | null>(null);
   const [searching, setSearching] = useState(false);
 
-  async function handleSearch() {
-    if (!searchEmail.trim()) return;
+  async function handleSearch(email?: string) {
+    const query = email ?? searchEmail;
+    if (!query.trim()) return;
     setSearching(true);
     try {
-      const result = await txnFn({ data: { search: searchEmail.trim() } });
+      const result = await txnFn({ data: { search: query.trim() } });
       setTxData(result);
     } catch {
       toast.error("Failed to load transactions");
@@ -299,6 +312,14 @@ function TransactionSearch() {
       setSearching(false);
     }
   }
+
+  // Auto-search when initialSearch changes externally (e.g. clicking a user in limits table)
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchEmail(initialSearch);
+      handleSearch(initialSearch);
+    }
+  }, [initialSearch]);
 
   return (
     <div>
