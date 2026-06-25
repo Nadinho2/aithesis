@@ -187,7 +187,11 @@ function PresentationPage() {
         setShowPayment(true);
         return;
       }
-    } catch {}
+    } catch {
+      saveFormBeforePay({ topic, content, slideCount });
+      setShowPayment(true);
+      return;
+    }
     mut.mutate();
   };
 

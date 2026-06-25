@@ -118,7 +118,9 @@ function NewThesisPage() {
         return;
       }
     } catch {
-      // fallback to server-enforced payment check
+      saveFormBeforePay(form);
+      setShowPayment(true);
+      return;
     }
     // Fire mutation and navigate away — it continues in the background
     mut.mutate();

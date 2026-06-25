@@ -69,15 +69,19 @@ export const generateProposal = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek is not configured.");
 
-    // Payment check — if user has paid, skip limit check
-    const { data: paidTx } = await (supabase as any)
+    // Payment check — count completed transactions vs documents generated
+    const { count: txCount } = await (supabase as any)
       .from("transactions")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("status", "completed")
-      .eq("product", "proposal")
-      .limit(1);
-    const isPaid = paidTx?.length > 0;
+      .eq("product", "proposal");
+    const { count: docCount } = await (supabase as any)
+      .from("proposals")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed");
+    const isPaid = ((txCount ?? 0) - (docCount ?? 0)) > 0;
 
     if (!isPaid) {
       const canGen = await checkGenerateLimit(supabase, userId, "proposal");

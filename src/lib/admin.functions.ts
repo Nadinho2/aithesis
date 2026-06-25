@@ -32,6 +32,14 @@ export const adminStats = createServerFn({ method: "GET" })
     };
   });
 
+function runtimeEnv(key: string): string | undefined {
+  try {
+    return (globalThis as any).process?.env?.[key];
+  } catch {
+    return undefined;
+  }
+}
+
 async function loadAuthUsers(): Promise<Map<string, { email: string | null; banned_until: string | null; created_at: string | null; last_sign_in_at: string | null }>> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const map = new Map<string, any>();
@@ -282,12 +290,15 @@ export const adminListTransactions = createServerFn({ method: "POST" })
     // Resolve user_id from search string (could be email or user_id)
     let userIds: string[] = [];
     if (data.search.includes("@")) {
-      const auth = await loadAuthUsers();
-      for (const [id, user] of auth) {
-        if (user.email?.toLowerCase() === data.search.toLowerCase()) {
-          userIds.push(id);
-          break;
-        }
+      const { createClerkClient } = await import("@clerk/backend");
+      const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+      if (clerkSecretKey) {
+        const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
+        const clerkUsers = await clerkClient.users.getUserList({
+          emailAddress: [data.search.toLowerCase()],
+          limit: 10,
+        });
+        userIds = clerkUsers.data.map((u) => u.id);
       }
     } else {
       userIds = [data.search];
@@ -304,10 +315,24 @@ export const adminListTransactions = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    // Enrich with user email
-    const auth = await loadAuthUsers();
+    // Enrich with user email from Clerk
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+    const emailMap = new Map<string, string | null>();
+    if (clerkSecretKey) {
+      const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
+      for (const uid of userIds) {
+        try {
+          const user = await clerkClient.users.getUser(uid);
+          emailMap.set(uid, user.emailAddresses[0]?.emailAddress ?? null);
+        } catch {
+          emailMap.set(uid, null);
+        }
+      }
+    }
+
     return (txs ?? []).map((tx: any) => ({
       ...tx,
-      user_email: auth.get(tx.user_id)?.email ?? null,
+      user_email: emailMap.get(tx.user_id) ?? null,
     }));
   });

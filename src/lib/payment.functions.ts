@@ -66,7 +66,23 @@ export const initPayment = createServerFn({ method: "POST" })
     const json = await resp.json();
     if (!json.status) throw new Error(json.message || "Payment initiation failed");
 
-    return { authorization_url: json.data.authorization_url, reference: json.data.reference };
+    const reference = json.data.reference;
+
+    // Save pending transaction immediately so it persists even if the
+    // post-payment callback (verifyPayment) fails due to network outage
+    const { supabase } = context;
+    await (supabase as any).from("transactions").insert({
+      user_id: userId,
+      reference,
+      amount,
+      currency: "NGN",
+      product: data.product,
+      level: data.level ?? null,
+      status: "pending",
+      metadata: {},
+    });
+
+    return { authorization_url: json.data.authorization_url, reference };
   });
 
 // --- Verify Payment ---
@@ -95,17 +111,19 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const { metadata } = json.data;
     const amount = json.data.amount / 100; // Convert back from kobo
 
-    // Save transaction
-    const { error: txError } = await (supabase as any).from("transactions").insert({
-      user_id: userId,
-      reference: data.reference,
-      amount,
-      currency: "NGN",
-      product: metadata.product,
-      level: metadata.level || null,
-      status: "completed",
-      metadata: json.data,
-    });
+    // Upsert transaction (pending record was already saved in initPayment)
+    const { error: txError } = await (supabase as any)
+      .from("transactions")
+      .upsert({
+        user_id: userId,
+        reference: data.reference,
+        amount,
+        currency: "NGN",
+        product: metadata.product,
+        level: metadata.level || null,
+        status: "completed",
+        metadata: json.data,
+      }, { onConflict: "reference" });
 
     if (txError) throw new Error("Failed to record payment");
 

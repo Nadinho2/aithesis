@@ -96,7 +96,9 @@ function QuickProposalPage() {
         return;
       }
     } catch {
-      // If check fails, still try to generate (server will enforce payment)
+      saveFormBeforePay(form);
+      setShowPayment(true);
+      return;
     }
     // Fire mutation and navigate away — it continues in the background
     sessionStorage.setItem("draft_in_progress", Date.now().toString());

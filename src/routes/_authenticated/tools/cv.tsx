@@ -114,7 +114,11 @@ function CvPage() {
         setShowPayment(true);
         return;
       }
-    } catch {}
+    } catch {
+      saveFormBeforePay({ manual, useForm });
+      setShowPayment(true);
+      return;
+    }
     mut.mutate();
   };
 

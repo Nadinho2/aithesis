@@ -139,7 +139,11 @@ function ExamPage() {
         setShowPayment(true);
         return;
       }
-    } catch {}
+    } catch {
+      saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
+      setShowPayment(true);
+      return;
+    }
     mut.mutate();
   };
 

@@ -34,17 +34,21 @@ export const generateThesis = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Payment check
-    let isPaid = false;
-    const { data: paidTx } = await (supabase as any)
+    // Payment check — count completed transactions vs documents generated
+    const { count: txCount } = await (supabase as any)
       .from("transactions")
-      .select("id")
+      .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("status", "completed")
       .eq("product", "thesis")
-      .eq("level", data.level)
-      .limit(1);
-    if (paidTx?.length) isPaid = true;
+      .eq("level", data.level);
+    const { count: docCount } = await (supabase as any)
+      .from("theses")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("level", data.level);
+    const isPaid = ((txCount ?? 0) - (docCount ?? 0)) > 0;
 
     // Limit check (non-paid only)
     if (!isPaid) {

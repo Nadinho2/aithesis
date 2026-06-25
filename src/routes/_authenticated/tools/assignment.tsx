@@ -120,7 +120,11 @@ function AssignmentPage() {
         setShowPayment(true);
         return;
       }
-    } catch {}
+    } catch {
+      saveFormBeforePay({ question, includeRefs, citationStyle });
+      setShowPayment(true);
+      return;
+    }
     mut.mutate();
   };
 
