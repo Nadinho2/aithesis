@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback } from "@/lib/usePaymentCallback";
+import { usePaymentCallback, saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
@@ -19,7 +19,17 @@ function QuickProposalPage() {
   const fn = useServerFn(generateProposal);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [form, setForm] = useState({
+
+  // Restore form data if returning from Paystack redirect
+  const savedForm = restoreFormAfterPay<{
+    title: string; problem_statement: string; research_gap: string;
+    objectives: string[]; department: string; area_of_interest: string;
+    country: string; research_type: string;
+    level: "undergraduate" | "masters" | "phd"; target_words: number;
+    citation_style: "apa_7" | "harvard";
+  }>();
+
+  const defaultForm = {
     title: "",
     problem_statement: "",
     research_gap: "",
@@ -31,7 +41,9 @@ function QuickProposalPage() {
     level: "undergraduate" as "undergraduate" | "masters" | "phd",
     target_words: 2800,
     citation_style: "apa_7" as "apa_7" | "harvard",
-  });
+  };
+
+  const [form, setForm] = useState(savedForm ?? defaultForm);
 
   const mut = useMutation({
     mutationFn: () =>
@@ -79,6 +91,7 @@ function QuickProposalPage() {
     try {
       const access = await checkAccessFn({ data: { product: "proposal" } });
       if (!access.allowed) {
+        saveFormBeforePay(form);
         setShowPayment(true);
         return;
       }

@@ -5,14 +5,40 @@ import { verifyPayment as verifyPaymentFn } from "@/lib/payment.functions";
 import { toast } from "sonner";
 
 /**
+ * Save form data to sessionStorage before Paystack redirect so it can be
+ * restored when the user returns after payment.
+ */
+export function saveFormBeforePay(formData: Record<string, unknown>) {
+  sessionStorage.setItem("pending_form_data", JSON.stringify(formData));
+}
+
+/**
+ * Restore form data from sessionStorage after Paystack redirect.
+ * Returns the saved data or null if nothing was saved.
+ * Automatically clears the saved data after reading.
+ */
+export function restoreFormAfterPay<T extends Record<string, unknown>>(): T | null {
+  try {
+    const raw = sessionStorage.getItem("pending_form_data");
+    if (!raw) return null;
+    sessionStorage.removeItem("pending_form_data");
+    return JSON.parse(raw) as T;
+  } catch {
+    sessionStorage.removeItem("pending_form_data");
+    return null;
+  }
+}
+
+/**
  * Hook for service pages to handle Paystack redirect callback.
  *
  * When Paystack redirects back to the page after payment, it appends
  * ?reference=REF&trxref=REF to the URL. This hook detects that and
- * auto-verifies the payment silently. It does NOT trigger generation
- * because the form data was lost during the redirect page reload.
- * Instead, it shows a success toast and the user clicks Generate again
- * (which will now pass checkAccess since the payment is verified).
+ * auto-verifies the payment silently. It also restores form data that
+ * was saved via saveFormBeforePay() before the redirect.
+ *
+ * After verification, the user clicks Generate again (which now passes
+ * checkAccess since the payment transaction exists and is unused).
  */
 export function usePaymentCallback() {
   const verifyPay = useServerFn(verifyPaymentFn);

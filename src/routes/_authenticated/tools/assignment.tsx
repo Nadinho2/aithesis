@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateAssignment, exportAssignmentDocx } from "@/lib/assignments.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback } from "@/lib/usePaymentCallback";
+import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
   Loader2, Upload, Download, BookOpen, X, Sparkles, ImageIcon, FileText, Info,
 } from "lucide-react";
@@ -116,6 +116,7 @@ function AssignmentPage() {
     try {
       const access = await checkAccessFn({ data: { product: "assignment" } });
       if (!access.allowed) {
+        saveFormBeforePay({ question, includeRefs, citationStyle });
         setShowPayment(true);
         return;
       }

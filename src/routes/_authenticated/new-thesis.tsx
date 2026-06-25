@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateThesis } from "@/lib/theses.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback } from "@/lib/usePaymentCallback";
+import { usePaymentCallback, saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
@@ -19,7 +19,17 @@ function NewThesisPage() {
   const fn = useServerFn(generateThesis);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [form, setForm] = useState({
+
+  // Restore form data if returning from Paystack redirect (check both keys)
+  const savedForm = restoreFormAfterPay<{
+    title: string; problem_statement: string; research_gap: string;
+    objectives: string[]; department: string; area_of_interest: string;
+    country: string; research_type: string;
+    level: "undergraduate" | "masters" | "phd"; target_words: number;
+    citation_style: "apa_7" | "harvard";
+  }>();
+
+  const [form, setForm] = useState(savedForm ?? {
     title: "",
     problem_statement: "",
     research_gap: "",
@@ -103,6 +113,7 @@ function NewThesisPage() {
     try {
       const access = await checkAccessFn({ data: { product: "thesis", level: form.level } });
       if (!access.allowed) {
+        saveFormBeforePay(form);
         setShowPayment(true);
         return;
       }

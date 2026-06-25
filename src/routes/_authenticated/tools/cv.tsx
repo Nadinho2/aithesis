@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateCv, exportCvDocx } from "@/lib/cv.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback } from "@/lib/usePaymentCallback";
+import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
   Loader2,
   Upload,
@@ -110,6 +110,7 @@ function CvPage() {
     try {
       const access = await checkAccessFn({ data: { product: "cv" } });
       if (!access.allowed) {
+        saveFormBeforePay({ manual, useForm });
         setShowPayment(true);
         return;
       }

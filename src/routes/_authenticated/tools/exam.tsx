@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateExam } from "@/lib/exam.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback } from "@/lib/usePaymentCallback";
+import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, ImageIcon, Info, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
@@ -135,6 +135,7 @@ function ExamPage() {
     try {
       const access = await checkAccessFn({ data: { product: "exam" } });
       if (!access.allowed) {
+        saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
         setShowPayment(true);
         return;
       }
