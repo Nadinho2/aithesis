@@ -374,7 +374,7 @@ export async function generateProposalContent(payload: {
   // Generate abstract
   let abstract = "";
   try {
-    const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, jsonMode: true, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
+    const raw = await callAI(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system: `You are a senior academic. Write ONLY abstract as JSON. JSON: {"abstract":"..."} Target: ${abstractTarget} words.`, user: topicContext });
     abstract = raw?.abstract ?? "";
   } catch (e) {
     console.error("[proposal] Abstract failed, continuing");

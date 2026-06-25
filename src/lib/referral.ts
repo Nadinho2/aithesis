@@ -28,6 +28,11 @@ async function getClient() {
   return _supabase;
 }
 
+// Helper: cast from() to any so untyped tables don't error
+function anyFrom(supabase: Awaited<ReturnType<typeof getClient>>, table: string) {
+  return (supabase as any).from(table);
+}
+
 // ─── A) Generate referral code ─────────────────────────────────────────────
 
 export function generateReferralCode(userId: string): string {
@@ -46,8 +51,7 @@ export async function createReferralCodeForUser(userId: string): Promise<string>
   const supabase = await getClient();
 
   // Check if user already has a code
-  const { data: existing } = await supabase
-    .from("referral_codes")
+  const { data: existing } = await anyFrom(supabase, "referral_codes")
     .select("code")
     .eq("user_id", userId)
     .maybeSingle();
@@ -58,8 +62,7 @@ export async function createReferralCodeForUser(userId: string): Promise<string>
   let code = generateReferralCode(userId);
   let attempts = 0;
   while (attempts < 10) {
-    const { error } = await supabase
-      .from("referral_codes")
+    const { error } = await anyFrom(supabase, "referral_codes")
       .insert({ user_id: userId, code });
     if (!error) break;
     code = generateReferralCode(userId);
@@ -67,8 +70,7 @@ export async function createReferralCodeForUser(userId: string): Promise<string>
   }
 
   // Create wallet if not exists
-  await supabase
-    .from("wallets")
+  await anyFrom(supabase, "wallets")
     .upsert({ user_id: userId, balance: 0, total_earned: 0, total_withdrawn: 0 }, { onConflict: "user_id" })
     .then(() => {});
 
@@ -79,11 +81,10 @@ export async function createReferralCodeForUser(userId: string): Promise<string>
 
 export async function getReferralCodeForUser(userId: string): Promise<string | null> {
   const supabase = await getClient();
-  const { data } = await supabase
-    .from("referral_codes")
+  const { data } = await anyFrom(supabase, "referral_codes")
     .select("code")
     .eq("user_id", userId)
-    .maybeSingle();
+    .maybeSingle() as any;
   return data ? (data as any).code : null;
 }
 
@@ -103,11 +104,10 @@ export async function trackReferral(
     const supabase = await getClient();
 
     // Look up the referral code
-    const { data: referrer } = await supabase
-      .from("referral_codes")
+    const { data: referrer } = await anyFrom(supabase, "referral_codes")
       .select("user_id")
       .eq("code", refCode.toUpperCase())
-      .maybeSingle();
+      .maybeSingle() as any;
 
     if (!referrer) return; // Code not found — silently return
 
@@ -115,12 +115,11 @@ export async function trackReferral(
     if (referrerId === referredUserId) return; // No self-referral
 
     // Insert relationship (upsert — a user can only be referred once)
-    await supabase
-      .from("referral_relationships")
+    await anyFrom(supabase, "referral_relationships")
       .upsert(
         { referrer_id: referrerId, referred_id: referredUserId },
         { onConflict: "referred_id", ignoreDuplicates: true },
-      );
+      ) as any;
   } catch (err) {
     console.error("[referral] trackReferral error:", err);
     // Never throw — silent failure
@@ -144,11 +143,10 @@ export async function creditReferralCommission({
     const supabase = await getClient();
 
     // Look up who referred this user
-    const { data: rel } = await supabase
-      .from("referral_relationships")
+    const { data: rel } = await anyFrom(supabase, "referral_relationships")
       .select("referrer_id")
       .eq("referred_id", referredUserId)
-      .maybeSingle();
+      .maybeSingle() as any;
 
     if (!rel) return; // User was not referred — silently return
 
@@ -156,7 +154,7 @@ export async function creditReferralCommission({
     const commissionAmount = Math.floor(paymentAmount * 0.2); // 20% in naira
 
     // Record the earning
-    await supabase.from("referral_earnings").insert({
+    await anyFrom(supabase, "referral_earnings").insert({
       referrer_id: referrerId,
       referred_id: referredUserId,
       payment_id: paymentId,
@@ -164,33 +162,31 @@ export async function creditReferralCommission({
       commission_amount: commissionAmount,
       tool,
       status: "credited",
-    });
+    }) as any;
 
     // Upsert wallet — increment balance and total_earned
-    const { data: wallet } = await supabase
-      .from("wallets")
+    const { data: wallet } = await anyFrom(supabase, "wallets")
       .select("id, balance, total_earned")
       .eq("user_id", referrerId)
-      .maybeSingle();
+      .maybeSingle() as any;
 
     if (wallet) {
       const currentBalance = (wallet as any).balance ?? 0;
       const currentEarned = (wallet as any).total_earned ?? 0;
-      await supabase
-        .from("wallets")
+      await anyFrom(supabase, "wallets")
         .update({
           balance: currentBalance + commissionAmount,
           total_earned: currentEarned + commissionAmount,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", referrerId);
+        .eq("user_id", referrerId) as any;
     } else {
-      await supabase.from("wallets").insert({
+      await anyFrom(supabase, "wallets").insert({
         user_id: referrerId,
         balance: commissionAmount,
         total_earned: commissionAmount,
         total_withdrawn: 0,
-      });
+      }) as any;
     }
   } catch (err) {
     console.error("[referral] creditReferralCommission error:", err);
