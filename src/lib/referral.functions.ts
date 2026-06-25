@@ -102,6 +102,28 @@ export const getMyEarnings = createServerFn({ method: "GET" })
     return (data ?? []) as any[];
   });
 
+// --- Get referral count (how many people this user has referred) ---
+
+export const getMyReferralCount = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const supabaseUrl = runtimeEnv("SUPABASE_URL");
+    const supabaseKey = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseKey) return 0;
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { count } = await supabase
+      .from("referral_relationships")
+      .select("*", { count: "exact", head: true })
+      .eq("referrer_id", userId);
+
+    return count ?? 0;
+  });
+
 // --- Get withdrawal history ---
 
 export const getMyWithdrawals = createServerFn({ method: "GET" })

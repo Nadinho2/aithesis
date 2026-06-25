@@ -136,6 +136,7 @@ function RootComponent() {
     const ref = params.get("ref");
     if (ref) {
       sessionStorage.setItem("ref_code", ref);
+      localStorage.setItem("ref_code", ref);
     }
   }, []);
 

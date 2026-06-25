@@ -290,6 +290,8 @@ const tiers = [
 /* ─── Landing Page ─── */
 function LandingPage() {
   const [mobileNav, setMobileNav] = useState(false);
+  const urlRef = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : null;
+  const refSearch = urlRef ? { ref: urlRef } : undefined;
 
   return (
     <div className="min-h-screen bg-paper text-ink font-sans">
@@ -310,11 +312,12 @@ function LandingPage() {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <Link to="/auth" className="text-sm text-ink-secondary hover:text-ink transition-colors">
+          <Link to="/auth" search={refSearch} className="text-sm text-ink-secondary hover:text-ink transition-colors">
             Log in
           </Link>
           <Link
             to="/auth"
+            search={refSearch}
             className="px-5 py-2.5 bg-ink text-paper text-sm font-medium rounded-lg hover:opacity-90 transition-all"
           >
             Enter workspace
@@ -341,8 +344,8 @@ function LandingPage() {
           <a href="#features" className="block text-sm text-ink-secondary hover:text-ink" onClick={() => setMobileNav(false)}>Features</a>
           <a href="#pricing" className="block text-sm text-ink-secondary hover:text-ink" onClick={() => setMobileNav(false)}>Pricing</a>
           <div className="pt-2 flex flex-col gap-3">
-            <Link to="/auth" className="w-full py-2.5 text-center text-sm border border-[#E5E2D8] rounded-lg">Log in</Link>
-            <Link to="/auth" className="w-full py-2.5 text-center text-sm bg-ink text-paper rounded-lg">Enter workspace</Link>
+            <Link to="/auth" search={refSearch} className="w-full py-2.5 text-center text-sm border border-[#E5E2D8] rounded-lg">Log in</Link>
+            <Link to="/auth" search={refSearch} className="w-full py-2.5 text-center text-sm bg-ink text-paper rounded-lg">Enter workspace</Link>
           </div>
         </div>
       )}
@@ -374,6 +377,7 @@ function LandingPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             to="/auth"
+            search={refSearch}
             className="w-full sm:w-auto px-10 py-4 bg-ink text-paper font-medium rounded-lg hover:opacity-90 transition-all inline-flex items-center justify-center gap-2"
           >
             Start your research
@@ -441,6 +445,7 @@ function LandingPage() {
               </ul>
               <Link
                 to="/auth"
+                search={refSearch}
                 className={`w-full py-2.5 text-center rounded-lg text-sm font-medium transition-colors ${
                   p.highlight
                     ? "bg-ink text-paper hover:opacity-90"

@@ -71,11 +71,23 @@ function AuthForms() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
 
+  // Capture ref code from URL on mount and persist across auth flows
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      sessionStorage.setItem("ref_code", ref);
+      localStorage.setItem("ref_code", ref);
+    }
+  }, []);
+
   // Track referral after successful signup
   const trackReferralIfNeeded = async (userId: string) => {
-    const refCode = sessionStorage.getItem("ref_code");
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get("ref") || sessionStorage.getItem("ref_code") || localStorage.getItem("ref_code");
     if (!refCode) return;
     sessionStorage.removeItem("ref_code");
+    localStorage.removeItem("ref_code");
     try {
       await fetch("/api/track-referral", {
         method: "POST",

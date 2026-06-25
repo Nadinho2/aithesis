@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Copy, Check, Share2, Wallet, TrendingUp, ArrowUpRight, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks } from "@/lib/referral.functions";
+import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks, getMyReferralCount } from "@/lib/referral.functions";
 import { getReferralLink } from "@/lib/referral";
 
 export const Route = createFileRoute("/_authenticated/referral")({
@@ -25,6 +25,7 @@ function ReferralPage() {
   const fnEarnings = useServerFn(getMyEarnings);
   const fnWithdrawals = useServerFn(getMyWithdrawals);
   const fnBanks = useServerFn(getBanks);
+  const fnReferralCount = useServerFn(getMyReferralCount);
 
   // Fetch referral code
   const { data: refCode, isLoading: codeLoading } = useQuery({
@@ -58,6 +59,12 @@ function ReferralPage() {
     queryKey: ["banks"],
     queryFn: () => fnBanks(),
     staleTime: 86400000,
+  });
+
+  // Fetch referral count
+  const { data: referralCount = 0, isLoading: countLoading } = useQuery({
+    queryKey: ["my-referral-count"],
+    queryFn: () => fnReferralCount(),
   });
 
   const balance = wallet?.balance ?? 0;
@@ -175,34 +182,45 @@ function ReferralPage() {
         )}
       </div>
 
-      {/* Wallet Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Referral Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="bg-card border border-ink/10 rounded-sm p-5">
           <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
-            <Wallet className="size-4" />
-            Available Balance
+            <Gift className="size-4" />
+            People Referred
           </div>
           <p className="font-serif text-2xl font-semibold">
-            {walletLoading ? "..." : `₦${balance.toLocaleString()}`}
+            {countLoading ? "..." : referralCount}
           </p>
         </div>
-        <div className="bg-card border border-ink/10 rounded-sm p-5">
-          <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
-            <TrendingUp className="size-4" />
-            Total Earned
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-card border border-ink/10 rounded-sm p-5">
+            <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
+              <Wallet className="size-4" />
+              Available Balance
+            </div>
+            <p className="font-serif text-2xl font-semibold">
+              {walletLoading ? "..." : `₦${balance.toLocaleString()}`}
+            </p>
           </div>
-          <p className="font-serif text-2xl font-semibold">
-            {walletLoading ? "..." : `₦${totalEarned.toLocaleString()}`}
-          </p>
-        </div>
-        <div className="bg-card border border-ink/10 rounded-sm p-5">
-          <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
-            <ArrowUpRight className="size-4" />
-            Total Withdrawn
+          <div className="bg-card border border-ink/10 rounded-sm p-5">
+            <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
+              <TrendingUp className="size-4" />
+              Total Earned
+            </div>
+            <p className="font-serif text-2xl font-semibold">
+              {walletLoading ? "..." : `₦${totalEarned.toLocaleString()}`}
+            </p>
           </div>
-          <p className="font-serif text-2xl font-semibold">
-            {walletLoading ? "..." : `₦${totalWithdrawn.toLocaleString()}`}
-          </p>
+          <div className="bg-card border border-ink/10 rounded-sm p-5">
+            <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
+              <ArrowUpRight className="size-4" />
+              Total Withdrawn
+            </div>
+            <p className="font-serif text-2xl font-semibold">
+              {walletLoading ? "..." : `₦${totalWithdrawn.toLocaleString()}`}
+            </p>
+          </div>
         </div>
       </div>
 
