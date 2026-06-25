@@ -218,7 +218,7 @@ export const checkAccess = createServerFn({ method: "POST" })
       }
     }
 
-    // Check 2: Admin-allocated limit from user_limits table (per-level for thesis)
+    // Check 2: Admin-allocated limit from user_limits table
     const { data: limits } = await (supabase as any)
       .from("user_limits")
       .select("*")
@@ -236,6 +236,30 @@ export const checkAccess = createServerFn({ method: "POST" })
       }
       if (data.product === "proposal") {
         const available = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0);
+        if (available > 0) {
+          return { allowed: true, price };
+        }
+      }
+      if (data.product === "assignment") {
+        const available = (limits as any).assignment_available ?? 0;
+        if (available > 0) {
+          return { allowed: true, price };
+        }
+      }
+      if (data.product === "exam") {
+        const available = (limits as any).exam_available ?? 0;
+        if (available > 0) {
+          return { allowed: true, price };
+        }
+      }
+      if (data.product === "presentation") {
+        const available = (limits as any).presentation_available ?? 0;
+        if (available > 0) {
+          return { allowed: true, price };
+        }
+      }
+      if (data.product === "cv") {
+        const available = (limits as any).cv_available ?? 0;
         if (available > 0) {
           return { allowed: true, price };
         }
