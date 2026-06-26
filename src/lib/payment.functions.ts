@@ -131,49 +131,25 @@ export const verifyPayment = createServerFn({ method: "POST" })
     try {
       const product = metadata.product as string;
       const level = (metadata.level as string) ?? "undergraduate";
-      const upsertBase = { user_id: userId, updated_at: new Date().toISOString() };
 
-      // Ensure row exists with defaults
-      await (supabase as any)
-        .from("user_limits")
-        .upsert({ ...upsertBase, proposal_limit: 0, proposal_used: 0, thesis_available_ug: 0, thesis_available_masters: 0, thesis_available_phd: 0, assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0 }, { onConflict: "user_id", ignoreDuplicates: true });
+      // Ensure row exists
+      await safeUserLimitsUpsert(supabase as any, userId, {
+        proposal_limit: 0, proposal_used: 0,
+        thesis_available_ug: 0, thesis_available_masters: 0, thesis_available_phd: 0,
+        assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0,
+      });
+
+      const limits = await safeUserLimits(supabase as any, userId);
+      if (!limits) return; // table doesn't exist, skip
 
       if (product === "proposal") {
-        // Fetch current proposal_limit, then increment by 1
-        const { data: row } = await (supabase as any)
-          .from("user_limits")
-          .select("proposal_limit")
-          .eq("user_id", userId)
-          .maybeSingle();
-        const newLimit = (row?.proposal_limit ?? 0) + 1;
-        await (supabase as any)
-          .from("user_limits")
-          .update({ proposal_limit: newLimit, updated_at: new Date().toISOString() })
-          .eq("user_id", userId);
+        await safeUserLimitsUpdate(supabase as any, userId, { proposal_limit: (limits.proposal_limit ?? 0) + 1 });
       } else if (product === "thesis") {
         const col = level === "masters" ? "thesis_available_masters" : level === "phd" ? "thesis_available_phd" : "thesis_available_ug";
-        const { data: row } = await (supabase as any)
-          .from("user_limits")
-          .select(col)
-          .eq("user_id", userId)
-          .maybeSingle();
-        const newVal = (row?.[col] ?? 0) + 1;
-        await (supabase as any)
-          .from("user_limits")
-          .update({ [col]: newVal, updated_at: new Date().toISOString() })
-          .eq("user_id", userId);
+        await safeUserLimitsUpdate(supabase as any, userId, { [col]: (limits[col] ?? 0) + 1 });
       } else {
         const col = product === "assignment" ? "assignment_available" : product === "exam" ? "exam_available" : product === "presentation" ? "presentation_available" : "cv_available";
-        const { data: row } = await (supabase as any)
-          .from("user_limits")
-          .select(col)
-          .eq("user_id", userId)
-          .maybeSingle();
-        const newVal = (row?.[col] ?? 0) + 1;
-        await (supabase as any)
-          .from("user_limits")
-          .update({ [col]: newVal, updated_at: new Date().toISOString() })
-          .eq("user_id", userId);
+        await safeUserLimitsUpdate(supabase as any, userId, { [col]: (limits[col] ?? 0) + 1 });
       }
     } catch (e: any) {
       console.error("[verifyPayment] credit increment failed:", e.message ?? e);
@@ -231,75 +207,83 @@ const CheckAccessInput = z.object({
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
 });
 
+// ─── Safe helpers (handle missing user_limits table gracefully) ───
+async function safeUserLimits(supabase: any, userId: string): Promise<Record<string, number> | null> {
+  try {
+    const { data } = await supabase
+      .from("user_limits")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function safeUserLimitsUpsert(supabase: any, userId: string, defaults: Record<string, any>): Promise<void> {
+  try {
+    await supabase
+      .from("user_limits")
+      .upsert({ user_id: userId, ...defaults, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
+  } catch {}
+}
+
+async function safeUserLimitsUpdate(supabase: any, userId: string, updates: Record<string, any>): Promise<void> {
+  try {
+    await supabase
+      .from("user_limits")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+  } catch {}
+}
+
 export const checkAccess = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => CheckAccessInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // Check: Admin-allocated or payment-earned credits in user_limits
-    const { data: limits } = await (supabase as any)
-      .from("user_limits")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // Check user_limits (single source of truth) — safe fallback if table missing
+    const limits = await safeUserLimits(supabase as any, userId);
 
     if (limits) {
       if (data.product === "thesis") {
         const level = data.level ?? "undergraduate";
         const field = `thesis_available_${level}`;
-        const available = (limits as any)[field] ?? 0;
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if ((limits[field] ?? 0) > 0) return { allowed: true, price };
       }
       if (data.product === "proposal") {
         const available = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0);
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if (available > 0) return { allowed: true, price };
       }
       if (data.product === "assignment") {
-        const available = (limits as any).assignment_available ?? 0;
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if ((limits.assignment_available ?? 0) > 0) return { allowed: true, price };
       }
       if (data.product === "exam") {
-        const available = (limits as any).exam_available ?? 0;
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if ((limits.exam_available ?? 0) > 0) return { allowed: true, price };
       }
       if (data.product === "presentation") {
-        const available = (limits as any).presentation_available ?? 0;
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if ((limits.presentation_available ?? 0) > 0) return { allowed: true, price };
       }
       if (data.product === "cv") {
-        const available = (limits as any).cv_available ?? 0;
-        if (available > 0) {
-          return { allowed: true, price };
-        }
+        if ((limits.cv_available ?? 0) > 0) return { allowed: true, price };
       }
     }
 
-    // Edge case: user just paid but verifyPayment hasn't incremented credits yet
-    // (e.g. Paystack redirect landed but hook hasn't fired). Check recent-pending only.
-    const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString(); // 3 min
-    const { count: recentPending } = await (supabase as any)
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .eq("product", data.product)
-      .gte("created_at", freshCutoff);
-    if ((recentPending ?? 0) > 0) {
-      return { allowed: true, price };
-    }
+    // Fallback: if user_limits table missing or has zero credits, check recent-pending
+    try {
+      const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+      const { count: recentPending } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .eq("product", data.product)
+        .gte("created_at", freshCutoff);
+      if ((recentPending ?? 0) > 0) return { allowed: true, price };
+    } catch { /* transactions table may also fail — just deny */ }
 
     return { allowed: false, price };
   });
@@ -313,12 +297,7 @@ export const debugAccess = createServerFn({ method: "POST" })
     const { userId } = context;
     const supabase = context.supabase as any;
 
-    // user_limits — single source of truth for both admin + paid credits
-    const { data: limits } = await supabase
-      .from("user_limits")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const limits = await safeUserLimits(supabase, userId);
 
     let adminGranted = false;
     if (limits) {

@@ -93,9 +93,7 @@ function QuickProposalPage() {
         return;
       }
     } catch {
-      saveFormBeforePay(form);
-      sessionStorage.setItem("return_path", window.location.pathname);
-      navigate({ to: "/billing" });
+      toast.error("Unable to verify payment. Please try again or refresh the page.");
       return;
     }
     // Fire mutation and navigate away — it continues in the background

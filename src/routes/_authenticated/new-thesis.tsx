@@ -116,9 +116,7 @@ function NewThesisPage() {
         return;
       }
     } catch {
-      saveFormBeforePay(form);
-      sessionStorage.setItem("return_path", window.location.pathname);
-      navigate({ to: "/billing" });
+      toast.error("Unable to verify payment. Please check your account or refresh the page.");
       return;
     }
     // Fire mutation and navigate away — it continues in the background
