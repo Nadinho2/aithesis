@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
-import { adminListTransactions } from "@/lib/admin.functions";
-import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock } from "lucide-react";
+import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone } from "@/lib/admin.functions";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
-  const [tab, setTab] = useState<"limits" | "transactions">("limits");
+  const [tab, setTab] = useState<"limits" | "transactions" | "university">("limits");
   const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
@@ -108,6 +108,12 @@ function AdminPage() {
             className={`pb-2 text-sm font-medium transition-colors ${tab === "transactions" ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
           >
             Transactions
+          </button>
+          <button
+            onClick={() => setTab("university")}
+            className={`pb-2 text-sm font-medium transition-colors ${tab === "university" ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
+          >
+            University Submissions
           </button>
         </div>
 
@@ -268,6 +274,7 @@ function AdminPage() {
         )}
 
         {tab === "transactions" && <TransactionSearch initialSearch={txSearchEmail} />}
+        {tab === "university" && <UniversitySubmissions />}
       </div>
     </div>
   );
@@ -289,6 +296,101 @@ function Input({
       onChange={(e) => onChange(Math.max(0, Math.min(999, parseInt(e.target.value) || 0)))}
       className="w-16 text-center border border-ink/20 rounded-sm px-1 py-0.5 text-xs bg-white"
     />
+  );
+}
+
+function UniversitySubmissions() {
+  const listFn = useServerFn(adminListUniversitySubmissions);
+  const markFn = useServerFn(adminMarkUniversityDone);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-university-submissions"],
+    queryFn: () => listFn(),
+  });
+
+  const markMut = useMutation({
+    mutationFn: (id: number) => markFn({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-university-submissions"] });
+      toast.success("Marked as done");
+    },
+    onError: () => toast.error("Failed to update"),
+  });
+
+  return (
+    <div>
+      <p className="text-ink-secondary max-w-xl text-sm mb-6">
+        University chapter structure submissions. Review and set up the correct chapter structure, then mark as done.
+      </p>
+
+      {isLoading && (
+        <div className="flex items-center gap-3 text-ink/60">
+          <Loader2 className="size-4 animate-spin" /> Loading submissions…
+        </div>
+      )}
+
+      {data && data.length === 0 && <p className="text-sm text-ink/40">No submissions yet.</p>}
+
+      {data && data.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-ink/10">
+                <th className="text-left py-3 pr-3 font-medium">Date</th>
+                <th className="text-left py-3 pr-3 font-medium">University</th>
+                <th className="text-left py-3 pr-3 font-medium">Department</th>
+                <th className="text-left py-3 pr-3 font-medium">Structure</th>
+                <th className="text-left py-3 pr-3 font-medium">Email</th>
+                <th className="text-center py-3 pr-3 font-medium">Status</th>
+                <th className="text-right py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((sub: any) => (
+                <tr key={sub.id} className="border-b border-ink/5 hover:bg-ink/[0.02]">
+                  <td className="py-3 pr-3 text-xs text-ink/60 whitespace-nowrap">
+                    {new Date(sub.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td className="py-3 pr-3 font-medium">{sub.university_name}</td>
+                  <td className="py-3 pr-3 text-ink/60">{sub.department}</td>
+                  <td className="py-3 pr-3 text-xs text-ink/40 max-w-[200px] truncate" title={sub.chapter_structure}>
+                    {sub.chapter_structure}
+                  </td>
+                  <td className="py-3 pr-3 text-sm">
+                    {sub.email ? (
+                      <a href={`mailto:${sub.email}`} className="text-verde hover:underline text-xs">
+                        {sub.email}
+                      </a>
+                    ) : (
+                      <span className="text-ink/30">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 pr-3 text-center">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-sm ${
+                      sub.status === "done" ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"
+                    }`}>
+                      {sub.status === "done" ? "Done" : "Pending"}
+                    </span>
+                  </td>
+                  <td className="py-3 text-right">
+                    {sub.status !== "done" && (
+                      <button
+                        onClick={() => markMut.mutate(sub.id)}
+                        disabled={markMut.isPending}
+                        className="text-xs font-medium text-verde hover:text-verde/70 transition-colors disabled:opacity-50"
+                      >
+                        Mark Done
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -340,7 +442,7 @@ function TransactionSearch({ initialSearch = "" }: { initialSearch?: string }) {
           />
         </div>
         <button
-          onClick={handleSearch}
+          onClick={() => handleSearch()}
           disabled={searching || !searchEmail.trim()}
           className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 transition-all"
         >

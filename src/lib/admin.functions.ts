@@ -336,3 +336,37 @@ export const adminListTransactions = createServerFn({ method: "POST" })
       user_email: emailMap.get(tx.user_id) ?? null,
     }));
   });
+
+// --- List university submissions ---
+
+export const adminListUniversitySubmissions = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("university_submissions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+// --- Mark university submission as done ---
+
+export const adminMarkUniversityDone = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.number() }).parse(i))
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("university_submissions")
+      .update({ status: "done" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

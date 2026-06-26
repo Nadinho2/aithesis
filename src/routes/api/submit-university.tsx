@@ -66,6 +66,14 @@ export async function POST({ request }: { request: Request }) {
       );
     }
 
+    // Notify admin
+    try {
+      const { notifyAdminUniversitySubmitted } = await import("@/lib/mail-helper");
+      await notifyAdminUniversitySubmitted(universityName, department, chapterStructure, email || null);
+    } catch {
+      // notification is best-effort
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: "Thank you! We'll review and add your university soon." }),
       { status: 200, headers: { "Content-Type": "application/json" } },

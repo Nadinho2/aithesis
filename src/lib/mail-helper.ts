@@ -147,3 +147,45 @@ export async function notifyToolFailed(
     console.error(`[mail-helper] Failed to send failure email for ${tool} to ${email}:`, err);
   }
 }
+
+/**
+ * Notify admin about a new university submission.
+ */
+export async function notifyAdminUniversitySubmitted(
+  universityName: string,
+  department: string,
+  chapterStructure: string,
+  email: string | null,
+): Promise<void> {
+  const adminEmail = process?.env?.ADMIN_EMAIL;
+  if (!adminEmail) {
+    console.warn("[mail-helper] ADMIN_EMAIL not set — skipping submission notification");
+    return;
+  }
+
+  const { Resend } = await import("resend");
+  const resendApiKey = process?.env?.RESEND_API_KEY;
+  if (!resendApiKey) return;
+
+  const resend = new Resend(resendApiKey);
+
+  try {
+    const { data: sent } = await resend.emails.send({
+      from: "BrainPadi <notifications@brainpadi.com>",
+      to: [adminEmail],
+      subject: `New University Submission: ${universityName}`,
+      html: `
+        <h2>New University Structure Request</h2>
+        <table style="border-collapse:collapse;width:100%">
+          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">University</td><td style="padding:8px;border:1px solid #ddd">${universityName}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Department</td><td style="padding:8px;border:1px solid #ddd">${department}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Chapter Structure</td><td style="padding:8px;border:1px solid #ddd">${chapterStructure}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold">Submitter Email</td><td style="padding:8px;border:1px solid #ddd">${email ?? "Not provided"}</td></tr>
+        </table>
+        <p><a href="https://mybrainpadi.com/admin" style="background:#2563eb;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">View in Admin Panel</a></p>
+      `,
+    });
+  } catch (err) {
+    console.error("[mail-helper] Failed to send admin submission notification:", err);
+  }
+}
