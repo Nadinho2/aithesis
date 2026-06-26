@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generatePresentation, exportPresentationDocx, exportPresentationPptx } from "@/lib/presentation.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +27,7 @@ function PresentationPage() {
   const imgRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{ slides: any[] } | null>(null);
   const [dlBusy, setDlBusy] = useState<"pptx" | "docx" | null>(null);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
 
   const mut = useMutation({
     mutationFn: () =>
@@ -49,9 +48,6 @@ function PresentationPage() {
   });
 
   const markUsedFn = useServerFn(markTransactionUsed);
-
-  // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);
@@ -184,12 +180,11 @@ function PresentationPage() {
       const access = await checkAccessFn({ data: { product: "presentation" } });
       if (!access.allowed) {
         saveFormBeforePay({ topic, content, slideCount });
-        setShowPayment(true);
-        return;
-      }
+      navigate({ to: "/billing" });
+      return;
     } catch {
       saveFormBeforePay({ topic, content, slideCount });
-      setShowPayment(true);
+      navigate({ to: "/billing" });
       return;
     }
     mut.mutate();
@@ -419,17 +414,6 @@ function PresentationPage() {
           </div>
         </div>
       )}
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="presentation"
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          mut.mutate();
-        }}
-      />
     </div>
   );
 }

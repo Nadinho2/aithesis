@@ -4,8 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
 import { checkAccess } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
@@ -75,10 +74,9 @@ function QuickProposalPage() {
   });
 
   const checkAccessFn = useServerFn(checkAccess);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
 
   // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,20 +268,6 @@ function QuickProposalPage() {
           )}
         </button>
       </form>
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="proposal"
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          sessionStorage.setItem("draft_in_progress", Date.now().toString());
-          mut.mutate();
-          toast.info("Drafting your proposal in the background…");
-          navigate({ to: "/proposals" });
-        }}
-      />
     </div>
   );
 }

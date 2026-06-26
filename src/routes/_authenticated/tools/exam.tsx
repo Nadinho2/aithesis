@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateExam } from "@/lib/exam.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import { Loader2, Upload, GraduationCap, X, Sparkles, FileQuestion, FileText, ImageIcon, Info, Check, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,7 +27,7 @@ function ExamPage() {
   const docRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{ objectives: any[]; theory: any[] } | null>(null);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [submitted, setSubmitted] = useState<Record<number, boolean>>({});
   const [revealedTheory, setRevealedTheory] = useState<Record<number, boolean>>({});
@@ -56,9 +55,6 @@ function ExamPage() {
   });
 
   const markUsedFn = useServerFn(markTransactionUsed);
-
-  // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);
@@ -136,12 +132,12 @@ function ExamPage() {
       const access = await checkAccessFn({ data: { product: "exam" } });
       if (!access.allowed) {
         saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
-        setShowPayment(true);
+        navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
-      setShowPayment(true);
+      navigate({ to: "/billing" });
       return;
     }
     mut.mutate();
@@ -573,17 +569,6 @@ function ExamPage() {
           </button>
         </div>
       )}
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="exam"
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          mut.mutate();
-        }}
-      />
     </div>
   );
 }

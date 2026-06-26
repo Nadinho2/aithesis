@@ -4,8 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateThesis } from "@/lib/theses.functions";
 import { checkAccess } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { BookOpen, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
@@ -87,17 +86,16 @@ function NewThesisPage() {
         },
       }),
     onSuccess: () => {
-      toast.success("Thesis draft complete — check your theses.");
+      toast.success("Thesis generated successfully!");
       qc.invalidateQueries({ queryKey: ["theses"] });
     },
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
   const checkAccessFn = useServerFn(checkAccess);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
 
   // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,21 +300,6 @@ function NewThesisPage() {
           )}
         </button>
       </form>
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="thesis"
-        level={form.level}
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          sessionStorage.setItem("draft_in_progress", Date.now().toString());
-          mut.mutate();
-          toast.info("Drafting your thesis in the background…");
-          navigate({ to: "/theses" });
-        }}
-      />
     </div>
   );
 }

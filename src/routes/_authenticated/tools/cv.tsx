@@ -1,11 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateCv, exportCvDocx } from "@/lib/cv.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
   Loader2,
   Upload,
@@ -31,7 +30,7 @@ function CvPage() {
   const photoRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<any>(null);
   const [dlBusy, setDlBusy] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
   const [manual, setManual] = useState({
     full_name: "",
     email: "",
@@ -65,9 +64,6 @@ function CvPage() {
   });
 
   const markUsedFn = useServerFn(markTransactionUsed);
-
-  // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -111,12 +107,12 @@ function CvPage() {
       const access = await checkAccessFn({ data: { product: "cv" } });
       if (!access.allowed) {
         saveFormBeforePay({ manual, useForm });
-        setShowPayment(true);
+        navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ manual, useForm });
-      setShowPayment(true);
+      navigate({ to: "/billing" });
       return;
     }
     mut.mutate();
@@ -298,17 +294,6 @@ function CvPage() {
           </div>
         </div>
       )}
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="cv"
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          mut.mutate();
-        }}
-      />
     </div>
   );
 }

@@ -4,8 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateAssignment, exportAssignmentDocx } from "@/lib/assignments.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
-import { PaymentModal } from "@/components/PaymentModal";
-import { usePaymentCallback, saveFormBeforePay } from "@/lib/usePaymentCallback";
+import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
   Loader2, Upload, Download, BookOpen, X, Sparkles, ImageIcon, FileText, Info,
 } from "lucide-react";
@@ -29,7 +28,7 @@ function AssignmentPage() {
   const imageRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<{ answer: string; references: any[] } | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
+  const navigate = useNavigate();
   const checkAccessFn = useServerFn(checkAccess);
 
   const mut = useMutation({
@@ -51,9 +50,6 @@ function AssignmentPage() {
   });
 
   const markUsedFn = useServerFn(markTransactionUsed);
-
-  // Handle Paystack redirect back after payment — just verify silently
-  usePaymentCallback();
 
   const switchMode = (mode: "text" | "image") => {
     setInputMode(mode);
@@ -117,12 +113,12 @@ function AssignmentPage() {
       const access = await checkAccessFn({ data: { product: "assignment" } });
       if (!access.allowed) {
         saveFormBeforePay({ question, includeRefs, citationStyle });
-        setShowPayment(true);
+        navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ question, includeRefs, citationStyle });
-      setShowPayment(true);
+      navigate({ to: "/billing" });
       return;
     }
     mut.mutate();
@@ -362,17 +358,6 @@ function AssignmentPage() {
           </div>
         </div>
       )}
-
-      <PaymentModal
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        product="assignment"
-        callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
-        onPaid={() => {
-          setShowPayment(false);
-          mut.mutate();
-        }}
-      />
     </div>
   );
 }
