@@ -4,6 +4,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { buildPreviousContext, buildChapterFourRules, buildChapterFiveRules } from "./jobs/pipeline";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -82,6 +83,7 @@ ${refContext}`;
     {
       key: "chapter_1_introduction",
       label: "Chapter 1: Introduction",
+      order: 1,
       instructions: `Use these numbered sub-sections:
 1.1 Background to the study
 1.2 Statement of problem
@@ -96,6 +98,7 @@ Focus on clearly explaining the research problem and why this study matters.`,
     {
       key: "chapter_2_literature_review",
       label: "Chapter 2: Literature Review",
+      order: 2,
       instructions: `Use these numbered sub-sections:
 2.1 Conceptual review
 2.2 Empirical Review
@@ -108,6 +111,7 @@ For each area, explain the key ideas and debates — use 1-2 citations where the
     {
       key: "chapter_3_methodology",
       label: "Chapter 3: Research Methodology",
+      order: 3,
       instructions: `Use these numbered sub-sections:
 3.1 Research design
 3.2 Area of the study
@@ -124,6 +128,7 @@ Describe exactly how the research was carried out with methodological detail.`,
     {
       key: "chapter_4_results_findings",
       label: "Chapter 4: Results and Findings",
+      order: 4,
       instructions: `Use these numbered sub-sections:
 4.1 Introduction
 4.2 Data analysis and presentation
@@ -144,6 +149,7 @@ Include descriptive statistics (mean, standard deviation) and inferential statis
     {
       key: "chapter_5_discussion_conclusion",
       label: "Chapter 5: Discussion, Conclusion and Recommendations",
+      order: 5,
       instructions: `Use these numbered sub-sections:
 5.1 Summary of findings
 5.2 Conclusion
@@ -158,6 +164,9 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
 
   const chapters: Record<string, string> = {};
 
+  // Track generated chapters for context passing (sequential generation)
+  const generatedChapters: Array<{ chapterTitle: string; order: number; content: string }> = [];
+
   // Generate abstract + chapters SEQUENTIALLY to avoid rate limits
   // Abstract first (using reasoner for quality)
   const abstract = await (async () => {
@@ -169,8 +178,9 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
     }
   })();
 
-  // Generate each chapter one at a time (using chat model for speed + reliability)
+  // Generate each chapter one at a time WITH context from previous chapters
   const thesisLevel = data.level === "undergraduate" ? "Undergraduate" : data.level === "masters" ? "Master's" : "PhD";
+  const pipelinePayload = { topic: topicCtx.title, documentTitle: topicCtx.title };
   for (const def of chapterDefs) {
     try {
       // Extract sub-section titles from the instructions (lines matching "X.Y Title")
@@ -179,7 +189,7 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
         .filter((l) => /^\d+\.\d+\s+/.test(l))
         .map((l) => l.replace(/^\d+\.\d+\s+/, "").trim())
         .filter(Boolean);
-      const system = `You are an experienced Nigerian academic writing a completed research thesis at ${thesisLevel} level. Write ${def.label} for a study titled '${topicCtx.title}' on '${topicCtx.title}' conducted at a Nigerian university.
+      let system = `You are an experienced Nigerian academic writing a completed research thesis at ${thesisLevel} level. Write ${def.label} for a study titled '${topicCtx.title}' on '${topicCtx.title}' conducted at a Nigerian university.
 
 CRITICAL RULES FOR THESIS:
 - Use past tense for methodology and findings: 'this study examined', 'data was collected', 'the researcher found'
@@ -191,7 +201,25 @@ CRITICAL RULES FOR THESIS:
 - Include in-text citations: (Surname, Year)
 - Sub-sections required in order: ${sectionLines.join(", ")}
 - Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
+
+      // Append context from all previously generated chapters
+      system += buildPreviousContext(generatedChapters, pipelinePayload as any);
+
+      // Append chapter-specific rules
+      if (def.order === 4) {
+        system += buildChapterFourRules();
+      } else if (def.order === 5) {
+        system += buildChapterFiveRules();
+      }
+
       chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
+
+      // Track this chapter for context in subsequent chapters
+      generatedChapters.push({
+        chapterTitle: def.label,
+        order: def.order,
+        content: chapters[def.key] ?? "",
+      });
     } catch (e) {
       console.error(`[thesis] Failed to generate ${def.key}:`, e);
       chapters[def.key] = "";
@@ -365,15 +393,20 @@ export async function generateProposalContent(payload: {
 
   const sections: Record<string, string> = {};
 
-  const proposalChapters: Array<{ label: string; sections: string[]; target: number }> = [
-    { label: "Chapter 1: Introduction", sections: ["Background to the Study", "Statement of the Problem", "Objectives", "Research Questions", "Research Hypotheses", "Significance", "Scope of the Study", "Definition of Terms"], target: prelimTarget },
-    { label: "Chapter 2: Literature Review", sections: ["Conceptual Review", "Empirical Review", "Theoretical Review", "Theoretical Framework", "Summary of Reviews", "Gap in Literature"], target: litReviewTarget },
-    { label: "Chapter 3: Research Methodology", sections: ["Research Design", "Area of the Study", "Population of the Study", "Sample Size", "Sampling Technique", "Instrumentation", "Validity of Instrument", "Reliability of Instrument", "Method of Collecting Data", "Method of Data Analysis"], target: methodTarget },
+  // Track generated proposal chapters for context passing
+  const genChapters: Array<{ chapterTitle: string; order: number; content: string }> = [];
+
+  const proposalChapters: Array<{ label: string; order: number; sections: string[]; target: number }> = [
+    { label: "Chapter 1: Introduction", order: 1, sections: ["Background to the Study", "Statement of the Problem", "Objectives", "Research Questions", "Research Hypotheses", "Significance", "Scope of the Study", "Definition of Terms"], target: prelimTarget },
+    { label: "Chapter 2: Literature Review", order: 2, sections: ["Conceptual Review", "Empirical Review", "Theoretical Review", "Theoretical Framework", "Summary of Reviews", "Gap in Literature"], target: litReviewTarget },
+    { label: "Chapter 3: Research Methodology", order: 3, sections: ["Research Design", "Area of the Study", "Population of the Study", "Sample Size", "Sampling Technique", "Instrumentation", "Validity of Instrument", "Reliability of Instrument", "Method of Collecting Data", "Method of Data Analysis"], target: methodTarget },
   ];
+
+  const proposalPayload = { topic: topicCtx.title, documentTitle: topicCtx.title };
 
   for (const ch of proposalChapters) {
     try {
-      const system = `You are an experienced Nigerian academic writing a research proposal at ${proposalLevel} level. Write ${ch.label} for a proposed study titled '${topicCtx.title}' on '${topicCtx.title}' for submission at a Nigerian university.
+      let system = `You are an experienced Nigerian academic writing a research proposal at ${proposalLevel} level. Write ${ch.label} for a proposed study titled '${topicCtx.title}' on '${topicCtx.title}' for submission at a Nigerian university.
 
 CRITICAL RULES FOR PROPOSALS:
 - Use future tense throughout: 'this study will examine', 'the researcher will use', 'data will be collected'
@@ -386,8 +419,20 @@ CRITICAL RULES FOR PROPOSALS:
 - Include in-text citations: (Surname, Year) — do not fabricate specific page numbers
 - Sub-sections required in order: ${ch.sections.join(", ")}
 - Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
+
+      // Append context from all previously generated chapters
+      system += buildPreviousContext(genChapters, proposalPayload as any);
+
       const sectionNames = ch.sections.map((s) => s.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
       const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
+
+      // Track for context in subsequent chapters
+      genChapters.push({
+        chapterTitle: ch.label,
+        order: ch.order,
+        content: text,
+      });
+
       Object.assign(sections, parseSections(text));
     } catch (e) {
       console.error(`[proposal] ${ch.label} failed:`, e);
