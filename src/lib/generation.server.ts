@@ -253,25 +253,6 @@ CRITICAL RULES FOR THESIS:
 
   if (error) throw new Error(error.message);
 
-  // Mark the oldest unused completed transaction as used
-  const { data: usedTx } = await (supabase as any)
-    .from("transactions")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("status", "completed")
-    .eq("product", "thesis")
-    .eq("level", data.level)
-    .eq("used", false)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (usedTx) {
-    await (supabase as any)
-      .from("transactions")
-      .update({ used: true })
-      .eq("id", usedTx.id);
-  }
-
   // Send email
   const { notifyToolCompleted } = await import("@/lib/mail-helper");
   await notifyToolCompleted(userId, "thesis", {
@@ -471,24 +452,6 @@ Write only the paragraph text — no headings, no JSON.`;
     .single();
 
   if (error) throw new Error(error.message);
-
-  // Mark the oldest unused completed proposal transaction as used
-  const { data: usedTx } = await (supabase as any)
-    .from("transactions")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("status", "completed")
-    .eq("product", "proposal")
-    .eq("used", false)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (usedTx) {
-    await (supabase as any)
-      .from("transactions")
-      .update({ used: true })
-      .eq("id", usedTx.id);
-  }
 
   // Send email
   const { notifyToolCompleted } = await import("@/lib/mail-helper");

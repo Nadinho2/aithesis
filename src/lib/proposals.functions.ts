@@ -83,8 +83,7 @@ export const generateProposal = createServerFn({ method: "POST" })
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .eq("status", "completed")
-        .eq("product", "proposal")
-        .eq("used", false);
+        .eq("product", "proposal");
       const { count: pendingTx } = await (supabase as any)
         .from("transactions")
         .select("id", { count: "exact", head: true })

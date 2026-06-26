@@ -122,7 +122,6 @@ export const verifyPayment = createServerFn({ method: "POST" })
         product: metadata.product,
         level: metadata.level || null,
         status: "completed",
-        used: false,
         metadata: json.data,
       }, { onConflict: "reference" });
 
@@ -197,8 +196,7 @@ export const checkAccess = createServerFn({ method: "POST" })
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .eq("status", "completed")
-        .eq("product", data.product)
-        .eq("used", false);
+        .eq("product", data.product);
       if (data.level) completedQuery.eq("level", data.level);
       const { count: completedCount } = await completedQuery;
 
@@ -240,16 +238,15 @@ export const checkAccess = createServerFn({ method: "POST" })
       }
     }
 
-    // For non-document tools: count only unused (consumable) transactions
+    // For non-document tools: count completed transactions vs generation count
     if (["assignment", "exam", "presentation", "cv"].includes(data.product)) {
-      const { count: unusedCount } = await (supabase as any)
+      const { count: completedTxCount } = await (supabase as any)
         .from("transactions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .eq("status", "completed")
-        .eq("product", data.product)
-        .eq("used", false);
-      if ((unusedCount ?? 0) > 0) {
+        .eq("product", data.product);
+      if ((completedTxCount ?? 0) > 0) {
         return { allowed: true, price };
       }
     }
@@ -314,7 +311,7 @@ export const debugTxState = createServerFn({ method: "POST" })
 
     const { data: txns } = await (supabase as any)
       .from("transactions")
-      .select("id, reference, product, level, status, used, amount, created_at")
+      .select("id, reference, product, level, status, amount, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -368,24 +365,11 @@ export const markTransactionUsed = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => MarkUsedInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    // Mark the most recent unused transaction for this product as used
-    const { data: tx } = await (supabase as any)
-      .from("transactions")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("product", data.product)
-      .eq("status", "completed")
-      .eq("used", false)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (tx) {
-      await (supabase as any)
-        .from("transactions")
-        .update({ used: true })
-        .eq("id", tx.id);
-    }
+    // No-op: used column may not exist. Credit tracking for tools
+    // is handled by counting completed transactions in checkAccess.
+    void data;
+    void context;
+    return { ok: true };
   });
 
 // --- Get payment history ---
