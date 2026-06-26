@@ -47,8 +47,18 @@ export function usePaymentCallback() {
   const verifyMut = useMutation({
     mutationFn: (ref: string) => verifyPay({ data: { reference: ref } }),
     onSuccess: () => {
-      toast.success("Payment successful! Click Generate to start.");
       setVerified(true);
+
+      // Redirect back to the service page the user came from
+      const returnPath = sessionStorage.getItem("return_path");
+      if (returnPath && returnPath !== window.location.pathname) {
+        sessionStorage.removeItem("return_path");
+        window.location.href = returnPath;
+        return;
+      }
+
+      toast.success("Payment successful! Click Generate to start.");
+
       // Clean up URL params
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
