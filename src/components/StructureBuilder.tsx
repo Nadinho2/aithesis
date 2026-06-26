@@ -29,6 +29,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
   // Submit your university form state
   const [subName, setSubName] = useState("");
   const [subDept, setSubDept] = useState("");
+  const [subStructure, setSubStructure] = useState("");
   const [subEmail, setSubEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -71,8 +72,8 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
         body: JSON.stringify({
           universityName: subName.trim(),
           department: subDept.trim(),
+          chapterStructure: subStructure.trim() || `${documentType === "proposal" ? "Proposal" : "Thesis"} chapters needed for ${subName.trim()} - ${subDept.trim()}`,
           email: subEmail.trim() || null,
-          chapterStructure: `Request from user: ${documentType === "proposal" ? "Proposal" : "Thesis"} chapters needed for ${subName.trim()} - ${subDept.trim()}`,
         }),
       });
       const json = await res.json();
@@ -194,6 +195,18 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
                       onChange={(e) => setSubDept(e.target.value)}
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-ink/70">
+                    Chapter Structure <span className="text-ink/40 font-normal">(optional — list your chapter titles)</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage"
+                    placeholder="e.g. Chapter 1: Introduction, Chapter 2: Literature Review, Chapter 3: Methodology"
+                    value={subStructure}
+                    onChange={(e) => setSubStructure(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1 text-ink/70">
