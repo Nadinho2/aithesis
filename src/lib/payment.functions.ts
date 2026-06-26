@@ -280,6 +280,63 @@ export const checkAccess = createServerFn({ method: "POST" })
     return { allowed: false, price };
   });
 
+// --- Debug: raw access check (for the billing page debug panel) ---
+
+export const debugAccess = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((input: unknown) => CheckAccessInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const supabase = context.supabase as any;
+    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { count: completedTx } = await supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("product", data.product);
+    const { count: pendingTx } = await supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .eq("product", data.product)
+      .gte("created_at", cutoff);
+
+    const { data: limits } = await supabase
+      .from("user_limits")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let adminGranted = false;
+    if (limits) {
+      if (data.product === "thesis") {
+        const field = `thesis_available_${data.level ?? "undergraduate"}`;
+        adminGranted = (limits[field] ?? 0) > 0;
+      } else if (data.product === "proposal") {
+        adminGranted = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0) > 0;
+      } else {
+        const col = data.product === "assignment" ? "assignment_available"
+          : data.product === "exam" ? "exam_available"
+          : data.product === "presentation" ? "presentation_available"
+          : "cv_available";
+        adminGranted = (limits[col] ?? 0) > 0;
+      }
+    }
+
+    return {
+      product: data.product,
+      completedTx: completedTx ?? 0,
+      pendingTx: pendingTx ?? 0,
+      hasUserLimitsRow: !!limits,
+      userLimits: limits ?? null,
+      adminGranted,
+      isAllowed: (completedTx ?? 0) > 0 || (pendingTx ?? 0) > 0 || adminGranted,
+    };
+  });
+
 // --- Debug: transaction state (for the billing page debug panel) ---
 
 export const debugTxState = createServerFn({ method: "POST" })

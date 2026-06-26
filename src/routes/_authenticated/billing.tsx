@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getPaymentHistory } from "@/lib/payment.functions";
+import { getPaymentHistory, debugAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { getPrice } from "@/lib/pricing";
@@ -196,8 +196,21 @@ function DebugPanel() {
     setLoading(true);
     try {
       const { debugTxState } = await import("@/lib/payment.functions");
-      const res = await debugTxState();
-      setData(res);
+      const txRes = await debugTxState();
+
+      // Also check access for all products
+      const accessFn = useServerFn(debugAccess);
+      const products = ["proposal", "thesis", "assignment", "exam", "presentation", "cv"] as const;
+      const accessResults: Record<string, any> = {};
+      for (const p of products) {
+        try {
+          accessResults[p] = await accessFn({ data: { product: p } });
+        } catch (e: any) {
+          accessResults[p] = { error: e.message };
+        }
+      }
+
+      setData({ ...txRes, accessCheck: accessResults });
     } catch (e: any) {
       setData({ error: e.message ?? String(e) });
     } finally {
