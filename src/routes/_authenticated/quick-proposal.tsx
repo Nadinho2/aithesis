@@ -65,10 +65,13 @@ function QuickProposalPage() {
         },
       }),
     onSuccess: () => {
-      toast.success("Proposal draft complete — check your proposals.");
+      toast.success("Proposal generated successfully!");
       qc.invalidateQueries({ queryKey: ["proposals"] });
     },
-    onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
+    onError: (e) => {
+      console.error("[quick-proposal] Generation error:", e);
+      toast.error(String(e instanceof Error ? e.message : e));
+    },
   });
 
   const checkAccessFn = useServerFn(checkAccess);
@@ -99,8 +102,7 @@ function QuickProposalPage() {
     // Fire mutation and navigate away — it continues in the background
     sessionStorage.setItem("draft_in_progress", Date.now().toString());
     mut.mutate();
-    toast.info("Drafting your proposal in the background…");
-    navigate({ to: "/proposals" });
+    toast.info("Generating your proposal…");
   };
 
   const updateObj = (i: number, v: string) => {

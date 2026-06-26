@@ -186,16 +186,33 @@ export const checkAccess = createServerFn({ method: "POST" })
 
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // For proposal/thesis: count completed transactions vs documents generated
+    // For proposal/thesis: count completed + recently-pending transactions vs documents generated
     if (data.product === "proposal" || data.product === "thesis") {
-      const txQuery = (supabase as any)
+      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 60 min ago
+
+      // Completed (verified by Paystack callback)
+      const completedQuery = (supabase as any)
         .from("transactions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
         .eq("status", "completed")
-        .eq("product", data.product);
-      if (data.level) txQuery.eq("level", data.level);
-      const { count: txCount } = await txQuery;
+        .eq("product", data.product)
+        .eq("used", false);
+      if (data.level) completedQuery.eq("level", data.level);
+      const { count: completedCount } = await completedQuery;
+
+      // Pending (saved by initPayment but callback may have failed — only if recent)
+      const pendingQuery = (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .eq("product", data.product)
+        .gte("created_at", cutoff);
+      if (data.level) pendingQuery.eq("level", data.level);
+      const { count: pendingCount } = await pendingQuery;
+
+      const availableTx = (completedCount ?? 0) + (pendingCount ?? 0);
 
       let usageCount = 0;
       if (data.product === "proposal") {
@@ -216,7 +233,7 @@ export const checkAccess = createServerFn({ method: "POST" })
         usageCount = count ?? 0;
       }
 
-      const unused = (txCount ?? 0) - usageCount;
+      const unused = availableTx - usageCount;
       if (unused > 0) {
         return { allowed: true, price };
       }

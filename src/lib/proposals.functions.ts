@@ -8,6 +8,9 @@ import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 
+// Debug flag — log errors on stderr
+const debug = (...args: any[]) => console.error("[proposals.fn]", ...args);
+
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
   problem_statement: z.string().max(4000).optional().default(""),
@@ -69,26 +72,41 @@ export const generateProposal = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek is not configured.");
 
-    // Payment check — count completed transactions vs documents generated
-    const { count: txCount } = await (supabase as any)
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("product", "proposal");
-    const { count: docCount } = await (supabase as any)
-      .from("proposals")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed");
-    const isPaid = ((txCount ?? 0) - (docCount ?? 0)) > 0;
+    try {
+      debug("Starting generateProposal for user", userId);
 
-    if (!isPaid) {
-      const canGen = await checkGenerateLimit(supabase, userId, "proposal");
-      if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
-    }
+      // Payment check — count completed + recently-pending transactions vs documents generated
+      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    let topicCtx: {
+      const { count: completedTx } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", "proposal")
+        .eq("used", false);
+      const { count: pendingTx } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .eq("product", "proposal")
+        .gte("created_at", cutoff);
+      const { count: docCount } = await (supabase as any)
+        .from("proposals")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed");
+      const isPaid = ((completedTx ?? 0) + (pendingTx ?? 0) - (docCount ?? 0)) > 0;
+      debug("isPaid:", isPaid, "completed:", completedTx, "pending:", pendingTx, "docs:", docCount);
+
+      if (!isPaid) {
+        const canGen = await checkGenerateLimit(supabase, userId, "proposal");
+        debug("checkGenerateLimit:", canGen);
+        if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
+      }
+
+      let topicCtx: {
       title: string;
       problem_statement: string;
       research_gap: string;
@@ -190,6 +208,10 @@ export const generateProposal = createServerFn({ method: "POST" })
     }
 
     return { success: true, message: "Your proposal is being generated. You'll receive an email when it's ready." };
+  } catch (err: any) {
+    debug("generateProposal error:", err?.message ?? err);
+    throw err;
+  }
   });
 
 function trimProposalToExact(p: z.infer<typeof ProposalSchema>, target: number): z.infer<typeof ProposalSchema> {
