@@ -111,12 +111,12 @@ function NewThesisPage() {
       const access = await checkAccessFn({ data: { product: "thesis", level: form.level } });
       if (!access.allowed) {
         saveFormBeforePay(form);
-        setShowPayment(true);
+        navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay(form);
-      setShowPayment(true);
+      navigate({ to: "/billing" });
       return;
     }
     // Fire mutation and navigate away — it continues in the background
