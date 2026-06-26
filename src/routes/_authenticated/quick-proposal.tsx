@@ -115,20 +115,20 @@ function QuickProposalPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
-      <div className="mb-8">
+      <div className="mb-8 max-w-full overflow-hidden">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
           Direct Proposal
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">
+        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3 break-words">
           I already have a topic
         </h1>
-        <p className="text-ink/60 max-w-xl text-sm sm:text-base">
+        <p className="text-ink/60 max-w-xl text-sm sm:text-base break-words">
           Paste your topic details and draft a full APA 7 proposal with verified scholarly
           references.
         </p>
       </div>
 
-      <form onSubmit={submit} className="p-5 sm:p-8 bg-card border border-ink/10 rounded-sm space-y-5">
+      <form onSubmit={submit} className="p-5 sm:p-8 bg-card border border-ink/10 rounded-sm space-y-5 max-w-full overflow-hidden">
         <Text label="Topic / Title *" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
         <Area
           label="Problem Statement *"
@@ -285,7 +285,7 @@ function Text({
   placeholder?: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
         {label}
       </label>
@@ -294,7 +294,7 @@ function Text({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage"
+        className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage break-words"
       />
     </div>
   );
@@ -312,7 +312,7 @@ function Area({
   rows?: number;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
         {label}
       </label>
@@ -320,7 +320,7 @@ function Area({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
-        className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage resize-y"
+        className="mt-1 w-full bg-bone border border-ink/15 rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-sage resize-y break-words"
       />
     </div>
   );
