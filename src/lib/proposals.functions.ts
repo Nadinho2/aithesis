@@ -75,25 +75,15 @@ export const generateProposal = createServerFn({ method: "POST" })
     try {
       debug("Starting generateProposal for user", userId);
 
-      // Payment check — if user has any completed or recent-pending
-      // transaction for proposal, allow generation.
-      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-      const { count: completedTx } = await (supabase as any)
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
+      // Payment/credit check — user must have credits in user_limits
+      const { data: limits } = await (supabase as any)
+        .from("user_limits")
+        .select("proposal_limit, proposal_used")
         .eq("user_id", userId)
-        .eq("status", "completed")
-        .eq("product", "proposal");
-      const { count: pendingTx } = await (supabase as any)
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .eq("product", "proposal")
-        .gte("created_at", cutoff);
-      const isPaid = (completedTx ?? 0) > 0 || (pendingTx ?? 0) > 0;
-      debug("isPaid:", isPaid, "completed:", completedTx, "pending:", pendingTx);
+        .maybeSingle();
+      const remaining = (limits?.proposal_limit ?? 0) - (limits?.proposal_used ?? 0);
+      const isPaid = remaining > 0;
+      debug("isPaid:", isPaid, "remaining:", remaining);
 
       if (!isPaid) {
         const canGen = await checkGenerateLimit(supabase, userId, "proposal");
@@ -174,10 +164,8 @@ export const generateProposal = createServerFn({ method: "POST" })
       });
     }
 
-    // Increment usage BEFORE enqueue — ensures counter decrements
-    if (!isPaid) {
-      await incrementUsage(supabase, userId, "proposal");
-    }
+    // Decrement credit BEFORE enqueue (works for both payment and admin credits)
+    await incrementUsage(supabase, userId, "proposal");
 
     // Enqueue background job for queue worker
     await enqueueJob("proposal", {

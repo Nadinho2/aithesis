@@ -34,15 +34,15 @@ export const generateThesis = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Payment check — if user has any completed transaction for this thesis level, allow.
-    const { count: txCount } = await (supabase as any)
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
+    // Payment/credit check — user must have credits in user_limits
+    const lvl = data.level ?? "undergraduate";
+    const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
+    const { data: limits } = await (supabase as any)
+      .from("user_limits")
+      .select(col)
       .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("product", "thesis")
-      .eq("level", data.level);
-    const isPaid = (txCount ?? 0) > 0;
+      .maybeSingle();
+    const isPaid = (limits?.[col] ?? 0) > 0;
 
     // Limit check (non-paid only)
     if (!isPaid) {
@@ -101,10 +101,8 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
-    // Increment usage BEFORE enqueue — ensures counter decrements
-    if (!isPaid) {
-      await incrementUsage(supabase, userId, "thesis", data.level);
-    }
+    // Decrement credit BEFORE enqueue (works for both payment and admin credits)
+    await incrementUsage(supabase, userId, "thesis", data.level);
 
     // Enqueue background job for queue worker
     await enqueueJob("thesis", {

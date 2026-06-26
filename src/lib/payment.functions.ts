@@ -127,6 +127,59 @@ export const verifyPayment = createServerFn({ method: "POST" })
 
     if (txError) throw new Error("Failed to record payment");
 
+    // --- Add credit to user_limits (pay-per-use: each payment = 1 generation) ---
+    try {
+      const product = metadata.product as string;
+      const level = (metadata.level as string) ?? "undergraduate";
+      const upsertBase = { user_id: userId, updated_at: new Date().toISOString() };
+
+      // Ensure row exists with defaults
+      await (supabase as any)
+        .from("user_limits")
+        .upsert({ ...upsertBase, proposal_limit: 0, proposal_used: 0, thesis_available_ug: 0, thesis_available_masters: 0, thesis_available_phd: 0, assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0 }, { onConflict: "user_id", ignoreDuplicates: true });
+
+      if (product === "proposal") {
+        // Fetch current proposal_limit, then increment by 1
+        const { data: row } = await (supabase as any)
+          .from("user_limits")
+          .select("proposal_limit")
+          .eq("user_id", userId)
+          .maybeSingle();
+        const newLimit = (row?.proposal_limit ?? 0) + 1;
+        await (supabase as any)
+          .from("user_limits")
+          .update({ proposal_limit: newLimit, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+      } else if (product === "thesis") {
+        const col = level === "masters" ? "thesis_available_masters" : level === "phd" ? "thesis_available_phd" : "thesis_available_ug";
+        const { data: row } = await (supabase as any)
+          .from("user_limits")
+          .select(col)
+          .eq("user_id", userId)
+          .maybeSingle();
+        const newVal = (row?.[col] ?? 0) + 1;
+        await (supabase as any)
+          .from("user_limits")
+          .update({ [col]: newVal, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+      } else {
+        const col = product === "assignment" ? "assignment_available" : product === "exam" ? "exam_available" : product === "presentation" ? "presentation_available" : "cv_available";
+        const { data: row } = await (supabase as any)
+          .from("user_limits")
+          .select(col)
+          .eq("user_id", userId)
+          .maybeSingle();
+        const newVal = (row?.[col] ?? 0) + 1;
+        await (supabase as any)
+          .from("user_limits")
+          .update({ [col]: newVal, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+      }
+    } catch (e: any) {
+      console.error("[verifyPayment] credit increment failed:", e.message ?? e);
+      // Don't block — payment already recorded
+    }
+
     // Send payment confirmed email (fire-and-forget)
     const userEmail = await getUserEmail(userId);
     const toolName = productToTool(metadata.product) as BrainPadiTool | null;
@@ -186,50 +239,7 @@ export const checkAccess = createServerFn({ method: "POST" })
 
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // For proposal/thesis: if user has any completed or recent-pending
-    // transaction for this product, they've paid — allow regardless of
-    // how many documents were generated via other means (free limits, etc.)
-    if (data.product === "proposal" || data.product === "thesis") {
-      const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-      const completedQuery = (supabase as any)
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "completed")
-        .eq("product", data.product);
-      if (data.level) completedQuery.eq("level", data.level);
-      const { count: completedCount } = await completedQuery;
-
-      const pendingQuery = (supabase as any)
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "pending")
-        .eq("product", data.product)
-        .gte("created_at", cutoff);
-      if (data.level) pendingQuery.eq("level", data.level);
-      const { count: pendingCount } = await pendingQuery;
-
-      if ((completedCount ?? 0) > 0 || (pendingCount ?? 0) > 0) {
-        return { allowed: true, price };
-      }
-    }
-
-    // For non-document tools: count completed transactions vs generation count
-    if (["assignment", "exam", "presentation", "cv"].includes(data.product)) {
-      const { count: completedTxCount } = await (supabase as any)
-        .from("transactions")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "completed")
-        .eq("product", data.product);
-      if ((completedTxCount ?? 0) > 0) {
-        return { allowed: true, price };
-      }
-    }
-
-    // Check 2: Admin-allocated limit from user_limits table
+    // Check: Admin-allocated or payment-earned credits in user_limits
     const { data: limits } = await (supabase as any)
       .from("user_limits")
       .select("*")
@@ -277,6 +287,20 @@ export const checkAccess = createServerFn({ method: "POST" })
       }
     }
 
+    // Edge case: user just paid but verifyPayment hasn't incremented credits yet
+    // (e.g. Paystack redirect landed but hook hasn't fired). Check recent-pending only.
+    const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString(); // 3 min
+    const { count: recentPending } = await (supabase as any)
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .eq("product", data.product)
+      .gte("created_at", freshCutoff);
+    if ((recentPending ?? 0) > 0) {
+      return { allowed: true, price };
+    }
+
     return { allowed: false, price };
   });
 
@@ -288,22 +312,8 @@ export const debugAccess = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const supabase = context.supabase as any;
-    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    const { count: completedTx } = await supabase
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("product", data.product);
-    const { count: pendingTx } = await supabase
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .eq("product", data.product)
-      .gte("created_at", cutoff);
-
+    // user_limits — single source of truth for both admin + paid credits
     const { data: limits } = await supabase
       .from("user_limits")
       .select("*")
@@ -328,12 +338,9 @@ export const debugAccess = createServerFn({ method: "POST" })
 
     return {
       product: data.product,
-      completedTx: completedTx ?? 0,
-      pendingTx: pendingTx ?? 0,
       hasUserLimitsRow: !!limits,
       userLimits: limits ?? null,
-      adminGranted,
-      isAllowed: (completedTx ?? 0) > 0 || (pendingTx ?? 0) > 0 || adminGranted,
+      isAllowed: adminGranted,
     };
   });
 
