@@ -180,8 +180,9 @@ function PresentationPage() {
       const access = await checkAccessFn({ data: { product: "presentation" } });
       if (!access.allowed) {
         saveFormBeforePay({ topic, content, slideCount });
-      navigate({ to: "/billing" });
-      return;
+        navigate({ to: "/billing" });
+        return;
+      }
     } catch {
       saveFormBeforePay({ topic, content, slideCount });
       navigate({ to: "/billing" });

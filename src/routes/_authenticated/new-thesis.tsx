@@ -93,7 +93,6 @@ function NewThesisPage() {
   });
 
   const checkAccessFn = useServerFn(checkAccess);
-  const navigate = useNavigate();
 
   // Handle Paystack redirect back after payment — just verify silently
 
