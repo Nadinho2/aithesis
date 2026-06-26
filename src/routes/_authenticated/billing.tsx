@@ -5,8 +5,8 @@ import { getPaymentHistory } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
 import { getPrice } from "@/lib/pricing";
-import { CreditCard, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { CreditCard, CheckCircle, Clock, XCircle, Loader2, Bug } from "lucide-react";
+import { useState, useEffect } from "react";
 import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/billing")({
@@ -163,6 +163,8 @@ function BillingPage() {
           }}
         />
       )}
+
+      <DebugPanel />
     </div>
   );
 }
@@ -182,5 +184,50 @@ function PricingCard({ product, price, description, onClick }: {
       <p className="font-serif text-3xl mb-2">{price}</p>
       <p className="text-xs text-ink/40">{description}</p>
     </button>
+  );
+}
+
+function DebugPanel() {
+  const [show, setShow] = useState(false);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchDebug = async () => {
+    setLoading(true);
+    try {
+      const { debugTxState } = await import("@/lib/payment.functions");
+      const res = await debugTxState();
+      setData(res);
+    } catch (e: any) {
+      setData({ error: e.message ?? String(e) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { if (show) fetchDebug(); }, [show]);
+
+  return (
+    <div className="mt-12 border border-dashed border-ink/20 rounded-sm p-4">
+      <button
+        onClick={() => setShow(!show)}
+        className="flex items-center gap-2 text-xs text-ink/40 hover:text-ink transition-colors"
+      >
+        <Bug className="size-3" /> {show ? "Hide" : "Show"} Debug Panel
+      </button>
+      {show && (
+        <div className="mt-3">
+          {loading && <p className="text-xs text-ink/40">Loading…</p>}
+          {data && (
+            <pre className="text-[10px] text-ink/60 overflow-auto max-h-96 whitespace-pre-wrap">
+              {JSON.stringify(data, null, 2)}
+            </pre>
+          )}
+          <button onClick={fetchDebug} className="mt-2 text-[10px] text-verde hover:underline">
+            Refresh
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

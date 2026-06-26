@@ -305,6 +305,59 @@ export const checkAccess = createServerFn({ method: "POST" })
     return { allowed: false, price };
   });
 
+// --- Debug: transaction state (for the billing page debug panel) ---
+
+export const debugTxState = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    const { data: txns } = await (supabase as any)
+      .from("transactions")
+      .select("id, reference, product, level, status, used, amount, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Also get completed doc counts
+    const { count: proposalDocs } = await (supabase as any)
+      .from("proposals")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed");
+    const { count: ugThesisDocs } = await (supabase as any)
+      .from("theses")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("level", "undergraduate");
+    const { count: msThesisDocs } = await (supabase as any)
+      .from("theses")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("level", "masters");
+    const { count: phdThesisDocs } = await (supabase as any)
+      .from("theses")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("level", "phd");
+
+    return {
+      transactions: txns ?? [],
+      completedDocs: {
+        proposal: proposalDocs ?? 0,
+        thesis_undergraduate: ugThesisDocs ?? 0,
+        thesis_masters: msThesisDocs ?? 0,
+        thesis_phd: phdThesisDocs ?? 0,
+      },
+      sessionStorage: {
+        return_path: typeof process !== "undefined" ? undefined : null,
+      },
+    };
+  });
+
 // --- Mark transaction as used (for non-document tools) ---
 
 const MarkUsedInput = z.object({
