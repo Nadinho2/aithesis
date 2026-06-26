@@ -5,6 +5,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { buildPreviousContext, buildChapterFourRules, buildChapterFiveRules } from "./jobs/pipeline";
+import { countWords } from "./ai-utils.server";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -214,6 +215,21 @@ CRITICAL RULES FOR THESIS:
 
       chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
 
+      // STRICT per-chapter word count enforcement — re-prompt up to 3 times if below target
+      let chapterWords = countWords(chapters[def.key] ?? "");
+      let chapterRetries = 0;
+      while (chapterWords < def.target && chapterRetries < 3) {
+        chapterRetries++;
+        const shortfall = def.target - chapterWords;
+        try {
+          const expandSystem = `You are a senior academic. Your previous ${def.label} was too short — only ${chapterWords} words, but the target is AT LEAST ${def.target} words. You MUST expand it by ${shortfall}+ words with NEW content, additional analysis, deeper explanation, and more examples. Keep ALL existing content. Do NOT use filler phrases. Target: AT LEAST ${def.target} words. Output the FULL updated chapter as plain text.`;
+          chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${chapters[def.key]}` });
+          chapterWords = countWords(chapters[def.key] ?? "");
+        } catch (e) {
+          break; // stop retrying if API fails
+        }
+      }
+
       // Track this chapter for context in subsequent chapters
       generatedChapters.push({
         key: def.key,
@@ -227,24 +243,29 @@ CRITICAL RULES FOR THESIS:
     }
   }
 
-  // Word count enforcement — expand shortest chapters
-  const { countWords, scrubObject } = await import("@/lib/ai-utils.server");
+  // Word count enforcement — expand any chapter below its target
+  const { scrubObject } = await import("@/lib/ai-utils.server");
   let total = abstractTarget + chapterDefs.reduce((s, d) => s + countWords(chapters[d.key] ?? ""), 0);
 
   let expandAttempts = 0;
-  while (total < target && expandAttempts < 6) {
+  while (total < target && expandAttempts < 8) {
     expandAttempts++;
     const diff = target - total;
-    const sorted = chapterDefs
-      .map((d) => ({ ...d, current: countWords(chapters[d.key] ?? "") }))
-      .sort((a, b) => a.current - b.current);
-    const toExpand = sorted.slice(0, 2);
+    // Expand ALL chapters that are below their individual target, not just the shortest
+    const below = chapterDefs
+      .filter((d) => countWords(chapters[d.key] ?? "") < d.target)
+      .sort((a, b) => countWords(chapters[a.key] ?? "") - countWords(chapters[b.key] ?? ""));
+
+    if (below.length === 0) break; // all chapters at or above target
+
+    const toExpand = below.slice(0, 3); // expand up to 3 at a time
+    const share = Math.max(Math.ceil(diff / toExpand.length) * 2, 500);
 
     for (const c of toExpand) {
       try {
-        const overshoot = Math.max(Math.ceil(diff / toExpand.length) * 2, Math.round(c.target * 0.3));
-        const newTarget = c.current + overshoot;
-        const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially with NEW content and examples. Keep ALL existing content. Do NOT use phrases like "This section", "Furthermore", "It is important". Write naturally. Target for this chapter: AT LEAST ${newTarget} words (currently ${c.current}). Output FULL updated chapter as plain text.`;
+        const current = countWords(chapters[c.key] ?? "");
+        const newTarget = current + share;
+        const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially with NEW content, more detailed analysis, additional examples, and deeper explanation. Keep ALL existing content. Do NOT use filler phrases like "Furthermore", "In addition", "It is important to note". Write naturally. Your current word count is ${current} words. You MUST reach AT LEAST ${newTarget} words. Output the FULL updated chapter as plain text.`;
         const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-chat", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
         chapters[c.key] = content;
       } catch (e) {
@@ -425,7 +446,22 @@ CRITICAL RULES FOR PROPOSALS:
       system += buildPreviousContext(genChapters, proposalPayload as any);
 
       const sectionNames = ch.sections.map((s) => s.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
-      const text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
+      let text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
+
+      // STRICT per-chapter word count enforcement — re-prompt up to 2 times if below target (proposals are shorter, fewer retries needed)
+      let chapterWords = countWords(text);
+      let chapterRetries = 0;
+      while (chapterWords < ch.target && chapterRetries < 2) {
+        chapterRetries++;
+        const shortfall = ch.target - chapterWords;
+        try {
+          const expandSystem = `You are a senior academic. Your previous ${ch.label} was too short — only ${chapterWords} words, but the target is AT LEAST ${ch.target} words. You MUST expand it by ${shortfall}+ words with NEW content, additional detail, deeper analysis, and more examples. Keep ALL existing content. Do NOT use filler phrases. Target: AT LEAST ${ch.target} words. Output the FULL updated chapter as plain text.`;
+          text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${text}` });
+          chapterWords = countWords(text);
+        } catch {
+          break;
+        }
+      }
 
       // Track for context in subsequent chapters
       genChapters.push({
@@ -442,17 +478,17 @@ CRITICAL RULES FOR PROPOSALS:
   }
 
   // Word count enforcement — expand shortest sections if below target
-  const { countWords } = await import("@/lib/ai-utils.server");
-  let totalWords = abstractTarget +
+  const totalWords = abstractTarget +
     Object.values(sections).reduce((s: number, v: any) => s + countWords(String(v ?? "")), 0);
+  let totalWords2 = totalWords;
 
   let expandAttempts = 0;
-  while (totalWords < target && expandAttempts < 6) {
+  while (totalWords2 < target && expandAttempts < 8) {
     expandAttempts++;
-    const diff = target - totalWords;
+    const diff = target - totalWords2;
     const fieldLengths = Object.entries(sections).map(([k, v]) => ({ key: k, len: countWords(String(v ?? "")) }));
     fieldLengths.sort((a, b) => a.len - b.len);
-    const toExpand = fieldLengths.slice(0, 2);
+    const toExpand = fieldLengths.slice(0, 3); // expand up to 3 shortest simultaneously
 
     for (const f of toExpand) {
       const overshoot = Math.max(Math.ceil(diff / toExpand.length), 500);
@@ -468,16 +504,16 @@ Write only the paragraph text — no headings, no JSON.`;
         // Continue with what we have
       }
     }
-    totalWords = abstractTarget +
+    totalWords2 = abstractTarget +
       Object.values(sections).reduce((s: number, v: any) => s + countWords(String(v ?? "")), 0);
   }
 
   // HARD ENFORCEMENT — never save below target
-  if (totalWords < target) {
+  if (totalWords2 < target) {
     const { notifyToolFailed } = await import("@/lib/mail-helper");
     await notifyToolFailed(userId, "Proposal");
 
-    return { success: false, error: `Only reached ${totalWords} words (target: ${target}). Please try again.` };
+    return { success: false, error: `Only reached ${totalWords2} words (target: ${target}). Please try again.` };
   }
 
   // Save completed proposal
@@ -491,7 +527,7 @@ Write only the paragraph text — no headings, no JSON.`;
       abstract,
       sections,
       references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}` })),
-      word_count: target,
+      word_count: totalWords2,
       citation_style: data.citation_style,
       status: "completed",
     } as any)
