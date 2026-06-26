@@ -101,6 +101,11 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
+    // Increment usage BEFORE enqueue — ensures counter decrements
+    if (!isPaid) {
+      await incrementUsage(supabase, userId, "thesis", data.level);
+    }
+
     // Enqueue background job for queue worker
     await enqueueJob("thesis", {
       userId,
@@ -122,11 +127,6 @@ export const generateThesis = createServerFn({ method: "POST" })
         headers: { Authorization: `Bearer ${ghPat}`, "Content-Type": "application/json", Accept: "application/vnd.github.v3+json" },
         body: JSON.stringify({ event_type: "process-queue" }),
       }).catch(() => {});
-    }
-
-    // Increment usage
-    if (!isPaid) {
-      await incrementUsage(supabase, userId, "thesis", data.level);
     }
 
     return { success: true, message: "Your thesis is being generated. You'll receive an email when it's ready." };

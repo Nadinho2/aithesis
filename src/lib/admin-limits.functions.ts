@@ -124,33 +124,77 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ─── Check generate limit (used before generation) ───
+// ─── Check generate limit (direct SQL, no RPC) ───
 export async function checkGenerateLimit(
   supabase: any,
   userId: string,
   type: "thesis" | "proposal",
   level?: string,
 ): Promise<boolean> {
-  const { data, error } = await supabase.rpc("can_generate", {
-    p_user_id: userId,
-    p_type: type,
-    p_level: level ?? "undergraduate",
-  });
-  if (error) throw new Error(error.message);
-  return !!data;
+  try {
+    const { data: row } = await supabase
+      .from("user_limits")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!row) return false; // no row = no credits allocated
+
+    if (type === "proposal") {
+      const remaining = (row.proposal_limit ?? 0) - (row.proposal_used ?? 0);
+      return remaining > 0;
+    }
+
+    // thesis — check per-level counter
+    const lvl = level ?? "undergraduate";
+    const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
+    return (row[col] ?? 0) > 0;
+  } catch {
+    return false;
+  }
 }
 
-// ─── Increment usage after successful generation ───
+// ─── Increment usage after successful generation (direct SQL, no RPC) ───
 export async function incrementUsage(
   supabase: any,
   userId: string,
   type: "thesis" | "proposal",
   level?: string,
 ): Promise<void> {
-  const { error } = await supabase.rpc("increment_usage", {
-    p_user_id: userId,
-    p_type: type,
-    p_level: level ?? "undergraduate",
-  });
-  if (error) throw new Error(error.message);
+  try {
+    // Ensure row exists
+    await supabase
+      .from("user_limits")
+      .upsert({ user_id: userId, thesis_available_ug: 0, proposal_limit: 0, proposal_used: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
+
+    if (type === "proposal") {
+      // Fetch current proposal_used, then increment
+      const { data: row } = await supabase
+        .from("user_limits")
+        .select("proposal_used")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const used = (row?.proposal_used ?? 0) + 1;
+      await supabase
+        .from("user_limits")
+        .update({ proposal_used: used, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+    } else {
+      const lvl = level ?? "undergraduate";
+      const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
+      const { data: row } = await supabase
+        .from("user_limits")
+        .select(col)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const current = Math.max(0, (row?.[col] ?? 0) - 1);
+      await supabase
+        .from("user_limits")
+        .update({ [col]: current, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+    }
+  } catch (e: any) {
+    console.error("[incrementUsage] failed:", e.message ?? e);
+    // Don't throw — counter failure shouldn't block generation
+  }
 }
