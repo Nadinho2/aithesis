@@ -122,6 +122,7 @@ export const verifyPayment = createServerFn({ method: "POST" })
         product: metadata.product,
         level: metadata.level || null,
         status: "completed",
+        used: false,
         metadata: json.data,
       }, { onConflict: "reference" });
 

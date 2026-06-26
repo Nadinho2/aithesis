@@ -107,11 +107,13 @@ function CvPage() {
       const access = await checkAccessFn({ data: { product: "cv" } });
       if (!access.allowed) {
         saveFormBeforePay({ manual, useForm });
+        sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ manual, useForm });
+      sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
     }

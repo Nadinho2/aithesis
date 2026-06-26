@@ -132,11 +132,13 @@ function ExamPage() {
       const access = await checkAccessFn({ data: { product: "exam" } });
       if (!access.allowed) {
         saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
+        sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
+      sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
     }

@@ -113,11 +113,13 @@ function AssignmentPage() {
       const access = await checkAccessFn({ data: { product: "assignment" } });
       if (!access.allowed) {
         saveFormBeforePay({ question, includeRefs, citationStyle });
+        sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay({ question, includeRefs, citationStyle });
+      sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
     }

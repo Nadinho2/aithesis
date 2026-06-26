@@ -152,7 +152,14 @@ function BillingPage() {
           callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
           onPaid={() => {
             setPayProduct(null);
-            window.location.reload();
+            // Redirect back to where the user came from (if stored)
+            const returnPath = sessionStorage.getItem("return_path");
+            sessionStorage.removeItem("return_path");
+            if (returnPath && returnPath !== "/billing") {
+              window.location.href = returnPath;
+            } else {
+              window.location.reload();
+            }
           }}
         />
       )}

@@ -88,11 +88,13 @@ function QuickProposalPage() {
       const access = await checkAccessFn({ data: { product: "proposal" } });
       if (!access.allowed) {
         saveFormBeforePay(form);
+        sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay(form);
+      sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
     }

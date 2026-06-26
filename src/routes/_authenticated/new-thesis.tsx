@@ -111,11 +111,13 @@ function NewThesisPage() {
       const access = await checkAccessFn({ data: { product: "thesis", level: form.level } });
       if (!access.allowed) {
         saveFormBeforePay(form);
+        sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
       saveFormBeforePay(form);
+      sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
     }
