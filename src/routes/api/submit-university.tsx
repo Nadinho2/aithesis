@@ -11,7 +11,7 @@ function runtimeEnv(key: string): string | undefined {
 export async function POST({ request }: { request: Request }) {
   try {
     const body = await request.json();
-    const { universityName, department, chapterStructure } = body;
+    const { universityName, department, chapterStructure, email } = body;
 
     if (!universityName || !department || !chapterStructure) {
       return new Response(
@@ -54,6 +54,7 @@ export async function POST({ request }: { request: Request }) {
       university_name: universityName,
       department,
       chapter_structure: chapterStructure,
+      email: email || null,
       submitted_by: userId,
       status: "pending",
     });

@@ -10,9 +10,9 @@ import { getUserEmail } from "./mail-helper";
 
 const ManualTopic = z.object({
   title: z.string().min(5).max(300),
-  problem_statement: z.string().min(20).max(4000),
-  research_gap: z.string().min(10).max(2000),
-  objectives: z.array(z.string().min(2).max(400)).min(1).max(10),
+  problem_statement: z.string().max(4000).optional().default(""),
+  research_gap: z.string().max(2000).optional().default(""),
+  objectives: z.array(z.string().max(400)).max(10).optional().default([]),
   department: z.string().max(120).optional().default(""),
   area_of_interest: z.string().max(200).optional().default(""),
   country: z.string().max(80).optional().default(""),

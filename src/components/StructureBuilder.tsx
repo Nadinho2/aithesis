@@ -29,7 +29,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
   // Submit your university form state
   const [subName, setSubName] = useState("");
   const [subDept, setSubDept] = useState("");
-  const [subStructure, setSubStructure] = useState("");
+  const [subEmail, setSubEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const isOther = selectedUni === UNLISTED_KEY;
@@ -59,8 +59,8 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
   }, [isOther, documentType]);
 
   const handleSubmitUniversity = async () => {
-    if (!subName.trim() || !subDept.trim() || !subStructure.trim()) {
-      toast.error("Please fill in all fields");
+    if (!subName.trim() || !subDept.trim()) {
+      toast.error("Please enter your university name and department");
       return;
     }
     setSubmitting(true);
@@ -71,7 +71,8 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
         body: JSON.stringify({
           universityName: subName.trim(),
           department: subDept.trim(),
-          chapterStructure: subStructure.trim(),
+          email: subEmail.trim() || null,
+          chapterStructure: `Request from user: ${documentType === "proposal" ? "Proposal" : "Thesis"} chapters needed for ${subName.trim()} - ${subDept.trim()}`,
         }),
       });
       const json = await res.json();
@@ -81,7 +82,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
       } else {
         toast.error(json.error ?? "Submission failed");
       }
-    } catch (e) {
+    } catch {
       toast.error("Network error — please try again");
     } finally {
       setSubmitting(false);
@@ -169,33 +170,41 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
               </div>
             ) : (
               <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-ink/70">University Name</label>
-                  <input
-                    type="text"
-                    className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage"
-                    placeholder="e.g. University of Lagos"
-                    value={subName}
-                    onChange={(e) => setSubName(e.target.value)}
-                  />
+                <p className="text-xs text-ink/60 leading-relaxed">
+                  Tell us your university and department. We'll set up the correct chapter structure and add it to our list.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-ink/70">University Name</label>
+                    <input
+                      type="text"
+                      className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage"
+                      placeholder="e.g. University of Lagos"
+                      value={subName}
+                      onChange={(e) => setSubName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-ink/70">Department</label>
+                    <input
+                      type="text"
+                      className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage"
+                      placeholder="e.g. Computer Science"
+                      value={subDept}
+                      onChange={(e) => setSubDept(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1 text-ink/70">Department</label>
+                  <label className="block text-xs font-medium mb-1 text-ink/70">
+                    Email <span className="text-ink/40 font-normal">(optional — so we can follow up)</span>
+                  </label>
                   <input
-                    type="text"
+                    type="email"
                     className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage"
-                    placeholder="e.g. Computer Science"
-                    value={subDept}
-                    onChange={(e) => setSubDept(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-ink/70">Chapter Structure</label>
-                  <textarea
-                    className="w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-sage resize-y min-h-[100px]"
-                    placeholder="Paste or describe your chapter titles and sub-sections, e.g. Chapter One: Introduction — Background to the Study, Statement of the Problem..."
-                    value={subStructure}
-                    onChange={(e) => setSubStructure(e.target.value)}
+                    placeholder="you@example.com"
+                    value={subEmail}
+                    onChange={(e) => setSubEmail(e.target.value)}
                   />
                 </div>
                 <button
@@ -205,7 +214,7 @@ export function StructureBuilder({ documentType, onChaptersChange, initialChapte
                   onClick={handleSubmitUniversity}
                 >
                   {submitting && <Loader2 className="size-4 animate-spin" />}
-                  Submit Structure
+                  Submit
                 </button>
               </div>
             )}

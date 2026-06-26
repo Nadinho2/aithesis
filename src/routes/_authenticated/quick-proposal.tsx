@@ -79,12 +79,8 @@ function QuickProposalPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.problem_statement || !form.research_gap) {
-      toast.error("Title, problem statement, and research gap are required.");
-      return;
-    }
-    if (form.objectives.filter((o) => o.trim()).length < 1) {
-      toast.error("Add at least one objective.");
+    if (!form.title) {
+      toast.error("Title is required.");
       return;
     }
     // Check if user has paid
