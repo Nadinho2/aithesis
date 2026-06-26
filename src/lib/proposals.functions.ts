@@ -75,7 +75,8 @@ export const generateProposal = createServerFn({ method: "POST" })
     try {
       debug("Starting generateProposal for user", userId);
 
-      // Payment check — count completed + recently-pending transactions vs documents generated
+      // Payment check — if user has any completed or recent-pending
+      // transaction for proposal, allow generation.
       const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
       const { count: completedTx } = await (supabase as any)
@@ -91,13 +92,8 @@ export const generateProposal = createServerFn({ method: "POST" })
         .eq("status", "pending")
         .eq("product", "proposal")
         .gte("created_at", cutoff);
-      const { count: docCount } = await (supabase as any)
-        .from("proposals")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .eq("status", "completed");
-      const isPaid = ((completedTx ?? 0) + (pendingTx ?? 0) - (docCount ?? 0)) > 0;
-      debug("isPaid:", isPaid, "completed:", completedTx, "pending:", pendingTx, "docs:", docCount);
+      const isPaid = (completedTx ?? 0) > 0 || (pendingTx ?? 0) > 0;
+      debug("isPaid:", isPaid, "completed:", completedTx, "pending:", pendingTx);
 
       if (!isPaid) {
         const canGen = await checkGenerateLimit(supabase, userId, "proposal");

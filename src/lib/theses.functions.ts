@@ -34,7 +34,7 @@ export const generateThesis = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Payment check — count completed transactions vs documents generated
+    // Payment check — if user has any completed transaction for this thesis level, allow.
     const { count: txCount } = await (supabase as any)
       .from("transactions")
       .select("id", { count: "exact", head: true })
@@ -42,13 +42,7 @@ export const generateThesis = createServerFn({ method: "POST" })
       .eq("status", "completed")
       .eq("product", "thesis")
       .eq("level", data.level);
-    const { count: docCount } = await (supabase as any)
-      .from("theses")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("level", data.level);
-    const isPaid = ((txCount ?? 0) - (docCount ?? 0)) > 0;
+    const isPaid = (txCount ?? 0) > 0;
 
     // Limit check (non-paid only)
     if (!isPaid) {
