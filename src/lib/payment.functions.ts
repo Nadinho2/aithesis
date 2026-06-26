@@ -343,10 +343,35 @@ export const markTransactionUsed = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => MarkUsedInput.parse(input))
   .handler(async ({ data, context }) => {
-    // No-op: used column may not exist. Credit tracking for tools
-    // is handled by counting completed transactions in checkAccess.
-    void data;
-    void context;
+    const { userId } = context;
+    const supabase = context.supabase as any;
+    const col = data.product === "assignment" ? "assignment_available"
+      : data.product === "exam" ? "exam_available"
+      : data.product === "presentation" ? "presentation_available"
+      : "cv_available"; // cv
+
+    try {
+      // Ensure row exists
+      await supabase
+        .from("user_limits")
+        .upsert({ user_id: userId, assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
+
+      // Fetch current value, then decrement
+      const { data: row } = await supabase
+        .from("user_limits")
+        .select(col)
+        .eq("user_id", userId)
+        .maybeSingle();
+      const current = Math.max(0, (row?.[col] ?? 0) - 1);
+      await supabase
+        .from("user_limits")
+        .update({ [col]: current, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+    } catch (e: any) {
+      console.error("[markTransactionUsed] failed:", e.message ?? e);
+      // Don't throw — counter failure shouldn't block the tool
+    }
+
     return { ok: true };
   });
 
