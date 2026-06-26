@@ -78,7 +78,7 @@ ${baseRules}`;
 /**
  * Build the previous-chapters context block to append to the system prompt.
  */
-function buildPreviousContext(generatedChapters: GeneratedChapter[], payload: PipelinePayload): string {
+export function buildPreviousContext(generatedChapters: GeneratedChapter[], payload: PipelinePayload): string {
   if (generatedChapters.length === 0) return "";
 
   const summaries = generatedChapters
@@ -102,7 +102,7 @@ You must remain 100% consistent with everything established in the chapters abov
 /**
  * Build chapter-specific rules block for Chapter 4.
  */
-function buildChapterFourRules(): string {
+export function buildChapterFourRules(): string {
   return `
 
 CHAPTER FOUR SPECIFIC RULES:
@@ -143,7 +143,7 @@ NUMBERS:
 /**
  * Build chapter-specific rules block for Chapter 5.
  */
-function buildChapterFiveRules(): string {
+export function buildChapterFiveRules(): string {
   return `
 
 CHAPTER FIVE SPECIFIC RULES:

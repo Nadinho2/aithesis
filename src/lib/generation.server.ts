@@ -165,7 +165,7 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
   const chapters: Record<string, string> = {};
 
   // Track generated chapters for context passing (sequential generation)
-  const generatedChapters: Array<{ chapterTitle: string; order: number; content: string }> = [];
+  const generatedChapters: Array<{ key: string; chapterTitle: string; order: number; content: string }> = [];
 
   // Generate abstract + chapters SEQUENTIALLY to avoid rate limits
   // Abstract first (using reasoner for quality)
@@ -216,6 +216,7 @@ CRITICAL RULES FOR THESIS:
 
       // Track this chapter for context in subsequent chapters
       generatedChapters.push({
+        key: def.key,
         chapterTitle: def.label,
         order: def.order,
         content: chapters[def.key] ?? "",
@@ -394,7 +395,7 @@ export async function generateProposalContent(payload: {
   const sections: Record<string, string> = {};
 
   // Track generated proposal chapters for context passing
-  const genChapters: Array<{ chapterTitle: string; order: number; content: string }> = [];
+  const genChapters: Array<{ key: string; chapterTitle: string; order: number; content: string }> = [];
 
   const proposalChapters: Array<{ label: string; order: number; sections: string[]; target: number }> = [
     { label: "Chapter 1: Introduction", order: 1, sections: ["Background to the Study", "Statement of the Problem", "Objectives", "Research Questions", "Research Hypotheses", "Significance", "Scope of the Study", "Definition of Terms"], target: prelimTarget },
@@ -428,6 +429,7 @@ CRITICAL RULES FOR PROPOSALS:
 
       // Track for context in subsequent chapters
       genChapters.push({
+        key: ch.label,
         chapterTitle: ch.label,
         order: ch.order,
         content: text,
