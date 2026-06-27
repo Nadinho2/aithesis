@@ -158,15 +158,17 @@ export const verifyPayment = createServerFn({ method: "POST" })
 
 export const handlePaymentFailed = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: unknown) => z.object({ product: z.string().optional() }).parse(input))
+  .handler(async ({ context, data }) => {
     const { userId } = context;
     const email = await getUserEmail(userId);
     if (!email) return { success: false };
     const name = email.split("@")[0];
+    const tool = (productToTool(data.product ?? "") as BrainPadiTool) ?? "Thesis";
     await sendPaymentFailedEmail({
       to: email,
       name,
-      tool: "Thesis",
+      tool,
       amount: "0",
     });
     return { success: true };

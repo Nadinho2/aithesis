@@ -20,7 +20,7 @@ export async function getUserEmail(userId: string): Promise<string | null> {
  */
 export function productToTool(product: string): string | null {
   const map: Record<string, string> = {
-    proposal: "Thesis",
+    proposal: "Proposal",
     thesis: "Thesis",
     assignment: "Assignment",
     exam: "Exam Prep",
