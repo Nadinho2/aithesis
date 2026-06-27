@@ -122,39 +122,11 @@ export const verifyPayment = createServerFn({ method: "POST" })
         product: metadata.product,
         level: metadata.level || null,
         status: "completed",
+        used: false,
         metadata: json.data,
       }, { onConflict: "reference" });
 
     if (txError) throw new Error("Failed to record payment");
-
-    // --- Add credit to user_limits (pay-per-use: each payment = 1 generation) ---
-    try {
-      const product = metadata.product as string;
-      const level = (metadata.level as string) ?? "undergraduate";
-
-      // Ensure row exists
-      await safeUserLimitsUpsert(supabase as any, userId, {
-        proposal_limit: 0, proposal_used: 0,
-        thesis_available_ug: 0, thesis_available_masters: 0, thesis_available_phd: 0,
-        assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0,
-      });
-
-      const limits = await safeUserLimits(supabase as any, userId);
-      if (!limits) return; // table doesn't exist, skip
-
-      if (product === "proposal") {
-        await safeUserLimitsUpdate(supabase as any, userId, { proposal_limit: (limits.proposal_limit ?? 0) + 1 });
-      } else if (product === "thesis") {
-        const col = level === "masters" ? "thesis_available_masters" : level === "phd" ? "thesis_available_phd" : "thesis_available_ug";
-        await safeUserLimitsUpdate(supabase as any, userId, { [col]: (limits[col] ?? 0) + 1 });
-      } else {
-        const col = product === "assignment" ? "assignment_available" : product === "exam" ? "exam_available" : product === "presentation" ? "presentation_available" : "cv_available";
-        await safeUserLimitsUpdate(supabase as any, userId, { [col]: (limits[col] ?? 0) + 1 });
-      }
-    } catch (e: any) {
-      console.error("[verifyPayment] credit increment failed:", e.message ?? e);
-      // Don't block — payment already recorded
-    }
 
     // Send payment confirmed email (fire-and-forget)
     const userEmail = await getUserEmail(userId);
@@ -207,75 +179,64 @@ const CheckAccessInput = z.object({
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
 });
 
-// ─── Safe helpers (handle missing user_limits table gracefully) ───
-async function safeUserLimits(supabase: any, userId: string): Promise<Record<string, number> | null> {
+// ─── Count unused transactions for a product/level ───
+async function countUnusedTx(supabase: any, userId: string, product: string, level?: string): Promise<number> {
   try {
-    const { data } = await supabase
-      .from("user_limits")
-      .select("*")
+    let query = (supabase as any)
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
-      .maybeSingle();
-    return data ?? null;
+      .eq("status", "completed")
+      .eq("product", product)
+      .eq("used", false);
+    if (level) query = query.eq("level", level);
+    const { count } = await query;
+    return count ?? 0;
   } catch {
-    return null;
+    return 0;
   }
 }
 
-async function safeUserLimitsUpsert(supabase: any, userId: string, defaults: Record<string, any>): Promise<void> {
+// ─── Mark oldest unused transaction as used ───
+async function consumeTransaction(supabase: any, userId: string, product: string, level?: string): Promise<boolean> {
   try {
-    await supabase
-      .from("user_limits")
-      .upsert({ user_id: userId, ...defaults, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
-  } catch {}
-}
-
-async function safeUserLimitsUpdate(supabase: any, userId: string, updates: Record<string, any>): Promise<void> {
-  try {
-    await supabase
-      .from("user_limits")
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
-  } catch {}
+    let query = (supabase as any)
+      .from("transactions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("product", product)
+      .eq("used", false)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (level) query = query.eq("level", level);
+    const { data: tx } = await query.maybeSingle();
+    if (!tx) return false;
+    await (supabase as any)
+      .from("transactions")
+      .update({ used: true })
+      .eq("id", tx.id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export const checkAccess = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((input: unknown) => CheckAccessInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const price = getPrice(data.product, data.level as ThesisLevel);
 
-    // Check user_limits (single source of truth) — safe fallback if table missing
-    const limits = await safeUserLimits(supabase as any, userId);
+    // Count unused completed transactions for this product/level
+    const unused = await countUnusedTx(context.supabase, userId, data.product, data.level as string | undefined);
+    if (unused > 0) return { allowed: true, price };
 
-    if (limits) {
-      if (data.product === "thesis") {
-        const level = data.level ?? "undergraduate";
-        const field = `thesis_available_${level}`;
-        if ((limits[field] ?? 0) > 0) return { allowed: true, price };
-      }
-      if (data.product === "proposal") {
-        const available = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0);
-        if (available > 0) return { allowed: true, price };
-      }
-      if (data.product === "assignment") {
-        if ((limits.assignment_available ?? 0) > 0) return { allowed: true, price };
-      }
-      if (data.product === "exam") {
-        if ((limits.exam_available ?? 0) > 0) return { allowed: true, price };
-      }
-      if (data.product === "presentation") {
-        if ((limits.presentation_available ?? 0) > 0) return { allowed: true, price };
-      }
-      if (data.product === "cv") {
-        if ((limits.cv_available ?? 0) > 0) return { allowed: true, price };
-      }
-    }
-
-    // Fallback: if user_limits table missing or has zero credits, check recent-pending
+    // Fallback: user just paid via Paystack but hook hasn't fired yet (pending < 3 min)
     try {
       const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
-      const { count: recentPending } = await (supabase as any)
+      const { count: recentPending } = await (context.supabase as any)
         .from("transactions")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
@@ -283,7 +244,7 @@ export const checkAccess = createServerFn({ method: "POST" })
         .eq("product", data.product)
         .gte("created_at", freshCutoff);
       if ((recentPending ?? 0) > 0) return { allowed: true, price };
-    } catch { /* transactions table may also fail — just deny */ }
+    } catch { /* ignore */ }
 
     return { allowed: false, price };
   });
@@ -295,31 +256,37 @@ export const debugAccess = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CheckAccessInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const supabase = context.supabase as any;
 
-    const limits = await safeUserLimits(supabase, userId);
+    const unused = await countUnusedTx(context.supabase, userId, data.product, data.level as string | undefined);
 
-    let adminGranted = false;
-    if (limits) {
-      if (data.product === "thesis") {
-        const field = `thesis_available_${data.level ?? "undergraduate"}`;
-        adminGranted = (limits[field] ?? 0) > 0;
-      } else if (data.product === "proposal") {
-        adminGranted = (limits.proposal_limit ?? 0) - (limits.proposal_used ?? 0) > 0;
-      } else {
-        const col = data.product === "assignment" ? "assignment_available"
-          : data.product === "exam" ? "exam_available"
-          : data.product === "presentation" ? "presentation_available"
-          : "cv_available";
-        adminGranted = (limits[col] ?? 0) > 0;
-      }
-    }
+    // Also get raw transaction counts for debugging
+    let allCompleted = 0;
+    let allUnused = 0;
+    try {
+      const { count: c1 } = await (context.supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("product", data.product)
+        .eq("status", "completed");
+      allCompleted = c1 ?? 0;
+      const { count: c2 } = await (context.supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("product", data.product)
+        .eq("status", "completed")
+        .eq("used", false);
+      allUnused = c2 ?? 0;
+    } catch { /* ignore */ }
 
     return {
       product: data.product,
-      hasUserLimitsRow: !!limits,
-      userLimits: limits ?? null,
-      isAllowed: adminGranted,
+      level: data.level ?? null,
+      allCompleted,
+      allUnused,
+      unused: unused,
+      isAllowed: unused > 0,
     };
   });
 
@@ -387,34 +354,7 @@ export const markTransactionUsed = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => MarkUsedInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const supabase = context.supabase as any;
-    const col = data.product === "assignment" ? "assignment_available"
-      : data.product === "exam" ? "exam_available"
-      : data.product === "presentation" ? "presentation_available"
-      : "cv_available"; // cv
-
-    try {
-      // Ensure row exists
-      await supabase
-        .from("user_limits")
-        .upsert({ user_id: userId, assignment_available: 0, exam_available: 0, presentation_available: 0, cv_available: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
-
-      // Fetch current value, then decrement
-      const { data: row } = await supabase
-        .from("user_limits")
-        .select(col)
-        .eq("user_id", userId)
-        .maybeSingle();
-      const current = Math.max(0, (row?.[col] ?? 0) - 1);
-      await supabase
-        .from("user_limits")
-        .update({ [col]: current, updated_at: new Date().toISOString() })
-        .eq("user_id", userId);
-    } catch (e: any) {
-      console.error("[markTransactionUsed] failed:", e.message ?? e);
-      // Don't throw — counter failure shouldn't block the tool
-    }
-
+    await consumeTransaction(context.supabase, userId, data.product);
     return { ok: true };
   });
 

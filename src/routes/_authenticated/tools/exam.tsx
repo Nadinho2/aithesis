@@ -137,7 +137,9 @@ function ExamPage() {
         return;
       }
     } catch {
-      toast.error("Unable to verify payment. Please try again or refresh the page.");
+      saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
+      sessionStorage.setItem("return_path", window.location.pathname);
+      navigate({ to: "/billing" });
       return;
     }
     mut.mutate();

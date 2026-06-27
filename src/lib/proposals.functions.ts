@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
-import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
+import { checkGenerateLimit } from "./admin-limits.functions";
 import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 
@@ -75,18 +75,20 @@ export const generateProposal = createServerFn({ method: "POST" })
     try {
       debug("Starting generateProposal for user", userId);
 
-      // Payment/credit check — user must have credits in user_limits
-      let remaining = 0;
+      // Payment check — count unused transactions instead of user_limits
+      let unusedTx = 0;
       try {
-        const { data: limits } = await (supabase as any)
-          .from("user_limits")
-          .select("proposal_limit, proposal_used")
+        const { count } = await (supabase as any)
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
           .eq("user_id", userId)
-          .maybeSingle();
-        remaining = (limits?.proposal_limit ?? 0) - (limits?.proposal_used ?? 0);
-      } catch { /* table may not exist — treat as 0 credits */ }
-      const isPaid = remaining > 0;
-      debug("isPaid:", isPaid, "remaining:", remaining);
+          .eq("status", "completed")
+          .eq("product", "proposal")
+          .eq("used", false);
+        unusedTx = count ?? 0;
+      } catch { unusedTx = 0; }
+      const isPaid = unusedTx > 0;
+      debug("isPaid:", isPaid, "unusedTx:", unusedTx);
 
       if (!isPaid) {
         const canGen = await checkGenerateLimit(supabase, userId, "proposal");
@@ -167,8 +169,19 @@ export const generateProposal = createServerFn({ method: "POST" })
       });
     }
 
-    // Decrement credit BEFORE enqueue (works for both payment and admin credits)
-    await incrementUsage(supabase, userId, "proposal");
+    // Consume one transaction BEFORE enqueue (pay-per-use)
+    try {
+      await (supabase as any)
+        .from("transactions")
+        .update({ used: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", "proposal")
+        .eq("used", false)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .throwOnError();
+    } catch { /* non-critical */ }
 
     // Enqueue background job for queue worker
     await enqueueJob("proposal", {

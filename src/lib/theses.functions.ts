@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
-import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
+import { checkGenerateLimit } from "./admin-limits.functions";
 import { enqueueJob } from "./queue";
 
 const ManualTopic = z.object({
@@ -34,18 +34,20 @@ export const generateThesis = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Payment/credit check — user must have credits in user_limits
+    // Payment/credit check — count unused transactions
     const lvl = data.level ?? "undergraduate";
-    const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
     let isPaid = false;
     try {
-      const { data: limits } = await (supabase as any)
-        .from("user_limits")
-        .select(col)
+      const { count } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .maybeSingle();
-      isPaid = (limits?.[col] ?? 0) > 0;
-    } catch { /* table may not exist — treat as no credits */ }
+        .eq("status", "completed")
+        .eq("product", "thesis")
+        .eq("level", lvl)
+        .eq("used", false);
+      isPaid = (count ?? 0) > 0;
+    } catch { /* ignore */ }
 
     // Limit check (non-paid only)
     if (!isPaid) {
@@ -104,8 +106,19 @@ export const generateThesis = createServerFn({ method: "POST" })
       });
     }
 
-    // Decrement credit BEFORE enqueue (works for both payment and admin credits)
-    await incrementUsage(supabase, userId, "thesis", data.level);
+    // Consume one transaction BEFORE enqueue (pay-per-use)
+    try {
+      await (supabase as any)
+        .from("transactions")
+        .update({ used: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", "thesis")
+        .eq("level", lvl)
+        .eq("used", false)
+        .order("created_at", { ascending: true })
+        .limit(1);
+    } catch { /* non-critical */ }
 
     // Enqueue background job for queue worker
     await enqueueJob("thesis", {
