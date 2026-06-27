@@ -43,8 +43,23 @@ export const generateCv = createServerFn({ method: "POST" })
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
       const raw = await callAI(apiKey, {
         model: "deepseek-reasoner",
-        system:
-          "Extract the following fields from this CV document and return ONLY valid JSON (no markdown, no code fences): { full_name, email, phone, address, summary, education, experience, skills, certifications, languages }",
+        max_tokens: 4096,
+        system: `You are a CV parser. Extract the following fields from the document below.
+If a field is not present, use an empty string "".
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  full_name: string,
+  email: string,
+  phone: string,
+  address: string,
+  summary: string,
+  education: string,
+  experience: string,
+  skills: string,
+  certifications: string,
+  languages: string
+}`,
         user: parsed.text,
       });
       // callAI already returns a parsed object
@@ -59,8 +74,21 @@ export const generateCv = createServerFn({ method: "POST" })
     const enhanced = await callAI(apiKey, {
       model: "deepseek-reasoner",
       max_tokens: 4096,
-      system:
-        "You are a professional CV writer. Improve the wording of this CV information. Make it concise, professional, and achievement-oriented. Return ONLY valid JSON (no markdown, no code fences) in this exact format: { full_name: string, email: string, phone: string, address: string, summary: string, education: string, experience: string, skills: string, certifications: string, languages: string }",
+      system: `You are a professional CV writer for the Nigerian and international job market.
+Rewrite this CV information to be concise, achievement-oriented, and optimised for ATS (Applicant Tracking Systems).
+
+FOR EACH FIELD:
+- full_name: Keep as-is, capitalize properly
+- email/phone/address: Keep as-is, ensure properly formatted
+- summary: 3-4 lines maximum. Start with "[Role] with X years of experience..." Highlight 2-3 key achievements with measurable impact. Use industry keywords.
+- education: Format as "Degree, Institution, Year". Keep chronological (most recent first).
+- experience: Format each role as "Job Title at Company (Year-Year): 2-3 bullet points starting with action verbs (Led, Managed, Developed, Increased, Reduced). Include metrics where possible."
+- skills: Group into categories: Technical Skills, Soft Skills, Languages. Use industry-standard terms.
+- certifications: Format as "Certification Name, Issuing Body, Year"
+- languages: Format as "Language: Proficiency Level (Native/Fluent/Intermediate/Basic)"
+
+Return ONLY valid JSON (no markdown, no code fences):
+{ full_name, email, phone, address, summary, education, experience, skills, certifications, languages }`,
       user: JSON.stringify(cvInfo),
     });
 

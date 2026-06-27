@@ -32,11 +32,29 @@ export const generatePresentation = createServerFn({ method: "POST" })
 
     const raw = await callAI(apiKey, {
       model: "deepseek-reasoner",
-      system: `You are a presentation designer. Generate ${data.slide_count} slides for a presentation on "${data.topic}".
-Each slide has: title, bullets (max 6), and speaker notes.
+      max_tokens: 64000,
+      system: `You are a senior academic and presentation designer creating a ${data.slide_count}-slide presentation on "${data.topic}" for a Nigerian university audience.
+
+EACH SLIDE MUST HAVE:
+- title: A short, punchy title (max 10 words)
+- bullets: 3-6 concise bullet points (each 5-15 words, no full paragraphs)
+- speaker_notes: 2-4 sentences explaining what the presenter should say — expand on the bullets, don't repeat them
+
+SLIDE STRUCTURE:
+- Slide 1: Title slide — presentation title, presenter context
+- Slide 2: Agenda/Outline — what will be covered
+- Slides 3-${data.slide_count - 1}: Content slides — one main idea per slide
+- Last slide: Summary/Conclusion — key takeaways
+
+DESIGN RULES:
+- Bullets must be scannable — no long sentences
+- Speaker notes must add value beyond the bullets
+- Use academic tone but keep it accessible
+- No markdown formatting in output
+- No filler slides like "Thank you" or "Questions?" unless the last slide
+
 Return ONLY valid JSON (no markdown, no code fences):
-{ slides: [{ title, bullets: [], speaker_notes }] }
-Keep bullets concise — presentation style.`,
+{ slides: [{ title: string, bullets: string[], speaker_notes: string }] }`,
       user: fullContent,
     });
 

@@ -55,16 +55,41 @@ export const generateExam = createServerFn({ method: "POST" })
           ? (data.theory_count ?? Math.floor(data.total_questions / 2))
           : 0;
 
-    const systemPrompt = `You are an exam preparation assistant. Generate exam questions based on the provided notes.
-${objectiveCount > 0 ? `Generate ${objectiveCount} multiple-choice objectives (4 options each, mark the correct answer). Include a brief explanation for each correct answer.` : ""}
-${theoryCount > 0 ? `Generate ${theoryCount} theory questions.` : ""}
+    const systemPrompt = `You are an experienced Nigerian university lecturer creating an examination paper based on the provided notes.
+
+EXAM STRUCTURE:
+${objectiveCount > 0 ? `SECTION A: OBJECTIVE QUESTIONS (${objectiveCount} questions)
+- Multiple choice with 4 options each (A-D)
+- Each question tests a distinct concept from the notes
+- Avoid trick questions — test understanding, not memory
+- Distractors must be plausible but clearly wrong to someone who studied
+- Include a brief explanation for why the correct answer is correct` : ""}
+${theoryCount > 0 ? `
+${objectiveCount > 0 ? `SECTION B: THEORY QUESTIONS (${theoryCount} questions)
+` : `THEORY QUESTIONS (${theoryCount} questions)
+`}- Each question should require 1-3 paragraphs to answer
+- Assign marks based on complexity: simple recall (5 marks), analysis (10 marks), evaluation (15 marks)
+- Questions should progress from easier to harder
+- Include "Discuss", "Explain", "Analyse", "Compare and contrast" types` : ""}
+
+GENERAL RULES:
+- Questions must be clear and unambiguous
+- Cover key concepts from the notes, not obscure details
+- Do not repeat the same concept in multiple questions
+- Language: formal academic English appropriate for university level
+- Do NOT include an answer key section — answers are embedded in each question object
+
 Return ONLY valid JSON (no markdown, no code fences):
-{ objectives: [{ question: "question text", options: ["Option A text", "Option B text", "Option C text", "Option D text"], answer: "Option A text", explanation: "Why this is correct" }], theory: [{ question: "question text", marks: number }] }
-IMPORTANT: The "answer" field must contain the FULL TEXT of the correct option, NOT a letter label.
-IMPORTANT: Each option in the "options" array must be the full text of the choice, not just "A", "B", etc.`;
+{
+  ${objectiveCount > 0 ? `objectives: [{ question: "question text", options: ["Option A text", "Option B text", "Option C text", "Option D text"], answer: "Option A text", explanation: "One sentence explaining why" }],` : ""}
+  ${theoryCount > 0 ? `theory: [{ question: "question text", marks: number }]` : ""}
+}
+IMPORTANT: The "answer" field must contain the FULL TEXT of the correct option (e.g. "Lagos"), NOT a letter label (e.g. "A").
+IMPORTANT: Each option in the "options" array must be the full text of the choice, not just a letter.`;
 
     const raw = await callAI(apiKey, {
       model: "deepseek-reasoner",
+      max_tokens: 64000,
       system: systemPrompt,
       user: notes,
     });
