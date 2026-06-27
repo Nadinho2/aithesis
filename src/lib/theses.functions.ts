@@ -37,12 +37,15 @@ export const generateThesis = createServerFn({ method: "POST" })
     // Payment/credit check — user must have credits in user_limits
     const lvl = data.level ?? "undergraduate";
     const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
-    const { data: limits } = await (supabase as any)
-      .from("user_limits")
-      .select(col)
-      .eq("user_id", userId)
-      .maybeSingle();
-    const isPaid = (limits?.[col] ?? 0) > 0;
+    let isPaid = false;
+    try {
+      const { data: limits } = await (supabase as any)
+        .from("user_limits")
+        .select(col)
+        .eq("user_id", userId)
+        .maybeSingle();
+      isPaid = (limits?.[col] ?? 0) > 0;
+    } catch { /* table may not exist — treat as no credits */ }
 
     // Limit check (non-paid only)
     if (!isPaid) {

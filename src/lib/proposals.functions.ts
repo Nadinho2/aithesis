@@ -76,12 +76,15 @@ export const generateProposal = createServerFn({ method: "POST" })
       debug("Starting generateProposal for user", userId);
 
       // Payment/credit check — user must have credits in user_limits
-      const { data: limits } = await (supabase as any)
-        .from("user_limits")
-        .select("proposal_limit, proposal_used")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const remaining = (limits?.proposal_limit ?? 0) - (limits?.proposal_used ?? 0);
+      let remaining = 0;
+      try {
+        const { data: limits } = await (supabase as any)
+          .from("user_limits")
+          .select("proposal_limit, proposal_used")
+          .eq("user_id", userId)
+          .maybeSingle();
+        remaining = (limits?.proposal_limit ?? 0) - (limits?.proposal_used ?? 0);
+      } catch { /* table may not exist — treat as 0 credits */ }
       const isPaid = remaining > 0;
       debug("isPaid:", isPaid, "remaining:", remaining);
 
