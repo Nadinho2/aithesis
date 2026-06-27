@@ -11,6 +11,26 @@ export const Route = createFileRoute("/")({
           "Topics, proposals, theses, assignments, exam prep, presentations, and CVs — all in one platform powered by 200M+ verified scholarly sources.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://www.mybrainpadi.com" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          "name": "Mybrainpadi",
+          "url": "https://www.mybrainpadi.com",
+          "description": "An all-in-one academic toolkit for students: research topics, proposals, theses, assignments, exam prep, presentations, and CVs backed by verified citations.",
+          "applicationCategory": "EducationalApplication",
+          "operatingSystem": "All",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "NGN",
+          },
+        }),
+      },
+    ],
   }),
   component: LandingPage,
 });

@@ -37,7 +37,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  void error; // consumed by reporter
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
@@ -89,15 +89,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "An all-in-one academic toolkit for students: research, assignments, exams, presentations, and career tools backed by verified citations.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:url", content: "https://www.mybrainpadi.com" },
+      { property: "og:image", content: "https://www.mybrainpadi.com/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Mybrainpadi — Your complete education ecosystem" },
-      { name: "description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
-      { property: "og:description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
-      { name: "twitter:description", content: "Mybrainpadi is an all-in-one education ecosystem that helps students with research topics, proposals, theses, assignments, exam prep, presentations, and CV building." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4c0d5e38-e8bf-47bc-b447-ea259822b476/id-preview-62eeb6e3--ea7c23ab-faa4-4923-be18-021aa6bd5e40.lovable.app-1780473278507.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/4c0d5e38-e8bf-47bc-b447-ea259822b476/id-preview-62eeb6e3--ea7c23ab-faa4-4923-be18-021aa6bd5e40.lovable.app-1780473278507.png" },
+      { name: "twitter:description", content: "An all-in-one academic toolkit for students: research, assignments, exams, presentations, and career tools backed by verified citations." },
+      { name: "twitter:image", content: "https://www.mybrainpadi.com/og-image.png" },
+      { name: "robots", content: "index, follow" },
     ],
     links: [
+      { rel: "canonical", href: "https://www.mybrainpadi.com" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       {
