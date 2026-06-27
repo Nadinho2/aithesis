@@ -112,6 +112,7 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const amount = json.data.amount / 100; // Convert back from kobo
 
     // Upsert transaction (pending record was already saved in initPayment)
+    // Note: used column may not exist yet. Omit it — DEFAULT false handles it.
     const { error: txError } = await (supabase as any)
       .from("transactions")
       .upsert({
@@ -122,7 +123,6 @@ export const verifyPayment = createServerFn({ method: "POST" })
         product: metadata.product,
         level: metadata.level || null,
         status: "completed",
-        used: false,
         metadata: json.data,
       }, { onConflict: "reference" });
 
