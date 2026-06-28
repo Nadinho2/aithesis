@@ -113,12 +113,14 @@ function NewThesisPage() {
         saveFormBeforePay(form);
         sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
         return;
       }
     } catch {
       saveFormBeforePay(form);
       sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
+      setTimeout(() => { window.location.href = "/billing"; }, 300);
       return;
     }
     // Fire mutation and navigate away — it continues in the background

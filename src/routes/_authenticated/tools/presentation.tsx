@@ -182,12 +182,14 @@ function PresentationPage() {
         saveFormBeforePay({ topic, content, slideCount });
         sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
         return;
       }
     } catch {
       saveFormBeforePay({ topic, content, slideCount });
       sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
+      setTimeout(() => { window.location.href = "/billing"; }, 300);
       return;
     }
     mut.mutate();

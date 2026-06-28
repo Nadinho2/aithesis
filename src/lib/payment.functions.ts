@@ -182,6 +182,8 @@ const CheckAccessInput = z.object({
 });
 
 // ─── Count unused transactions for a product/level ───
+// Returns number of unused credits. Falls back to counting ALL completed
+// transactions if the `used` column doesn't exist yet in production.
 async function countUnusedTx(supabase: any, userId: string, product: string, level?: string): Promise<number> {
   try {
     let query = (supabase as any)
@@ -192,17 +194,31 @@ async function countUnusedTx(supabase: any, userId: string, product: string, lev
       .eq("product", product)
       .eq("used", false);
     if (level) query = query.eq("level", level);
-    const { count } = await query;
-    return count ?? 0;
+    const { count, error } = await query;
+
+    // Column exists → return unused count
+    if (!error) return count ?? 0;
+
+    // Column missing → fallback: count ALL completed transactions
+    // (user hasn't run the ALTER TABLE migration yet)
+    const { count: fallbackCount } = await (supabase as any)
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("product", product);
+    return fallbackCount ?? 0;
   } catch {
     return 0;
   }
 }
 
 // ─── Mark oldest unused transaction as used ───
+// Graceful: if `used` column doesn't exist, the query errors, and we return false —
+// credit won't be consumed, but at least generation won't break.
 async function consumeTransaction(supabase: any, userId: string, product: string, level?: string): Promise<boolean> {
   try {
-    let query = (supabase as any)
+    let selectQ = (supabase as any)
       .from("transactions")
       .select("id")
       .eq("user_id", userId)
@@ -211,14 +227,15 @@ async function consumeTransaction(supabase: any, userId: string, product: string
       .eq("used", false)
       .order("created_at", { ascending: true })
       .limit(1);
-    if (level) query = query.eq("level", level);
-    const { data: tx } = await query.maybeSingle();
+    if (level) selectQ = selectQ.eq("level", level);
+    const { data: tx } = await selectQ.maybeSingle();
     if (!tx) return false;
-    await (supabase as any)
+
+    const { error } = await (supabase as any)
       .from("transactions")
       .update({ used: true })
       .eq("id", tx.id);
-    return true;
+    return !error;
   } catch {
     return false;
   }
