@@ -63,21 +63,22 @@ function QuickProposalPage() {
         },
       }),
     onSuccess: (result: any) => {
-      if (!result?.ok) {
-        // Payment required — redirect to billing
-        if (result?.code === "PAYMENT_REQUIRED") {
-          saveFormBeforePay(form);
-          sessionStorage.setItem("return_path", window.location.pathname);
-          navigate({ to: "/billing" });
-          setTimeout(() => { window.location.href = "/billing"; }, 300);
-          return;
-        }
-        // Some other error
-        toast.error(String(result?.message ?? "Generation failed. Please try again."));
+      // Normal success — proposal enqueued
+      if (result?.success) {
+        toast.success("Proposal is being generated. You'll receive an email when it's ready.");
+        qc.invalidateQueries({ queryKey: ["proposals"] });
         return;
       }
-      toast.success("Proposal is being generated. You'll receive an email when it's ready.");
-      qc.invalidateQueries({ queryKey: ["proposals"] });
+      // Payment required — no credits, redirect to billing
+      if (result?.code === "PAYMENT_REQUIRED") {
+        saveFormBeforePay(form);
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
+      // Unknown response
+      toast.error(String(result?.message ?? "Generation failed. Please try again."));
     },
     onError: (e) => {
       console.error("[quick-proposal] Generation error:", e);
