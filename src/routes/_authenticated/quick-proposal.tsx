@@ -65,7 +65,14 @@ function QuickProposalPage() {
           citation_style: form.citation_style,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      if (result?.code === "PAYMENT_REQUIRED") {
+        saveFormBeforePay(form);
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
       toast.success("Proposal is being generated. You'll receive an email when it's ready.");
       qc.invalidateQueries({ queryKey: ["proposals"] });
     },
