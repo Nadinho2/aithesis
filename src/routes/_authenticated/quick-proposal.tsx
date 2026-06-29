@@ -86,7 +86,7 @@ function QuickProposalPage() {
     }
     // Check if user has paid for this proposal level
     try {
-      const access = await checkAccessFn({ data: { product: "proposal", level: form.level } });
+      const access = await checkAccessFn({ data: { product: "proposal" } });
       if (!access.allowed) {
         saveFormBeforePay(form);
         sessionStorage.setItem("return_path", window.location.pathname);
