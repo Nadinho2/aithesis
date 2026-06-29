@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
-import { checkAccess } from "@/lib/payment.functions";
 import { saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -63,8 +62,21 @@ function QuickProposalPage() {
           citation_style: form.citation_style,
         },
       }),
-    onSuccess: () => {
-      toast.success("Proposal generated successfully!");
+    onSuccess: (result: any) => {
+      if (!result?.ok) {
+        // Payment required — redirect to billing
+        if (result?.code === "PAYMENT_REQUIRED") {
+          saveFormBeforePay(form);
+          sessionStorage.setItem("return_path", window.location.pathname);
+          navigate({ to: "/billing" });
+          setTimeout(() => { window.location.href = "/billing"; }, 300);
+          return;
+        }
+        // Some other error
+        toast.error(String(result?.message ?? "Generation failed. Please try again."));
+        return;
+      }
+      toast.success("Proposal is being generated. You'll receive an email when it's ready.");
       qc.invalidateQueries({ queryKey: ["proposals"] });
     },
     onError: (e) => {
@@ -72,8 +84,6 @@ function QuickProposalPage() {
       toast.error(String(e instanceof Error ? e.message : e));
     },
   });
-
-  const checkAccessFn = useServerFn(checkAccess);
 
   // Handle Paystack redirect back after payment — just verify silently
 
@@ -83,27 +93,8 @@ function QuickProposalPage() {
       toast.error("Title is required.");
       return;
     }
-    // Check if user has paid
-    try {
-      const access = await checkAccessFn({ data: { product: "proposal" } });
-      if (!access.allowed) {
-        saveFormBeforePay(form);
-        sessionStorage.setItem("return_path", window.location.pathname);
-        navigate({ to: "/billing" });
-        setTimeout(() => { window.location.href = "/billing"; }, 300);
-        return;
-      }
-    } catch {
-      saveFormBeforePay(form);
-      sessionStorage.setItem("return_path", window.location.pathname);
-      navigate({ to: "/billing" });
-      setTimeout(() => { window.location.href = "/billing"; }, 300);
-      return;
-    }
-    // Fire mutation and navigate away — it continues in the background
-    sessionStorage.setItem("draft_in_progress", Date.now().toString());
+    // Single round trip — generateProposal returns {ok:false} if no credits
     mut.mutate();
-    toast.info("Generating your proposal…");
   };
 
   const updateObj = (i: number, v: string) => {

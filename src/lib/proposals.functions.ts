@@ -75,7 +75,7 @@ export const generateProposal = createServerFn({ method: "POST" })
     try {
       debug("Starting generateProposal for user", userId);
 
-      // Payment check — count unused transactions instead of user_limits
+      // Payment check — count unused transactions
       let unusedTx = 0;
       try {
         const { count } = await (supabase as any)
@@ -88,12 +88,12 @@ export const generateProposal = createServerFn({ method: "POST" })
         unusedTx = count ?? 0;
       } catch { unusedTx = 0; }
       const isPaid = unusedTx > 0;
-      debug("isPaid:", isPaid, "unusedTx:", unusedTx);
 
       if (!isPaid) {
         const canGen = await checkGenerateLimit(supabase, userId, "proposal");
-        debug("checkGenerateLimit:", canGen);
-        if (!canGen) throw new Error("Generation limit reached. Upgrade your plan to continue.");
+        if (!canGen) {
+          return { ok: false, code: "PAYMENT_REQUIRED" as const, price: 5000 };
+        }
       }
 
       let topicCtx: {
