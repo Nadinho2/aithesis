@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
+import { checkAccess } from "@/lib/payment.functions";
 import { saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
 import { FileText, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +44,8 @@ function QuickProposalPage() {
 
   const [form, setForm] = useState(savedForm ?? defaultForm);
 
+  const checkAccessFn = useServerFn(checkAccess);
+
   const mut = useMutation({
     mutationFn: () =>
       fn({
@@ -62,39 +65,43 @@ function QuickProposalPage() {
           citation_style: form.citation_style,
         },
       }),
-    onSuccess: (result: any) => {
-      // Normal success — proposal enqueued
-      if (result?.success) {
-        toast.success("Proposal is being generated. You'll receive an email when it's ready.");
-        qc.invalidateQueries({ queryKey: ["proposals"] });
-        return;
-      }
-      // Payment required — no credits, redirect to billing
-      if (result?.code === "PAYMENT_REQUIRED") {
-        saveFormBeforePay(form);
-        sessionStorage.setItem("return_path", window.location.pathname);
-        navigate({ to: "/billing" });
-        setTimeout(() => { window.location.href = "/billing"; }, 300);
-        return;
-      }
-      // Unknown response
-      toast.error(String(result?.message ?? "Generation failed. Please try again."));
+    onSuccess: () => {
+      toast.success("Proposal is being generated. You'll receive an email when it's ready.");
+      qc.invalidateQueries({ queryKey: ["proposals"] });
     },
-    onError: (e) => {
-      console.error("[quick-proposal] Generation error:", e);
-      toast.error(String(e instanceof Error ? e.message : e));
-    },
+    onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
   // Handle Paystack redirect back after payment — just verify silently
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title) {
-      toast.error("Title is required.");
+    if (!form.title || !form.problem_statement || !form.research_gap) {
+      toast.error("Title, problem statement, and research gap are required.");
       return;
     }
-    // Single round trip — generateProposal returns {ok:false} if no credits
+    if (form.objectives.filter((o) => o.trim()).length < 1) {
+      toast.error("Add at least one objective.");
+      return;
+    }
+    // Check if user has paid for this proposal level
+    try {
+      const access = await checkAccessFn({ data: { product: "proposal", level: form.level } });
+      if (!access.allowed) {
+        saveFormBeforePay(form);
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
+    } catch {
+      saveFormBeforePay(form);
+      sessionStorage.setItem("return_path", window.location.pathname);
+      navigate({ to: "/billing" });
+      setTimeout(() => { window.location.href = "/billing"; }, 300);
+      return;
+    }
+    // Fire mutation and stay on page — it continues in the background
     mut.mutate();
   };
 
