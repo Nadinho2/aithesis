@@ -114,17 +114,14 @@ This chapter presents and analyses data based EXACTLY on:
 - The sample size calculated in Chapter Three
 
 DATA TABLES:
-Where data is presented in tabular form, format every table using this exact markdown structure:
+Where data is presented in tabular form, format every table using this exact structure:
 
+[TABLE: Table 4.1 Distribution of Respondents by Gender]
 | Column 1 | Column 2 | Column 3 |
 |----------|----------|----------|
 | Data     | Data     | Data     |
 
-Every table must have:
-- A table number and title above it: 'Table 4.1: Distribution of Respondents by Gender'
-- A clear header row
-- Consistent column alignment
-- A brief interpretation paragraph immediately after each table
+CRITICAL: Every table MUST start with a [TABLE: Title] tag on its own line. The table rows follow immediately after on separate lines. No extra text between the tag line and the table. A brief interpretation paragraph MUST follow each table.
 
 HYPOTHESES TESTING:
 For each hypothesis, follow this format exactly:

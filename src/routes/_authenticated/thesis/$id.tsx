@@ -231,9 +231,9 @@ function Section({ title, body }: { title: string; body?: string }) {
       {blocks.map((block, i) => {
         if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4 break-words">{block.content}</p>;
         if (block.type === "table") return (
-          <div key={i} className="mb-6 overflow-x-auto max-w-full">
-            <table className="w-full text-sm border-collapse">
-              <thead><tr>{block.headers.map((h, ci) => <th key={ci} className="border border-ink/20 bg-ink/5 px-3 py-2 text-left font-semibold break-words [overflow-wrap:anywhere]">{h}</th>)}</tr></thead>
+          <div key={i} className="mb-6 w-full overflow-x-auto">
+            <table className="w-full table-fixed text-sm border-collapse">
+              <thead><tr>{block.headers.map((h, ci) => <th key={ci} className="border border-ink/20 bg-ink/5 px-3 py-2 text-left font-semibold whitespace-nowrap">{h}</th>)}</tr></thead>
               <tbody>{block.rows.map((row, ri) => <tr key={ri} className="even:bg-ink/[0.02]">{row.map((cell, ci) => <td key={ci} className="border border-ink/20 px-3 py-2 break-words [overflow-wrap:anywhere]">{cell}</td>)}</tr>)}</tbody>
             </table>
             {block.caption && <p className="text-xs text-ink/60 mt-1 italic">{block.caption}</p>}
