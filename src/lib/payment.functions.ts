@@ -265,12 +265,14 @@ export const checkAccess = createServerFn({ method: "POST" })
       if ((recentPending ?? 0) > 0) return { allowed: true, price };
     } catch { /* ignore */ }
 
-    // Fallback 2: admin-assigned free credits in user_limits
-    try {
-      const { checkGenerateLimit } = await import("./admin-limits.functions");
-      const canGen = await checkGenerateLimit(context.supabase, userId, data.product, data.level as string | undefined);
-      if (canGen) return { allowed: true, price };
-    } catch { /* ignore */ }
+    // Fallback 2: admin-assigned free credits in user_limits (thesis & proposal only)
+    if (data.product === "thesis" || data.product === "proposal") {
+      try {
+        const { checkGenerateLimit } = await import("./admin-limits.functions");
+        const canGen = await checkGenerateLimit(context.supabase, userId, data.product as "thesis" | "proposal", data.level as string | undefined);
+        if (canGen) return { allowed: true, price };
+      } catch { /* ignore */ }
+    }
 
     return { allowed: false, price };
   });
