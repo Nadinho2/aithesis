@@ -229,7 +229,7 @@ function Section({ title, body }: { title: string; body?: string }) {
     <section className="mb-10 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
       {blocks.map((block, i) => {
-        if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4 break-words">{block.content}</p>;
+        if (block.type === "text") return <p key={i} className="text-[15px] leading-[1.8] text-ink/85 mb-4 break-words" dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(block.content) }} />;
         if (block.type === "table") return (
           <div key={i} className="mb-6 w-full overflow-x-auto">
             <table className="w-full table-fixed text-sm border-collapse">
@@ -258,6 +258,13 @@ function EditableSection({ title, value, onChange }: { title: string; value: str
       <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={8} className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-[15px] leading-relaxed focus:outline-none focus:border-sage resize-y font-mono text-sm" />
     </section>
   );
+}
+
+function formatInlineMarkdown(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, "<strong class='font-semibold'>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code class='bg-ink/5 px-1 py-0.5 rounded text-[13px] font-mono'>$1</code>");
 }
 
 function parseRichBlocks(text: string): Array<
