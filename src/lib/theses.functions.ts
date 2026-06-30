@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
-import { checkGenerateLimit } from "./admin-limits.functions";
+import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 import { enqueueJob } from "./queue";
 
 const ManualTopic = z.object({
@@ -119,6 +119,11 @@ export const generateThesis = createServerFn({ method: "POST" })
         .order("created_at", { ascending: true })
         .limit(1);
     } catch { /* non-critical */ }
+
+    // If no paid tx was consumed, deduct from admin free credits instead
+    if (!isPaid) {
+      try { await incrementUsage(supabase, userId, "thesis", data.level); } catch { /* non-critical */ }
+    }
 
     // Enqueue background job for queue worker
     await enqueueJob("thesis", {

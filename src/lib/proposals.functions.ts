@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchScholarlyRefs, formatAPA, type ScholarlyRef } from "./scholarly.server";
 import { buildProposalDocx, toBase64 } from "./docx.server";
 import { scrubObject, countWordsDeep, trimToExactWords } from "./ai-utils.server";
-import { checkGenerateLimit } from "./admin-limits.functions";
+import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
 import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 
@@ -182,6 +182,11 @@ export const generateProposal = createServerFn({ method: "POST" })
         .limit(1)
         .throwOnError();
     } catch { /* non-critical */ }
+
+    // If no paid tx was consumed, deduct from admin free credits instead
+    if (!isPaid) {
+      try { await incrementUsage(supabase, userId, "proposal"); } catch { /* non-critical */ }
+    }
 
     // Enqueue background job for queue worker
     await enqueueJob("proposal", {

@@ -252,7 +252,7 @@ export const checkAccess = createServerFn({ method: "POST" })
     const unused = await countUnusedTx(context.supabase, userId, data.product, data.level as string | undefined);
     if (unused > 0) return { allowed: true, price };
 
-    // Fallback: user just paid via Paystack but hook hasn't fired yet (pending < 3 min)
+    // Fallback 1: user just paid via Paystack but hook hasn't fired yet (pending < 3 min)
     try {
       const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
       const { count: recentPending } = await (context.supabase as any)
@@ -263,6 +263,13 @@ export const checkAccess = createServerFn({ method: "POST" })
         .eq("product", data.product)
         .gte("created_at", freshCutoff);
       if ((recentPending ?? 0) > 0) return { allowed: true, price };
+    } catch { /* ignore */ }
+
+    // Fallback 2: admin-assigned free credits in user_limits
+    try {
+      const { checkGenerateLimit } = await import("./admin-limits.functions");
+      const canGen = await checkGenerateLimit(context.supabase, userId, data.product, data.level as string | undefined);
+      if (canGen) return { allowed: true, price };
     } catch { /* ignore */ }
 
     return { allowed: false, price };
