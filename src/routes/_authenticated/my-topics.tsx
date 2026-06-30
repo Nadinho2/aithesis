@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { listTopics, deleteTopics, exportTopicsDocx } from "@/lib/topics.functions";
 import { generateProposal } from "@/lib/proposals.functions";
+import { checkAccess } from "@/lib/payment.functions";
+import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import { Loader2, Trash2, Sparkles, FileText, ChevronRight, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +45,7 @@ function MyTopicsPage() {
   const fn = useServerFn(listTopics);
   const delFn = useServerFn(deleteTopics);
   const genFn = useServerFn(generateProposal);
+  const checkAccessFn = useServerFn(checkAccess);
   const exportFn = useServerFn(exportTopicsDocx);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -83,9 +86,34 @@ function MyTopicsPage() {
     const level = (genLevel[topicId] ?? "undergraduate") as "undergraduate" | "masters" | "phd";
     const target_words = Math.min(20000, Math.max(500, genWords[topicId] ?? 2800));
     setGenBusy(topicId);
+    try {
+      const access = await checkAccessFn({ data: { product: "proposal" } });
+      if (!access.allowed) {
+        saveFormBeforePay({ level, target_words, topic_id: topicId });
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        setGenBusy(null);
+        return;
+      }
+    } catch {
+      saveFormBeforePay({ level, target_words, topic_id: topicId });
+      sessionStorage.setItem("return_path", window.location.pathname);
+      navigate({ to: "/billing" });
+      setTimeout(() => { window.location.href = "/billing"; }, 300);
+      setGenBusy(null);
+      return;
+    }
     sessionStorage.setItem("draft_in_progress", Date.now().toString());
-    // Fire the mutation (fire-and-forget) and navigate immediately
-    genFn({ data: { topic_id: topicId, level, target_words } }).catch((e) => {
+    genFn({ data: { topic_id: topicId, level, target_words } }).then((result: any) => {
+      if (result?.code === "PAYMENT_REQUIRED") {
+        saveFormBeforePay({ level, target_words, topic_id: topicId });
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
+    }).catch((e) => {
       console.error("Proposal generation failed:", e);
       sessionStorage.setItem("draft_error", e instanceof Error ? e.message : String(e));
     });
