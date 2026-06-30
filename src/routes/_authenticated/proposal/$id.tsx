@@ -342,12 +342,19 @@ function ProposalPage() {
   );
 }
 
+function formatInlineMarkdown(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, "<strong class='font-semibold'>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code class='bg-ink/5 px-1 py-0.5 rounded text-[13px] font-mono'>$1</code>");
+}
+
 function Section({ title, body }: { title: string; body?: string }) {
   if (!body) return null;
   return (
     <section className="mb-8 max-w-full">
       <h2 className="font-serif text-2xl mb-3 text-ink">{title}</h2>
-      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap break-words overflow-x-auto max-w-full [overflow-wrap:anywhere]">{body}</div>
+      <div className="text-[15px] leading-[1.8] text-ink/85 whitespace-pre-wrap break-words overflow-x-auto max-w-full [overflow-wrap:anywhere]" dangerouslySetInnerHTML={{ __html: formatInlineMarkdown(body) }} />
     </section>
   );
 }
