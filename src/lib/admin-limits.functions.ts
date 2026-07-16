@@ -124,11 +124,24 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ─── Map product type to user_limits column ───
+function limitsColumn(type: string): string | null {
+  switch (type) {
+    case "proposal": return null; // special two-column model
+    case "thesis": return null; // per-level below
+    case "assignment": return "assignment_available";
+    case "exam": return "exam_available";
+    case "presentation": return "presentation_available";
+    case "cv": return "cv_available";
+    default: return null;
+  }
+}
+
 // ─── Check generate limit (direct SQL, no RPC) ───
 export async function checkGenerateLimit(
   supabase: any,
   userId: string,
-  type: "thesis" | "proposal",
+  type: string,
   level?: string,
 ): Promise<boolean> {
   try {
@@ -138,17 +151,24 @@ export async function checkGenerateLimit(
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (!row) return false; // no row = no credits allocated
+    if (!row) return false;
 
     if (type === "proposal") {
       const remaining = (row.proposal_limit ?? 0) - (row.proposal_used ?? 0);
       return remaining > 0;
     }
 
-    // thesis — check per-level counter
-    const lvl = level ?? "undergraduate";
-    const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
-    return (row[col] ?? 0) > 0;
+    if (type === "thesis") {
+      const lvl = level ?? "undergraduate";
+      const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
+      return (row[col] ?? 0) > 0;
+    }
+
+    // Tools: assignment, exam, presentation, cv — single counter column
+    const col = limitsColumn(type);
+    if (col) return (row[col] ?? 0) > 0;
+
+    return false;
   } catch {
     return false;
   }
@@ -158,7 +178,7 @@ export async function checkGenerateLimit(
 export async function incrementUsage(
   supabase: any,
   userId: string,
-  type: "thesis" | "proposal",
+  type: string,
   level?: string,
 ): Promise<void> {
   try {
@@ -168,7 +188,6 @@ export async function incrementUsage(
       .upsert({ user_id: userId, thesis_available_ug: 0, proposal_limit: 0, proposal_used: 0, updated_at: new Date().toISOString() }, { onConflict: "user_id", ignoreDuplicates: true });
 
     if (type === "proposal") {
-      // Fetch current proposal_used, then increment
       const { data: row } = await supabase
         .from("user_limits")
         .select("proposal_used")
@@ -179,7 +198,10 @@ export async function incrementUsage(
         .from("user_limits")
         .update({ proposal_used: used, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
-    } else {
+      return;
+    }
+
+    if (type === "thesis") {
       const lvl = level ?? "undergraduate";
       const col = lvl === "masters" ? "thesis_available_masters" : lvl === "phd" ? "thesis_available_phd" : "thesis_available_ug";
       const { data: row } = await supabase
@@ -187,14 +209,30 @@ export async function incrementUsage(
         .select(col)
         .eq("user_id", userId)
         .maybeSingle();
-      const current = Math.max(0, (row?.[col] ?? 0) - 1);
+      const current = row?.[col] ?? 0;
+      if (current <= 0) return;
       await supabase
         .from("user_limits")
-        .update({ [col]: current, updated_at: new Date().toISOString() })
+        .update({ [col]: current - 1, updated_at: new Date().toISOString() })
         .eq("user_id", userId);
+      return;
     }
-  } catch (e: any) {
-    console.error("[incrementUsage] failed:", e.message ?? e);
-    // Don't throw — counter failure shouldn't block generation
+
+    // Tools: assignment, exam, presentation, cv — single counter column
+    const col = limitsColumn(type);
+    if (!col) return;
+    const { data: row } = await supabase
+      .from("user_limits")
+      .select(col)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const current = row?.[col] ?? 0;
+    if (current <= 0) return;
+    await supabase
+      .from("user_limits")
+      .update({ [col]: current - 1, updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+  } catch {
+    // Non-critical — don't block generation
   }
 }

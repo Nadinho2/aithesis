@@ -266,13 +266,11 @@ export const checkAccess = createServerFn({ method: "POST" })
       if ((recentPending ?? 0) > 0) return { allowed: true, price };
     } catch { /* ignore */ }
 
-    // Fallback 2: admin-assigned free credits in user_limits (thesis & proposal only)
-    if (data.product === "thesis" || data.product === "proposal") {
-      try {
-        const canGen = await checkGenerateLimit(context.supabase, userId, data.product as "thesis" | "proposal", data.level as string | undefined);
-        if (canGen) return { allowed: true, price };
-      } catch { /* ignore */ }
-    }
+    // Fallback 2: admin-assigned free credits in user_limits
+    try {
+      const canGen = await checkGenerateLimit(context.supabase, userId, data.product, data.level as string | undefined);
+      if (canGen) return { allowed: true, price };
+    } catch { /* ignore */ }
 
     return { allowed: false, price };
   });
@@ -382,7 +380,12 @@ export const markTransactionUsed = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => MarkUsedInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    await consumeTransaction(context.supabase, userId, data.product);
+    const consumed = await consumeTransaction(context.supabase, userId, data.product);
+    if (!consumed) {
+      // No paid transaction found — try admin free credits
+      const { incrementUsage } = await import("./admin-limits.functions");
+      await incrementUsage(context.supabase, userId, data.product);
+    }
     return { ok: true };
   });
 

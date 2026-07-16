@@ -249,39 +249,63 @@ export const generateAssignment = createServerFn({ method: "POST" })
     const totalWords = Object.values(sectionsRecord)
       .reduce((sum, text) => sum + text.split(/\s+/).length, 0);
 
-    // Store in DB
+    // Store in DB — graceful fallback if new columns don't exist yet
+    let savedId = "";
     if (supabase) {
       try {
-        await supabase.from("assignments").insert({
+        const payload: any = {
           user_id: userId,
-          title: data.question.slice(0, 120),
           question: fullQuestion,
-          answer: "", // legacy column — kept for backward compat
-          sections: sectionsRecord,
-          abstract,
-          references_list: refs,
+          answer: "", // legacy
           include_references: data.include_references,
           citation_style: data.citation_style,
           word_count: totalWords,
-          word_count_target: data.word_count_target,
-          academic_level: data.academic_level,
-          grading_target: data.grading_target,
           status: "completed",
-        });
+        };
+
+        // Try new columns — silently skip if migration not run
+        try {
+          payload.sections = sectionsRecord;
+          payload.abstract = abstract;
+          payload.references_list = refs;
+          payload.word_count_target = data.word_count_target;
+          payload.academic_level = data.academic_level;
+          payload.grading_target = data.grading_target;
+          payload.title = data.question.slice(0, 120);
+        } catch { /* columns don't exist yet */ }
+
+        const { data: inserted, error } = await supabase.from("assignments").insert(payload).select("id").single();
+        if (error) {
+          delete payload.sections;
+          delete payload.abstract;
+          delete payload.references_list;
+          delete payload.word_count_target;
+          delete payload.academic_level;
+          delete payload.grading_target;
+          delete payload.title;
+          const { data: inserted2, error: err2 } = await supabase.from("assignments").insert(payload).select("id").single();
+          if (err2) console.error("[assignment] Save retry failed:", err2.message);
+          else savedId = inserted2?.id ?? "";
+        } else {
+          savedId = inserted?.id ?? "";
+        }
       } catch (e: any) {
-        console.error("Failed to save assignment:", e?.message ?? e);
+        console.error("[assignment] Failed to save:", e?.message ?? e);
       }
     }
 
     // Fire-and-forget email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.mybrainpadi.com";
+    const detailUrl = savedId ? `${appUrl}/tools/assignment/${savedId}` : `${appUrl}/tools/history`;
     notifyToolCompleted(userId, "assignment", {
       title: fullQuestion.slice(0, 80),
-      downloadUrl: `https://www.mybrainpadi.com/tools/history`,
+      downloadUrl: detailUrl,
       aiScore: data.grading_target === "A" ? 90 : data.grading_target === "B" ? 80 : 65,
       plagiarismScore: 92,
     });
 
     return {
+      id: savedId,
       sections: sectionsRecord,
       abstract,
       references: data.include_references ? sortReferences(refs) : [],
