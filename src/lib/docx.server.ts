@@ -13,8 +13,8 @@ import {
   TableRow,
   TableCell,
   WidthType,
-  ShadingType,
   BorderStyle,
+  ShadingType,
 } from "docx";
 import { formatAPAParts, formatAPAPartsHarvard, formatPartsByStyle, sortReferences, type ScholarlyRef } from "./scholarly.server";
 
@@ -756,7 +756,7 @@ export async function buildCvDocx(p: {
           new TextRun({ text: "PROFESSIONAL SUMMARY", bold: true, size: 22 }),
         ],
         spacing: { after: 60, before: 100 },
-        border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
       }),
     );
     children.push(
@@ -786,7 +786,7 @@ export async function buildCvDocx(p: {
             new TextRun({ text: "EDUCATION", bold: true, size: 22 }),
           ],
           spacing: { after: 60, before: 100 },
-          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+          border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
         }),
       );
       for (const line of cvFields.education.split(/\n/).filter(Boolean)) {
@@ -808,7 +808,7 @@ export async function buildCvDocx(p: {
             new TextRun({ text: "EXPERIENCE", bold: true, size: 22 }),
           ],
           spacing: { after: 60, before: 200 },
-          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+          border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
         }),
       );
       for (const line of cvFields.experience.split(/\n/).filter(Boolean)) {
@@ -830,7 +830,7 @@ export async function buildCvDocx(p: {
             new TextRun({ text: "SKILLS", bold: true, size: 22 }),
           ],
           spacing: { after: 60, before: 200 },
-          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+          border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
         }),
       );
       const skillsList = cvFields.skills.split(/[,、]\s*/).filter(Boolean).join(", ");
@@ -850,7 +850,7 @@ export async function buildCvDocx(p: {
             new TextRun({ text: "CERTIFICATIONS", bold: true, size: 22 }),
           ],
           spacing: { after: 60, before: 200 },
-          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+          border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
         }),
       );
       for (const line of cvFields.certifications.split(/\n/).filter(Boolean)) {
@@ -872,7 +872,7 @@ export async function buildCvDocx(p: {
             new TextRun({ text: "LANGUAGES", bold: true, size: 22 }),
           ],
           spacing: { after: 60, before: 200 },
-          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+          border: { bottom: { style: BorderStyle.SINGLE, color: "CCCCCC", size: 2, space: 4 } },
         }),
       );
       for (const line of cvFields.languages.split(/\n/).filter(Boolean)) {
