@@ -6,34 +6,12 @@ export const listAssignments = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { userId, supabase } = context as any;
-    // Select broad columns — use * first, then fall back if new cols missing
-    let data: any[] | null = null;
-    let error: any = null;
-
-    // Try with all columns (new schema)
-    try {
-      const result = await supabase
-        .from("assignments")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      data = result.data;
-      error = result.error;
-    } catch {
-      // ignore
-    }
-
-    // Fallback to known legacy columns
-    if (error || !data) {
-      const result = await supabase
-        .from("assignments")
-        .select("id, question, answer, word_count, status, created_at")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      if (result.error) throw new Error(result.error.message);
-      return result.data ?? [];
-    }
-
+    const { data, error } = await supabase
+      .from("assignments")
+      .select("id, question, answer, word_count, include_references, citation_style, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
     return data ?? [];
   });
 
@@ -42,21 +20,6 @@ export const getAssignment = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
-
-    // Try full select first (with new columns)
-    try {
-      const { data: row, error } = await supabase
-        .from("assignments")
-        .select("*")
-        .eq("id", data.id)
-        .eq("user_id", userId)
-        .single();
-      if (!error && row) return row;
-    } catch {
-      // new columns may not exist
-    }
-
-    // Fallback to legacy columns
     const { data: row, error } = await supabase
       .from("assignments")
       .select("*")
