@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -222,6 +222,9 @@ function MilestoneCard({
 }
 
 function SideHustlePage() {
+  // If a child route is matched (detail page), render Outlet
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  if (pathname !== "/tools/side-hustle") return <Outlet />;
   const genFn = useServerFn(generateSideHustle);
   const startPlanFn = useServerFn(startSideHustlePlan);
   const adviceFn = useServerFn(askPhaseAdvice);

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,6 +14,9 @@ export const Route = createFileRoute("/_authenticated/tools/presentation")({
 });
 
 function PresentationPage() {
+  // If a child route is matched (detail page), render Outlet
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  if (pathname !== "/tools/presentation") return <Outlet />;
   const genFn = useServerFn(generatePresentation);
   const exportDocxFn = useServerFn(exportPresentationDocx);
   const checkAccessFn = useServerFn(checkAccess);

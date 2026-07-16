@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -28,6 +28,10 @@ function AssignmentPage() {
   const navigate = useNavigate();
   const checkAccessFn = useServerFn(checkAccess);
   const markUsedFn = useServerFn(markTransactionUsed);
+
+  // If a child route is matched (detail page), render Outlet
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  if (pathname !== "/tools/assignment") return <Outlet />;
 
   const mut = useMutation({
     mutationFn: () =>
