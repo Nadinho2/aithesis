@@ -581,23 +581,78 @@ export async function buildThesisDocx(p: {
 
 export async function buildAssignmentDocx(p: {
   title: string;
-  answer: string;
+  answer?: string;
+  sections?: Record<string, string>;
+  abstract?: string;
   references: any[];
 }): Promise<Uint8Array> {
-  const children: any[] = [
-    new Paragraph({ text: p.title, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
-    new Paragraph({ spacing: { after: 200 } }),
-  ];
-  for (const para of p.answer.split(/\n\n+/)) {
-    children.push(
-      new Paragraph({
-        children: [new TextRun({ text: para.trim(), size: 22 })],
+  const sectionTitles: Record<string, string> = {
+    introduction: "Introduction & Background",
+    literature_review: "Literature Review & Conceptual Framework",
+    analysis_1: "Analysis — Part 1",
+    analysis_2: "Analysis — Part 2",
+    discussion: "Discussion",
+    conclusion: "Conclusion & Recommendations",
+  };
+  const sectionKeys = ["introduction", "literature_review", "analysis_1", "analysis_2", "discussion", "conclusion"];
+
+  const children: any[] = [];
+
+  // Cover page
+  children.push(new Paragraph({ spacing: { before: 2400 } }));
+  children.push(new Paragraph({ text: p.title, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));
+  children.push(new Paragraph({ spacing: { after: 600 } }));
+  children.push(new Paragraph({ text: "Academic Assignment", alignment: AlignmentType.CENTER, spacing: { after: 400 } }));
+  children.push(new Paragraph({ text: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }), alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
+
+  // Page break after cover
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+
+  // Abstract
+  if (p.abstract) {
+    children.push(new Paragraph({ text: "Abstract", heading: HeadingLevel.HEADING_1 }));
+    for (const para of p.abstract.split(/\n\n+/)) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: para.trim(), size: 22, italics: true })],
         spacing: { after: 120 },
-      }),
-    );
+      }));
+    }
+    children.push(new Paragraph({ spacing: { after: 200 } }));
   }
+
+  // Sections
+  const sections = p.sections ?? {};
+  for (const key of sectionKeys) {
+    const content = sections[key];
+    if (!content?.trim()) continue;
+    const title = sectionTitles[key] ?? key;
+
+    children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
+    for (const para of content.split(/\n\n+/)) {
+      const trimmed = para.trim();
+      if (!trimmed) continue;
+
+      // Bold sub-headings
+      if (trimmed.startsWith("**") && trimmed.includes("**")) {
+        const headingText = trimmed.replace(/\*\*/g, "");
+        children.push(new Paragraph({
+          children: [new TextRun({ text: headingText, size: 24, bold: true })],
+          spacing: { before: 200, after: 100 },
+        }));
+        continue;
+      }
+
+      children.push(new Paragraph({
+        children: [new TextRun({ text: trimmed, size: 22 })],
+        spacing: { after: 120 },
+      }));
+    }
+  }
+
+  // References
   if (p.references?.length > 0) {
-    children.push(new Paragraph({ spacing: { before: 400 }, text: "References", heading: HeadingLevel.HEADING_1 }));
+    children.push(new Paragraph({ spacing: { before: 400 } }));
+    children.push(new Paragraph({ text: "References", heading: HeadingLevel.HEADING_1 }));
     for (const ref of p.references) {
       children.push(
         new Paragraph({
@@ -608,6 +663,7 @@ export async function buildAssignmentDocx(p: {
       );
     }
   }
+
   const doc = new Document({ sections: [{ children }] });
   return Packer.toBuffer(doc);
 }

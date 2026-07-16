@@ -8,7 +8,7 @@ export const listAssignments = createServerFn({ method: "POST" })
     const { userId, supabase } = context as any;
     const { data, error } = await supabase
       .from("assignments")
-      .select("id, question, word_count, status, created_at")
+      .select("id, title, question, word_count, academic_level, grading_target, status, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -22,7 +22,7 @@ export const getAssignment = createServerFn({ method: "POST" })
     const { userId, supabase } = context as any;
     const { data: row, error } = await supabase
       .from("assignments")
-      .select("*")
+      .select("*, sections, abstract, word_count_target, academic_level, grading_target, title")
       .eq("id", data.id)
       .eq("user_id", userId)
       .single();

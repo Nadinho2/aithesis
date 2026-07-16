@@ -189,3 +189,92 @@ RULES:
 
     return { abstract: revised.abstract, chapters: revised.chapters };
   });
+
+// ─── Assignment Revision ──────────────────────────────────
+
+export const updateAssignmentSections = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      abstract: z.string().optional(),
+      sections: z.record(z.string(), z.string()).optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const patch: any = { updated_at: new Date().toISOString() };
+    if (data.abstract !== undefined) patch.abstract = data.abstract;
+    if (data.sections !== undefined) patch.sections = data.sections;
+
+    const { error } = await supabase
+      .from("assignments")
+      .update(patch)
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const reviseAssignmentWithFeedback = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      feedback: z.string().min(10).max(50000),
+      file_base64: z.string().optional(),
+      file_mime: z.string().optional(),
+      file_name: z.string().optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("DeepSeek is not configured.");
+
+    const { data: assignment, error: fetchErr } = await supabase
+      .from("assignments")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (fetchErr || !assignment) throw new Error("Assignment not found");
+
+    let feedbackText = data.feedback;
+    if (data.file_base64 && data.file_mime) {
+      const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
+      feedbackText += "\n\n--- Uploaded correction document ---\n\n" + parsed.text;
+    }
+
+    const sections = typeof assignment.sections === "string"
+      ? JSON.parse(assignment.sections)
+      : (assignment.sections ?? {});
+
+    const existingContent = JSON.stringify(sections, null, 2);
+
+    const raw = await callAI(apiKey, {
+      model: "deepseek-reasoner",
+      system: `You are an academic writing assistant helping a student revise their assignment sections based on lecturer feedback.
+
+RULES:
+- Preserve everything the lecturer did not criticise.
+- ONLY rewrite sections that the feedback directly addresses.
+- Keep the same citation style.
+- Maintain academic tone.
+- Return ONLY valid JSON matching this schema: { introduction: string, literature_review: string, analysis_1: string, analysis_2: string, discussion: string, conclusion: string }`,
+      user: `EXISTING ASSIGNMENT SECTIONS:\n${existingContent}\n\nLECTURER FEEDBACK / CORRECTIONS:\n${feedbackText}\n\nRevise the assignment per the feedback above. Return ONLY the full updated JSON.`,
+    });
+
+    const revised = raw as any;
+    const { error: updErr } = await supabase
+      .from("assignments")
+      .update({
+        sections: revised,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (updErr) throw new Error(updErr.message);
+
+    return { sections: revised };
+  });
