@@ -5,6 +5,7 @@ import { enqueueJob } from "./queue";
 import { getUserEmail } from "./mail-helper";
 import { sendProcessingStartedEmail } from "./mail";
 import { parseUploadedFile } from "./upload.server";
+import { buildAssignmentDocx, toBase64 } from "./docx.server";
 
 // ─── Input validation ──────────────────────────────────────────────────────
 

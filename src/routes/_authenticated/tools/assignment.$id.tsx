@@ -124,6 +124,9 @@ function AssignmentDetailPage() {
   if (!data) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-ink/40">Assignment not found.</p><Link to="/tools/history" className="text-sage text-sm hover:underline mt-2 inline-block">← Back to history</Link></div>;
 
   const sections = typeof data.sections === "string" ? JSON.parse(data.sections) : (data.sections ?? {});
+  // Fallback: old assignments only have answer text, no structured sections
+  const hasSections = typeof sections === "object" && Object.keys(sections).length > 0;
+  const fallbackText = !hasSections ? (data.answer ?? data.question ?? "") : "";
   const refs = typeof data.references_list === "string" ? JSON.parse(data.references_list) : (data.references_list ?? []);
   const displaySections = editMode ? editSections : sections;
   const level = data.academic_level ?? "undergraduate";
@@ -174,13 +177,17 @@ function AssignmentDetailPage() {
         <Section title="Abstract" body={data.abstract} />
       ) : null}
 
-      {/* Sections */}
-      {SECTION_KEYS.map((key) =>
-        editMode ? (
-          <EditableSection key={key} title={SECTION_LABELS[key]} value={editSections[key] ?? ""} onChange={(v) => setEditSections({ ...editSections, [key]: v })} />
-        ) : (
-          <Section key={key} title={SECTION_LABELS[key]} body={displaySections[key]} />
-        ),
+      {/* Fallback: old assignment with only answer text */}
+      {!hasSections && fallbackText ? (
+        <Section title="Assignment Answer" body={fallbackText} />
+      ) : (
+        SECTION_KEYS.map((key) =>
+          editMode ? (
+            <EditableSection key={key} title={SECTION_LABELS[key]} value={editSections[key] ?? ""} onChange={(v) => setEditSections({ ...editSections, [key]: v })} />
+          ) : (
+            <Section key={key} title={SECTION_LABELS[key]} body={displaySections[key]} />
+          ),
+        )
       )}
 
       {/* References */}
