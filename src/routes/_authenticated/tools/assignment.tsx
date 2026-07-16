@@ -64,8 +64,13 @@ function AssignmentPage() {
           ...(imageFile ? { file_base64: imageFile.base64, file_mime: imageFile.mime, file_name: imageFile.name } : {}),
         },
       }),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setResult(data);
+      if (data?.saved) {
+        toast.success("Assignment saved to history!");
+      } else {
+        toast.warning("Generated but could not save to history — check Vercel logs");
+      }
       markUsedFn({ data: { product: "assignment" } }).catch(() => {});
     },
     onError: (e) => toast.error(String(e)),

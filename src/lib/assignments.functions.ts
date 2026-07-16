@@ -326,6 +326,7 @@ export const generateAssignment = createServerFn({ method: "POST" })
 
     return {
       id: savedId,
+      saved: !!savedId,
       sections: sectionsRecord,
       abstract,
       references: data.include_references ? sortReferences(refs) : [],
