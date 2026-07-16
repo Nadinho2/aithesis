@@ -673,10 +673,19 @@ export async function buildPresentationDocx(p: {
   slides: { title: string; bullets: string[]; speaker_notes?: string }[];
 }): Promise<Uint8Array> {
   const children: any[] = [
-    new Paragraph({ text: p.topic, heading: HeadingLevel.TITLE }),
-    new Paragraph({ spacing: { after: 200 } }),
+    new Paragraph({ spacing: { before: 2400 } }),
+    new Paragraph({ text: p.topic, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }),
+    new Paragraph({
+      text: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+    }),
+    new Paragraph({ children: [new PageBreak()] }),
   ];
   for (const [i, slide] of p.slides.entries()) {
+    if (i > 0) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+    }
     children.push(new Paragraph({ text: `Slide ${i + 1}: ${slide.title}`, heading: HeadingLevel.HEADING_1 }));
     for (const b of slide.bullets ?? []) {
       children.push(

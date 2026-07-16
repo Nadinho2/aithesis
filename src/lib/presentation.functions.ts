@@ -5,10 +5,11 @@ import { callAI } from "./ai-utils.server";
 import { notifyToolCompleted } from "./mail-helper";
 import { parseUploadedFile } from "./upload.server";
 import { buildPresentationDocx, toBase64 } from "./docx.server";
+import { checkGenerateLimit } from "./admin-limits.functions";
 
 const PresentationInput = z.object({
-  topic: z.string().min(5).max(300),
-  content: z.string().min(10).max(20000),
+  topic: z.string().max(300).default(""),
+  content: z.string().max(20000).default(""),
   slide_count: z.number().int().min(5).max(30).default(10),
   file_base64: z.string().optional(),
   file_mime: z.string().optional(),
@@ -24,7 +25,56 @@ export const generatePresentation = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek is not configured.");
 
+    // ── Server-side payment guard ──
+    let isPaid = false;
+    try {
+      const { count } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", "presentation")
+        .eq("used", false);
+      isPaid = (count ?? 0) > 0;
+    } catch { /* ignore */ }
+
+    if (!isPaid) {
+      // Check pending payments (paid in last 3 min, webhook not yet fired)
+      try {
+        const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+        const { count: pendingCount } = await (supabase as any)
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .eq("product", "presentation")
+          .gte("created_at", freshCutoff);
+        isPaid = (pendingCount ?? 0) > 0;
+      } catch { /* ignore */ }
+    }
+
+    if (!isPaid) {
+      // Fallback: admin-assigned free credits
+      try {
+        isPaid = await checkGenerateLimit(supabase, userId, "presentation");
+      } catch { /* ignore */ }
+    }
+
+    if (!isPaid) {
+      return { ok: false, code: "PAYMENT_REQUIRED" as const, price: 3000 };
+    }
+    // ── End payment guard ──
+
+    let topic = data.topic;
     let fullContent = data.content;
+
+    // Handle image upload mode
+    if (data.image_base64) {
+      topic = topic || "Image-based Presentation";
+      fullContent = fullContent || "The user uploaded an image containing presentation content. Generate slides based on the visual and textual content described.";
+    }
+
+    // Parse uploaded document file
     if (data.file_base64 && data.file_mime) {
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
       fullContent += "\n\n--- Uploaded content ---\n\n" + parsed.text;
@@ -33,7 +83,7 @@ export const generatePresentation = createServerFn({ method: "POST" })
     const raw = await callAI(apiKey, {
       model: "deepseek-reasoner",
       max_tokens: 64000,
-      system: `You are a senior academic and presentation designer creating a ${data.slide_count}-slide presentation on "${data.topic}" for a Nigerian university audience.
+      system: `You are a senior academic and presentation designer creating a ${data.slide_count}-slide presentation on "${topic}" for a Nigerian university audience.
 
 EACH SLIDE MUST HAVE:
 - title: A short, punchy title (max 10 words)
@@ -66,7 +116,7 @@ Return ONLY valid JSON (no markdown, no code fences):
       try {
         await supabase.from("presentations").insert({
           user_id: userId,
-          topic: data.topic,
+          topic,
           content: fullContent,
           slide_count: data.slide_count,
           slides: parsed.slides,
@@ -79,22 +129,11 @@ Return ONLY valid JSON (no markdown, no code fences):
 
     // Fire-and-forget email notification
     notifyToolCompleted(userId, "presentation", {
-      title: data.topic,
+      title: topic,
       downloadUrl: `https://www.mybrainpadi.com/tools/history`,
     });
 
     return parsed;
-  });
-
-export const exportPresentationPptx = createServerFn({ method: "POST" })
-  .middleware([requireClerkAuth])
-  .inputValidator((i: unknown) =>
-    z.object({ topic: z.string(), slides: z.any() }).parse(i),
-  )
-  .handler(async ({ data }) => {
-    // PPTX generation happens client-side via pptxgenjs
-    // This function returns the data needed
-    return { topic: data.topic, slides: data.slides };
   });
 
 export const exportPresentationDocx = createServerFn({ method: "POST" })

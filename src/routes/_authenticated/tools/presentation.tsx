@@ -2,11 +2,59 @@ import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { generatePresentation, exportPresentationDocx, exportPresentationPptx } from "@/lib/presentation.functions";
+import { generatePresentation, exportPresentationDocx } from "@/lib/presentation.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { saveFormBeforePay } from "@/lib/usePaymentCallback";
-import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info } from "lucide-react";
+import { Loader2, Upload, Download, X, Sparkles, FileText, ImageIcon, Info, Palette } from "lucide-react";
 import { toast } from "sonner";
+
+// ─── Theme presets ──────────────────────────────────────────────────────────
+
+type ThemeKey = "academic-cream" | "professional-navy" | "modern-slate" | "warm-amber";
+
+interface Theme {
+  label: string;
+  bg: string;
+  title: string;
+  bullets: string;
+  accent: string;
+  preview: string; // tailwind gradient for the swatch
+}
+
+const THEMES: Record<ThemeKey, Theme> = {
+  "academic-cream": {
+    label: "Academic Cream",
+    bg: "F5F0EB",
+    title: "1A1A1A",
+    bullets: "4A4A4A",
+    accent: "2D5A27",
+    preview: "bg-[#F5F0EB] ring-1 ring-ink/20",
+  },
+  "professional-navy": {
+    label: "Professional Navy",
+    bg: "1A2332",
+    title: "FFFFFF",
+    bullets: "B0C4DE",
+    accent: "3B82F6",
+    preview: "bg-[#1A2332] ring-1 ring-white/20",
+  },
+  "modern-slate": {
+    label: "Modern Slate",
+    bg: "2D3748",
+    title: "FFFFFF",
+    bullets: "CBD5E0",
+    accent: "48BB78",
+    preview: "bg-[#2D3748] ring-1 ring-white/20",
+  },
+  "warm-amber": {
+    label: "Warm Amber",
+    bg: "FFF8F0",
+    title: "3D2B1F",
+    bullets: "6B5B4F",
+    accent: "D97706",
+    preview: "bg-[#FFF8F0] ring-1 ring-ink/20",
+  },
+};
 
 export const Route = createFileRoute("/_authenticated/tools/presentation")({
   head: () => ({ meta: [{ title: "Presentation Assistant — Mybrainpadi" }] }),
@@ -24,6 +72,7 @@ function PresentationPage() {
   const [content, setContent] = useState("");
   const [slideCount, setSlideCount] = useState(10);
   const [inputMode, setInputMode] = useState<"text" | "image">("text");
+  const [theme, setTheme] = useState<ThemeKey>("academic-cream");
   const [docFile, setDocFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
   const [imageFile, setImageFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
   const docRef = useRef<HTMLInputElement>(null);
@@ -32,11 +81,13 @@ function PresentationPage() {
   const [dlBusy, setDlBusy] = useState<"pptx" | "docx" | null>(null);
   const navigate = useNavigate();
 
+  const activeTheme = THEMES[theme];
+
   const mut = useMutation({
     mutationFn: () =>
       genFn({
         data: {
-          topic: inputMode === "text" ? topic : "",
+          topic: inputMode === "text" ? topic : "Image-based Presentation",
           content: inputMode === "text" ? content : "",
           slide_count: slideCount,
           ...(docFile ? { file_base64: docFile.base64, file_mime: docFile.mime, file_name: docFile.name } : {}),
@@ -44,7 +95,16 @@ function PresentationPage() {
         },
       }),
     onSuccess: (data) => {
-      setResult(data as any);
+      // Handle server-side PAYMENT_REQUIRED rejection
+      const d = data as any;
+      if (d?.code === "PAYMENT_REQUIRED") {
+        saveFormBeforePay({ topic, content, slideCount });
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
+      setResult(d);
       markUsedFn({ data: { product: "presentation" } }).catch(() => {});
     },
     onError: (e) => toast.error(String(e)),
@@ -109,7 +169,7 @@ function PresentationPage() {
         pptx.title = topic;
         result.slides.forEach((slide: any, i: number) => {
           const s = pptx.addSlide();
-          s.background = { color: "F5F0EB" };
+          s.background = { color: activeTheme.bg };
           s.addText(slide.title, {
             x: 0.5,
             y: 0.3,
@@ -117,7 +177,7 @@ function PresentationPage() {
             h: 0.8,
             fontSize: 24,
             bold: true,
-            color: "1A1A1A",
+            color: activeTheme.title,
           });
           s.addText((slide.bullets ?? []).join("\n"), {
             x: 0.5,
@@ -125,7 +185,7 @@ function PresentationPage() {
             w: 9,
             h: 4.5,
             fontSize: 16,
-            color: "333333",
+            color: activeTheme.bullets,
             lineSpacing: 22,
           });
           if (slide.speaker_notes) {
@@ -196,6 +256,17 @@ function PresentationPage() {
       return;
     }
     mut.mutate();
+  };
+
+  const handleNewPresentation = () => {
+    setResult(null);
+    setTopic("");
+    setContent("");
+    setSlideCount(10);
+    setInputMode("text");
+    setTheme("academic-cream");
+    setDocFile(null);
+    setImageFile(null);
   };
 
   return (
@@ -333,18 +404,45 @@ function PresentationPage() {
             </div>
           )}
 
-          <div>
-            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
-              Number of Slides (5–30)
-            </label>
-            <input
-              type="number"
-              min={5}
-              max={30}
-              value={slideCount}
-              onChange={(e) => setSlideCount(Math.min(30, Math.max(5, Number(e.target.value))))}
-              className="mt-1 w-32 bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
-            />
+          <div className="flex flex-wrap items-end gap-5">
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60">
+                Number of Slides (5–30)
+              </label>
+              <input
+                type="number"
+                min={5}
+                max={30}
+                value={slideCount}
+                onChange={(e) => setSlideCount(Math.min(30, Math.max(5, Number(e.target.value))))}
+                className="mt-1 w-32 bg-card border border-ink/15 rounded-sm px-3 py-2 text-sm"
+              />
+            </div>
+
+            {/* ─── Theme Selector ─── */}
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 flex items-center gap-1">
+                <Palette className="size-2.5" /> Slide Theme
+              </label>
+              <div className="mt-1 flex gap-1.5">
+                {(Object.keys(THEMES) as ThemeKey[]).map((key) => {
+                  const t = THEMES[key];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTheme(key)}
+                      title={t.label}
+                      className={`w-7 h-7 rounded-sm border-2 transition-all ${t.preview} ${
+                        theme === key
+                          ? "border-sage scale-110 shadow-sm"
+                          : "border-transparent hover:scale-105"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-ink/40 mt-0.5">{activeTheme.label}</p>
+            </div>
           </div>
 
           <button
@@ -365,20 +463,37 @@ function PresentationPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* ─── Theme preview banner ─── */}
+          <div className="flex items-center gap-2 text-xs text-ink/40">
+            <Palette className="size-3" />
+            <span>Theme: <span className="font-medium text-ink/60">{activeTheme.label}</span></span>
+          </div>
+
           {result.slides.map((slide: any, i: number) => (
-            <div key={i} className="bg-card border border-ink/10 rounded-sm p-5">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-sage mb-2">
+            <div
+              key={i}
+              className="border border-ink/10 rounded-sm p-5"
+              style={{ backgroundColor: `#${activeTheme.bg}` }}
+            >
+              <div
+                className="text-[10px] font-bold uppercase tracking-wider mb-2"
+                style={{ color: `#${activeTheme.accent}` }}
+              >
                 Slide {i + 1}
               </div>
-              <h3 className="font-serif text-lg mb-3">{slide.title}</h3>
-              <ul className="space-y-1 text-sm text-ink/80">
+              <h3 className="font-serif text-lg mb-3" style={{ color: `#${activeTheme.title}` }}>
+                {slide.title}
+              </h3>
+              <ul className="space-y-1 text-sm" style={{ color: `#${activeTheme.bullets}` }}>
                 {(slide.bullets ?? []).map((b: string, j: number) => (
                   <li key={j}>• {b}</li>
                 ))}
               </ul>
               {slide.speaker_notes && (
-                <div className="mt-3 pt-3 border-t border-ink/5 text-xs text-ink/40 italic">
-                  {slide.speaker_notes}
+                <div className="mt-3 pt-3" style={{ borderTopColor: `#${activeTheme.bullets}20` }}>
+                  <p className="text-xs italic" style={{ color: `#${activeTheme.bullets}80` }}>
+                    {slide.speaker_notes}
+                  </p>
                 </div>
               )}
             </div>
@@ -410,11 +525,7 @@ function PresentationPage() {
               Download DOCX
             </button>
             <button
-              onClick={() => {
-                setResult(null);
-                setTopic("");
-                setContent("");
-              }}
+              onClick={handleNewPresentation}
               className="px-4 py-2 border border-ink/15 rounded-sm text-sm hover:bg-ink/5"
             >
               New Presentation
