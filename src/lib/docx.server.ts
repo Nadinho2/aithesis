@@ -714,21 +714,179 @@ export async function buildCvDocx(p: {
   headshot?: string;
 }): Promise<Uint8Array> {
   const children: any[] = [];
-  if (p.info?.full_name) {
-    children.push(new Paragraph({ text: p.info.full_name, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }));
+
+  // Parse enhanced JSON for structured output
+  let cvFields: any = {};
+  try {
+    cvFields = JSON.parse(p.enhanced);
+  } catch {
+    cvFields = {};
   }
-  const contact = [p.info?.email, p.info?.phone, p.info?.address].filter(Boolean).join(" · ");
-  if (contact) {
-    children.push(new Paragraph({ text: contact, alignment: AlignmentType.CENTER, spacing: { after: 200 } }));
-  }
-  for (const para of p.enhanced.split(/\n\n+/)) {
+
+  // Name header
+  const name = cvFields.full_name || p.info?.full_name;
+  if (name) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: para.trim(), size: 22 })],
-        spacing: { after: 120 },
+        text: name,
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 60 },
       }),
     );
   }
+
+  // Contact line
+  const contact = [cvFields.email || p.info?.email, cvFields.phone || p.info?.phone, cvFields.address || p.info?.address].filter(Boolean).join(" · ");
+  if (contact) {
+    children.push(
+      new Paragraph({
+        text: contact,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 300 },
+      }),
+    );
+  }
+
+  // Professional Summary
+  if (cvFields.summary) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: "PROFESSIONAL SUMMARY", bold: true, size: 22 }),
+        ],
+        spacing: { after: 60, before: 100 },
+        border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+      }),
+    );
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: cvFields.summary, size: 22 })],
+        spacing: { after: 200 },
+      }),
+    );
+  }
+
+  // Fallback if JSON parsing failed — dump as plain text
+  if (!cvFields.summary && !cvFields.education && !cvFields.experience && !cvFields.skills) {
+    for (const para of p.enhanced.split(/\n\n+/)) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: para.trim(), size: 22 })],
+          spacing: { after: 120 },
+        }),
+      );
+    }
+  } else {
+    // Education
+    if (cvFields.education) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "EDUCATION", bold: true, size: 22 }),
+          ],
+          spacing: { after: 60, before: 100 },
+          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        }),
+      );
+      for (const line of cvFields.education.split(/\n/).filter(Boolean)) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: line.trim(), size: 22 })],
+            spacing: { after: 60 },
+            indent: { left: 200 },
+          }),
+        );
+      }
+    }
+
+    // Experience
+    if (cvFields.experience) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "EXPERIENCE", bold: true, size: 22 }),
+          ],
+          spacing: { after: 60, before: 200 },
+          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        }),
+      );
+      for (const line of cvFields.experience.split(/\n/).filter(Boolean)) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: line.trim(), size: 22 })],
+            spacing: { after: 80 },
+            indent: { left: 200 },
+          }),
+        );
+      }
+    }
+
+    // Skills
+    if (cvFields.skills) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "SKILLS", bold: true, size: 22 }),
+          ],
+          spacing: { after: 60, before: 200 },
+          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        }),
+      );
+      const skillsList = cvFields.skills.split(/[,、]\s*/).filter(Boolean).join(", ");
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: skillsList, size: 22 })],
+          spacing: { after: 200 },
+        }),
+      );
+    }
+
+    // Certifications
+    if (cvFields.certifications) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "CERTIFICATIONS", bold: true, size: 22 }),
+          ],
+          spacing: { after: 60, before: 200 },
+          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        }),
+      );
+      for (const line of cvFields.certifications.split(/\n/).filter(Boolean)) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: line.trim(), size: 22 })],
+            spacing: { after: 60 },
+            indent: { left: 200 },
+          }),
+        );
+      }
+    }
+
+    // Languages
+    if (cvFields.languages) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: "LANGUAGES", bold: true, size: 22 }),
+          ],
+          spacing: { after: 60, before: 200 },
+          border: { bottom: { color: "CCCCCC", size: 2, space: 4 } },
+        }),
+      );
+      for (const line of cvFields.languages.split(/\n/).filter(Boolean)) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: line.trim(), size: 22 })],
+            spacing: { after: 60 },
+            indent: { left: 200 },
+          }),
+        );
+      }
+    }
+  }
+
   return Packer.toBuffer(new Document({ sections: [{ children }] }));
 }
 
