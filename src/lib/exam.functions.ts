@@ -4,11 +4,12 @@ import { z } from "zod";
 import { callAI } from "./ai-utils.server";
 import { notifyToolCompleted } from "./mail-helper";
 import { parseUploadedFile } from "./upload.server";
+import { checkGenerateLimit } from "./admin-limits.functions";
 
 export const ExamQuestionType = z.enum(["objectives", "theory", "both"]);
 
 const ExamInput = z.object({
-  subject_notes: z.string().min(10).max(20000),
+  subject_notes: z.string().max(20000).default(""),
   total_questions: z.number().int().min(5).max(100).default(20),
   question_type: ExamQuestionType.default("both"),
   theory_count: z.number().int().min(1).max(100).optional(),
@@ -27,7 +28,51 @@ export const generateExam = createServerFn({ method: "POST" })
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) throw new Error("DeepSeek is not configured.");
 
+    // ── Server-side payment guard ──
+    let isPaid = false;
+    try {
+      const { count } = await (supabase as any)
+        .from("transactions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("status", "completed")
+        .eq("product", "exam")
+        .eq("used", false);
+      isPaid = (count ?? 0) > 0;
+    } catch { /* ignore */ }
+
+    if (!isPaid) {
+      try {
+        const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+        const { count: pendingCount } = await (supabase as any)
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("status", "pending")
+          .eq("product", "exam")
+          .gte("created_at", freshCutoff);
+        isPaid = (pendingCount ?? 0) > 0;
+      } catch { /* ignore */ }
+    }
+
+    if (!isPaid) {
+      try {
+        isPaid = await checkGenerateLimit(supabase, userId, "exam");
+      } catch { /* ignore */ }
+    }
+
+    if (!isPaid) {
+      return { ok: false, code: "PAYMENT_REQUIRED" as const, price: 1000 };
+    }
+    // ── End payment guard ──
+
     let notes = data.subject_notes;
+
+    // Handle image upload mode
+    if (data.image_base64) {
+      notes = notes || "The user uploaded an image containing study notes. Generate exam questions based on the visual and textual content.";
+    }
+
     if (data.file_base64 && data.file_mime) {
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
       notes += "\n\n--- Uploaded content ---\n\n" + parsed.text;
@@ -115,7 +160,7 @@ IMPORTANT: Each option in the "options" array must be the full text of the choic
 
     // Fire-and-forget email notification
     notifyToolCompleted(userId, "exam", {
-      title: data.subject_notes?.slice(0, 80) ?? "Exam Prep",
+      title: data.subject_notes?.slice(0, 80) || "Exam Prep",
       downloadUrl: `https://www.mybrainpadi.com/tools/history`,
     });
 

@@ -40,7 +40,7 @@ function ExamPage() {
     mutationFn: () =>
       genFn({
         data: {
-          subject_notes: inputMode === "text" ? notes : "",
+          subject_notes: inputMode === "text" ? notes : "Exam from Image",
           total_questions: totalQ,
           question_type: qType,
           theory_count: qType === "both" ? theoryCount : undefined,
@@ -52,7 +52,15 @@ function ExamPage() {
         },
       }),
     onSuccess: (data) => {
-      setResult(data as any);
+      const d = data as any;
+      if (d?.code === "PAYMENT_REQUIRED") {
+        saveFormBeforePay({ notes, totalQ, qType, theoryCount, objectivesCount });
+        sessionStorage.setItem("return_path", window.location.pathname);
+        navigate({ to: "/billing" });
+        setTimeout(() => { window.location.href = "/billing"; }, 300);
+        return;
+      }
+      setResult(d);
       markUsedFn({ data: { product: "exam" } }).catch(() => {});
     },
     onError: (e) => toast.error(String(e)),
@@ -570,6 +578,9 @@ function ExamPage() {
               setAnswers({});
               setSubmitted({});
               setRevealedTheory({});
+              setInputMode("text");
+              setDocFile(null);
+              setImageFile(null);
             }}
             className="px-4 py-2 border border-ink/15 rounded-sm text-sm hover:bg-ink/5"
           >
