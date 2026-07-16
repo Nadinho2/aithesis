@@ -5,6 +5,7 @@ import { getPrice, type ProductType, type ThesisLevel } from "./pricing";
 import { sendPaymentConfirmedEmail, sendPaymentFailedEmail } from "./mail";
 import type { BrainPadiTool } from "./mail";
 import { getUserEmail, productToTool } from "./mail-helper";
+import { checkGenerateLimit } from "./admin-limits.functions";
 
 function runtimeEnv(key: string): string | undefined {
   try {
@@ -268,7 +269,6 @@ export const checkAccess = createServerFn({ method: "POST" })
     // Fallback 2: admin-assigned free credits in user_limits (thesis & proposal only)
     if (data.product === "thesis" || data.product === "proposal") {
       try {
-        const { checkGenerateLimit } = await import("./admin-limits.functions");
         const canGen = await checkGenerateLimit(context.supabase, userId, data.product as "thesis" | "proposal", data.level as string | undefined);
         if (canGen) return { allowed: true, price };
       } catch { /* ignore */ }
