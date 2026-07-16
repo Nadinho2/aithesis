@@ -42,9 +42,24 @@ export const getAssignment = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
+
+    // Try full select first (with new columns)
+    try {
+      const { data: row, error } = await supabase
+        .from("assignments")
+        .select("*")
+        .eq("id", data.id)
+        .eq("user_id", userId)
+        .single();
+      if (!error && row) return row;
+    } catch {
+      // new columns may not exist
+    }
+
+    // Fallback to legacy columns
     const { data: row, error } = await supabase
       .from("assignments")
-      .select("*, sections, abstract, word_count_target, academic_level, grading_target, title")
+      .select("*")
       .eq("id", data.id)
       .eq("user_id", userId)
       .single();
