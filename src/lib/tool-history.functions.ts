@@ -6,12 +6,34 @@ export const listAssignments = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
     const { userId, supabase } = context as any;
-    const { data, error } = await supabase
-      .from("assignments")
-      .select("id, title, question, word_count, academic_level, grading_target, status, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    // Select broad columns — use * first, then fall back if new cols missing
+    let data: any[] | null = null;
+    let error: any = null;
+
+    // Try with all columns (new schema)
+    try {
+      const result = await supabase
+        .from("assignments")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      data = result.data;
+      error = result.error;
+    } catch {
+      // ignore
+    }
+
+    // Fallback to known legacy columns
+    if (error || !data) {
+      const result = await supabase
+        .from("assignments")
+        .select("id, question, answer, word_count, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (result.error) throw new Error(result.error.message);
+      return result.data ?? [];
+    }
+
     return data ?? [];
   });
 

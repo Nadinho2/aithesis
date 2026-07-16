@@ -149,7 +149,9 @@ function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: (
 
   switch (tab) {
     case "assignments":
-      title = item.title?.slice(0, 80) + (item.title?.length > 80 ? "…" : "") || item.question?.slice(0, 80) + (item.question?.length > 80 ? "…" : "");
+      title = item.title
+        ? (item.title?.slice(0, 80) + (item.title?.length > 80 ? "…" : ""))
+        : (item.question?.slice(0, 80) + (item.question?.length > 80 ? "…" : "")) || "Assignment";
       subtitle = `${item.academic_level ?? "UG"} · ${item.grading_target ? `Target: ${item.grading_target}` : ""} · ${item.word_count ?? 0} words`;
       viewPath = `/tools/assignment/${item.id}`;
       break;

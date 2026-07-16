@@ -249,49 +249,69 @@ export const generateAssignment = createServerFn({ method: "POST" })
     const totalWords = Object.values(sectionsRecord)
       .reduce((sum, text) => sum + text.split(/\s+/).length, 0);
 
-    // Store in DB — graceful fallback if new columns don't exist yet
+    // Store in DB — throw on failure so user sees the error
     let savedId = "";
-    if (supabase) {
-      try {
-        const payload: any = {
-          user_id: userId,
-          question: fullQuestion,
-          answer: "", // legacy
-          include_references: data.include_references,
-          citation_style: data.citation_style,
-          word_count: totalWords,
-          status: "completed",
-        };
+    if (!supabase) throw new Error("Supabase client not available");
 
-        // Try new columns — silently skip if migration not run
-        try {
-          payload.sections = sectionsRecord;
-          payload.abstract = abstract;
-          payload.references_list = refs;
-          payload.word_count_target = data.word_count_target;
-          payload.academic_level = data.academic_level;
-          payload.grading_target = data.grading_target;
-          payload.title = data.question.slice(0, 120);
-        } catch { /* columns don't exist yet */ }
+    const payload: any = {
+      user_id: userId,
+      question: fullQuestion.slice(0, 10000),
+      answer: fullQuestion.slice(0, 10000), // fallback to question text
+      include_references: data.include_references,
+      citation_style: data.citation_style,
+      word_count: totalWords,
+      status: "completed",
+    };
 
-        const { data: inserted, error } = await supabase.from("assignments").insert(payload).select("id").single();
-        if (error) {
-          delete payload.sections;
-          delete payload.abstract;
-          delete payload.references_list;
-          delete payload.word_count_target;
-          delete payload.academic_level;
-          delete payload.grading_target;
-          delete payload.title;
-          const { data: inserted2, error: err2 } = await supabase.from("assignments").insert(payload).select("id").single();
-          if (err2) console.error("[assignment] Save retry failed:", err2.message);
-          else savedId = inserted2?.id ?? "";
-        } else {
-          savedId = inserted?.id ?? "";
+    // Try new columns first
+    try {
+      payload.sections = sectionsRecord;
+      payload.abstract = abstract;
+      payload.references_list = refs;
+      payload.word_count_target = data.word_count_target;
+      payload.academic_level = data.academic_level;
+      payload.grading_target = data.grading_target;
+      payload.title = data.question.slice(0, 120);
+
+      const { data: inserted, error } = await supabase.from("assignments").insert(payload).select("id").single();
+      if (!error && inserted?.id) {
+        savedId = inserted.id;
+      } else {
+        // New columns likely don't exist — retry with only legacy columns
+        console.warn("[assignment] New-column insert failed, retrying legacy:", error?.message);
+        delete payload.sections;
+        delete payload.abstract;
+        delete payload.references_list;
+        delete payload.word_count_target;
+        delete payload.academic_level;
+        delete payload.grading_target;
+        delete payload.title;
+        const { data: inserted2, error: err2 } = await supabase.from("assignments").insert(payload).select("id").single();
+        if (err2 || !inserted2?.id) {
+          console.error("[assignment] Legacy insert also failed:", err2?.message ?? err2);
+          throw new Error(`Failed to save assignment: ${err2?.message ?? err2 ?? "unknown"}`);
         }
-      } catch (e: any) {
-        console.error("[assignment] Failed to save:", e?.message ?? e);
+        savedId = inserted2.id;
       }
+    } catch (e: any) {
+      // If the error is from the inner retry throw, re-throw it
+      if (e.message?.startsWith("Failed to save")) throw e;
+
+      // Otherwise try legacy columns directly
+      console.warn("[assignment] Save caught, retrying legacy:", e?.message);
+      delete payload.sections;
+      delete payload.abstract;
+      delete payload.references_list;
+      delete payload.word_count_target;
+      delete payload.academic_level;
+      delete payload.grading_target;
+      delete payload.title;
+      const { data: inserted2, error: err2 } = await supabase.from("assignments").insert(payload).select("id").single();
+      if (err2 || !inserted2?.id) {
+        console.error("[assignment] Legacy insert failed:", err2?.message ?? err2);
+        throw new Error(`Failed to save assignment: ${err2?.message ?? err2 ?? "unknown"}`);
+      }
+      savedId = inserted2.id;
     }
 
     // Fire-and-forget email
