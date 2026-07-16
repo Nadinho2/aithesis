@@ -122,10 +122,12 @@ Return ONLY valid JSON (no markdown, no code fences):
       const targetCompany = data.company || "the company";
 
       // Step 1: Analyze the job description
-      const jdAnalysis = await callAI(apiKey, {
-        model: "deepseek-reasoner",
-        max_tokens: 2048,
-        system: `You are a job market analyst. Analyze this job description and extract:
+      let jdAnalysis: any = {};
+      try {
+        jdAnalysis = await callAI(apiKey, {
+          model: "deepseek-reasoner",
+          max_tokens: 2048,
+          system: `You are a job market analyst. Analyze this job description and extract:
 
 1. 5-8 KEY REQUIREMENTS (skills, experience, qualifications they explicitly want)
 2. 5-8 KEYWORDS / PHRASES that appear repeatedly or are emphasised
@@ -143,8 +145,19 @@ Return ONLY valid JSON (no markdown, no code fences):
   culture_indicators: string[],
   top_priorities: string[]
 }`,
-        user: data.job_description,
-      });
+          user: data.job_description,
+        });
+      } catch (e: any) {
+        console.error("JD analysis failed, falling back to basic tailoring:", e?.message ?? e);
+        jdAnalysis = {
+          industry: "Unknown",
+          seniority: "Mid",
+          key_requirements: [],
+          keywords: [],
+          top_priorities: [],
+          culture_indicators: [],
+        };
+      }
 
       // Step 2: Tailor the CV for this specific job
       const tailored = await callAI(apiKey, {
@@ -153,13 +166,13 @@ Return ONLY valid JSON (no markdown, no code fences):
         system: `You are a professional CV writer helping a candidate tailor their CV for a specific job application.
 
 TARGET JOB: ${targetTitle} ${data.company ? "at " + targetCompany : ""}
-INDUSTRY: ${jdAnalysis.industry}
-SENIORITY: ${jdAnalysis.seniority}
+INDUSTRY: ${jdAnalysis?.industry || "Unknown"}
+SENIORITY: ${jdAnalysis?.seniority || "Mid"}
 
 JOB DESCRIPTION ANALYSIS:
-- Key Requirements: ${(jdAnalysis.key_requirements || []).join("; ")}
-- Important Keywords: ${(jdAnalysis.keywords || []).join(", ")}
-- Top Priorities: ${(jdAnalysis.top_priorities || []).join("; ")}
+- Key Requirements: ${(jdAnalysis?.key_requirements || []).join("; ")}
+- Important Keywords: ${(jdAnalysis?.keywords || []).join(", ")}
+- Top Priorities: ${(jdAnalysis?.top_priorities || []).join("; ")}
 
 TAILORING RULES:
 - summary: Rewrite the professional summary to mirror the JD language. Lead with the most relevant experience for this role. Mention the target role directly. Include 2-3 achievements that align with the top priorities.
