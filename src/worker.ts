@@ -9,7 +9,7 @@
  * For long-running mode, use: while true; do npx tsx src/worker.ts; sleep 2; done
  */
 import { claimNextJob, completeJob, failJob } from "./lib/queue";
-import { generateThesisContent, generateProposalContent } from "./lib/generation.server";
+import { generateThesisContent, generateProposalContent, generateAssignmentContent } from "./lib/generation.server";
 
 const MAX_POLLS = 5;   // Poll up to 5 times for new jobs
 const POLL_DELAY_MS = 2000; // Wait 2s between polls
@@ -27,6 +27,8 @@ async function processJob(): Promise<boolean> {
       result = await generateThesisContent(job.payload as any);
     } else if (job.job_type === "proposal") {
       result = await generateProposalContent(job.payload as any);
+    } else if (job.job_type === "assignment") {
+      result = await generateAssignmentContent(job.payload as any);
     } else {
       throw new Error(`Unknown job type: ${job.job_type}`);
     }

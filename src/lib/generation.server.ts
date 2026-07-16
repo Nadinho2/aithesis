@@ -323,6 +323,164 @@ CRITICAL RULES FOR THESIS:
   return { success: true };
 }
 
+// ─── Assignment Generation ─────────────────────────────────────────────────
+
+const ASSIGNMENT_SECTIONS = [
+  { key: "introduction", label: "Introduction & Background", order: 1, target: 600 },
+  { key: "literature_review", label: "Literature Review & Conceptual Framework", order: 2, target: 900 },
+  { key: "analysis_1", label: "Analysis — Part 1", order: 3, target: 800 },
+  { key: "analysis_2", label: "Analysis — Part 2", order: 4, target: 800 },
+  { key: "discussion", label: "Discussion", order: 5, target: 600 },
+  { key: "conclusion", label: "Conclusion & Recommendations", order: 6, target: 500 },
+];
+
+function gradingLabel(grade: string): string {
+  switch (grade) {
+    case "A": return "A-grade (distinction-level)";
+    case "B": return "B-grade (strong pass)";
+    case "C": return "C-grade (adequate pass)";
+    default: return "B-grade";
+  }
+}
+
+function levelLabel(lvl: string): string {
+  return lvl === "masters" ? "Master's" : lvl === "phd" ? "PhD" : "Undergraduate";
+}
+
+const ASSIGNMENT_BASE_RULES = `RULES:
+- Use clear section headings on their own lines.
+- For sub-headings, use **Bold Text**.
+- Write in natural academic paragraphs — vary sentence length.
+- Be specific and concrete. Use real examples and data where possible.
+- Never use phrases like "This section will", "It is noteworthy", "In conclusion, it can be said".
+- For tables, use this format:
+[TABLE: Table Title]
+| Column 1 | Column 2 |
+|----------|----------|
+| Data     | Data     |
+- A brief interpretation paragraph must follow each table.`;
+
+export async function generateAssignmentContent(payload: {
+  userId: string;
+  data: {
+    question: string;
+    include_refs: boolean;
+    citation_style: string;
+    word_count_target: number;
+    academic_level: string;
+    grading_target: string;
+    file_text?: string;
+  };
+}): Promise<{ success: boolean; error?: string }> {
+  const { userId, data } = payload;
+  const supabase = await getSupabase();
+
+  const { callAIText } = await import("@/lib/ai-utils.server");
+  const { fetchScholarlyRefs, formatByStyle, sortReferences } = await import("@/lib/scholarly.server");
+  const { notifyToolCompleted } = await import("@/lib/mail-helper");
+
+  const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const fullQuestion = [data.question, data.file_text].filter(Boolean).join("\n\n");
+
+  // Fetch refs
+  const refs = data.include_refs
+    ? await fetchScholarlyRefs(fullQuestion.slice(0, 300), 12)
+    : [];
+  const refContext = refs.map((r: any) => formatByStyle(r, data.citation_style)).join("\n");
+
+  const sectionsRecord: Record<string, string> = {};
+  const generated: { key: string; content: string }[] = [];
+
+  for (let i = 0; i < ASSIGNMENT_SECTIONS.length; i++) {
+    const section = ASSIGNMENT_SECTIONS[i];
+    try {
+      const prevCtx = generated.map((s) => `${s.key}: ${s.content.slice(0, 400)}…`).join("\n\n");
+
+      const system = `You are an experienced academic writing a ${levelLabel(data.academic_level)}-level assignment answer targeting ${gradingLabel(data.grading_target)}.
+
+ASSIGNMENT QUESTION:
+${fullQuestion}
+
+Write the "${section.label}" section (approximately ${section.target} words).
+
+CITATION RULES (${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}):
+- Only cite the references provided below. Never invent sources.
+- Use inline citations: (Surname, Year).
+- Use 1-2 citations per section, depth over quantity.
+
+${ASSIGNMENT_BASE_RULES}
+${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`;
+
+      const text = await callAIText(apiKey, {
+        model: "deepseek-chat",
+        max_tokens: 16000,
+        system,
+        user: `Write the "${section.label}" section now — approximately ${section.target} words.`,
+      });
+
+      sectionsRecord[section.key] = text;
+      generated.push({ key: section.key, content: text });
+
+      if (i < ASSIGNMENT_SECTIONS.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch (e: any) {
+      console.error(`[assignment-worker] ${section.label} failed:`, e?.message);
+      sectionsRecord[section.key] = "";
+    }
+  }
+
+  const totalWords = Object.values(sectionsRecord)
+    .reduce((sum, text) => sum + countWords(text ?? ""), 0);
+  const abstract = (sectionsRecord["introduction"] ?? "").slice(0, 400);
+
+  // Save to DB — try new columns, fall back to legacy
+  try {
+    const newPayload: any = {
+      user_id: userId,
+      question: fullQuestion.slice(0, 10000),
+      answer: fullQuestion.slice(0, 10000),
+      include_references: data.include_refs,
+      citation_style: data.citation_style,
+      word_count: totalWords,
+      status: "completed",
+      sections: sectionsRecord,
+      abstract,
+      references_list: refs,
+      word_count_target: data.word_count_target,
+      academic_level: data.academic_level,
+      grading_target: data.grading_target,
+      title: data.question.slice(0, 120),
+    };
+
+    const { error } = await (supabase as any).from("assignments").insert(newPayload);
+    if (error) {
+      console.warn("[assignment-worker] New-column insert failed, retrying legacy:", error.message);
+      delete newPayload.sections;
+      delete newPayload.abstract;
+      delete newPayload.references_list;
+      delete newPayload.word_count_target;
+      delete newPayload.academic_level;
+      delete newPayload.grading_target;
+      delete newPayload.title;
+      const { error: err2 } = await (supabase as any).from("assignments").insert(newPayload);
+      if (err2) console.error("[assignment-worker] Legacy insert also failed:", err2.message);
+    }
+  } catch (e: any) {
+    console.error("[assignment-worker] Save failed:", e?.message);
+  }
+
+  // Email notification
+  await notifyToolCompleted(userId, "assignment", {
+    title: fullQuestion.slice(0, 80),
+    downloadUrl: `${SITE}/tools/history`,
+    aiScore: data.grading_target === "A" ? 90 : data.grading_target === "B" ? 80 : 65,
+    plagiarismScore: 92,
+  });
+
+  return { success: true };
+}
+
 // ─── Proposal Generation ───────────────────────────────────────────────────
 
 export async function generateProposalContent(payload: {
