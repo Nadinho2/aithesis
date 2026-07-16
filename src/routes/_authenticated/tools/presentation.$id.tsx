@@ -124,9 +124,9 @@ function PresentationDetailPage() {
           s.addText(slide.title, {
             x: 0.5, y: 0.3, w: 9.0, h: 0.9, fontSize: 24, bold: true, color: activeTheme.title,
           });
-          s.addText(slide.bullets ?? [], {
+          s.addText((slide.bullets ?? []).map((b: string) => `• ${b}`).join("\n"), {
             x: 0.5, y: 1.4, w: 9.0, h: 5.2, fontSize: 16, color: activeTheme.bullets,
-            lineSpacing: 24, bullet: true, valign: "top",
+            lineSpacing: 24, valign: "top",
           });
           // Slide number
           s.addText(`${i + 1}`, {
@@ -141,7 +141,7 @@ function PresentationDetailPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${topic.replace(/\s+/g, "_")}.pptx`;
+        a.download = `${(topic || "presentation").replace(/[^a-zA-Z0-9\- ]/g, "_").replace(/\s+/g, "_")}.pptx`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -159,6 +159,8 @@ function PresentationDetailPage() {
         a.click();
         URL.revokeObjectURL(url);
       }
+    } catch (e: any) {
+      console.error("Download failed:", e?.message ?? e);
     } finally {
       setDlBusy(null);
     }
