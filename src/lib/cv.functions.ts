@@ -145,7 +145,7 @@ Return ONLY valid JSON (no markdown, no code fences):
   culture_indicators: string[],
   top_priorities: string[]
 }`,
-          user: data.job_description,
+          user: data.job_description!,
         });
       } catch (e: any) {
         console.error("JD analysis failed, falling back to basic tailoring:", e?.message ?? e);

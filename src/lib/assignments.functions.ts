@@ -45,7 +45,7 @@ export const generateAssignment = createServerFn({ method: "POST" })
       sendProcessingStartedEmail({
         to: userEmail,
         name: userEmail.split("@")[0],
-        tool: data.assignment_type === "problem_solving" ? "Problem-Solving Assignment" : "Assignment",
+        tool: "Assignment",
       }).catch(() => {});
     }
 

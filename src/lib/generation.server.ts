@@ -407,7 +407,7 @@ export async function generateAssignmentContent(payload: {
     ? await fetchScholarlyRefs(fullQuestion.slice(0, 300), 12)
     : [];
   const refContext = !isProblemSolving
-    ? refs.map((r: any) => formatByStyle(r, data.citation_style)).join("\n")
+    ? refs.map((r: any) => formatByStyle(r, data.citation_style as "apa_7" | "harvard")).join("\n")
     : "";
 
   const sections = isProblemSolving ? QUANTITATIVE_SECTIONS : ASSIGNMENT_SECTIONS;
