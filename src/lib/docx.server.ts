@@ -643,9 +643,17 @@ export async function buildAssignmentDocx(p: {
     const title = sectionTitles[key] ?? key;
 
     children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
+    let titleHeadingJustWritten = true;
     for (const para of content.split(/\n\n+/)) {
       const trimmed = cleanMarkdown(para.trim());
       if (!trimmed) continue;
+
+      // Skip first paragraph if it duplicates the section title exactly
+      if (titleHeadingJustWritten && trimmed.toLowerCase() === title.toLowerCase()) {
+        titleHeadingJustWritten = false;
+        continue;
+      }
+      titleHeadingJustWritten = false;
 
       // Check for markdown heading within section content
       const headingMatch = detectMarkdownHeading(trimmed);

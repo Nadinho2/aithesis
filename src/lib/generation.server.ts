@@ -633,7 +633,7 @@ const MATH_SOLUTION_RULES = `CRITICAL RULES — MATHEMATICS FORMAT:
 
   CALCULATION:
   Show each arithmetic step. Calculate C(n,r), powers, and products separately before combining:
-  e.g. C(20,3) = 1140, (0.05)^3 = 0.000125, (0.95)^17 = 0.4181
+  e.g. C(20,3) = 1140, (0.05)^3 = 0.000125, (0.95)^17 ≈ 0.4181
        P(X = 3) = 1140 × 0.000125 × 0.4181 = 0.0596
 
   ANSWER:
@@ -646,7 +646,47 @@ const MATH_SOLUTION_RULES = `CRITICAL RULES — MATHEMATICS FORMAT:
 - For applied/interpretation questions: state the numerical answer first, then give a practical recommendation in 2-3 sentences
 - Do NOT write an abstract, introduction, or literature review
 - Do NOT use markdown bold (**) or italic (*) syntax — write plain text only, use CAPS for emphasis
-- Jump straight into solving the problem — no preamble, no essay`;
+- Jump straight into solving the problem — no preamble, no essay
+
+MATHEMATICAL NOTATION RULES:
+- Use the × symbol (not the letter x) for all multiplication operations
+- Use ÷ for division where applicable
+- Use ≤ and ≥ for inequality comparisons
+- Use ≈ when rounding to decimal places: e.g. (0.95)^17 ≈ 0.4181
+
+POWER CALCULATION BREVITY RULES:
+Do not expand powers step by step beyond 3 iterations. For any power above 3, compute and state the result directly:
+
+CORRECT FORMAT:
+(0.95)^17 ≈ 0.4181 (computed)
+
+WRONG FORMAT:
+(0.95)^1 = 0.95
+(0.95)^2 = 0.9025
+(0.95)^3 = 0.857375
+... (continuing all the way to power 17)
+
+FACTORIAL CALCULATIONS:
+Show the shortcut form only — do not expand factorials fully:
+
+CORRECT FORMAT:
+C(20, 3) = (20 × 19 × 18) / (3 × 2 × 1) = 6840 / 6 = 1140
+
+WRONG FORMAT:
+C(20, 3) = 20! / (3! × 17!) then expanding every term
+
+INTERMEDIATE MULTIPLICATION:
+Show a maximum of 2 intermediate steps per calculation. After 2 steps, state the result directly.
+
+CORRECT FORMAT:
+P(X = 3) = 1140 × 0.000125 × 0.4181
+         = 0.1425 × 0.4181
+         = 0.0596
+
+WRONG FORMAT (too verbose):
+0.1425 × 0.4181 = (1425 × 4181) / 10,000,000 then expanding manually
+
+The goal is to show enough working for an examiner to follow the logic — not to prove every arithmetic step. Nigerian university lecturers expect to see formula, substitution, key intermediate step, and final answer.`;
 
 const SCIENCE_SOLUTION_RULES = `CRITICAL RULES — SCIENCE FORMAT:
 - Restate each question part as a clear sub-heading
