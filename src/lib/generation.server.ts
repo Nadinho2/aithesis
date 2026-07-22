@@ -598,6 +598,10 @@ const QUANTITATIVE_SECTIONS = [
   { key: "solution_steps", label: "Step-by-Step Solution", order: 2, target: 1500 },
   { key: "final_answer", label: "Final Answer", order: 3, target: 200 },
 ];
+const SOLUTION_SINGLE = [
+  { key: "solution", label: "Solution", order: 1, target: 2000 },
+];
+
 
 const QUANTITATIVE_RULES = `RULES:
 - Number each step: Step 1, Step 2, Step 3...
@@ -753,8 +757,12 @@ export async function generateAssignmentContent(payload: {
     ? refs.map((r: any) => formatByStyle(r, data.citation_style as "apa_7" | "harvard")).join("\n")
     : "";
 
-  const sections = isProblemSolving ? QUANTITATIVE_SECTIONS : ASSIGNMENT_SECTIONS;
-  const problemSolvingRules = getProblemSolvingRules(fullQuestion);
+  const problemSubject = isProblemSolving ? detectAssignmentSubject(fullQuestion) : "general";
+  const isStructuredSubject = problemSubject === "mathematics" || problemSubject === "science" || problemSubject === "technical";
+  const sections = isProblemSolving
+    ? (isStructuredSubject ? SOLUTION_SINGLE : QUANTITATIVE_SECTIONS)
+    : ASSIGNMENT_SECTIONS;
+  const problemSolvingRules = isProblemSolving ? getProblemSolvingRules(fullQuestion) : "";
   const sectionsRecord: Record<string, string> = {};
   const generated: { key: string; content: string }[] = [];
 
@@ -811,7 +819,7 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
   const totalWords = Object.values(sectionsRecord)
     .reduce((sum, text) => sum + countWords(text ?? ""), 0);
   const abstract = isProblemSolving
-    ? (sectionsRecord["problem_restatement"] ?? "").slice(0, 400)
+    ? ((sectionsRecord["problem_restatement"] ?? sectionsRecord["solution"] ?? "").slice(0, 400))
     : (sectionsRecord["introduction"] ?? "").slice(0, 400);
 
   // Save to DB — try new columns, fall back to legacy
