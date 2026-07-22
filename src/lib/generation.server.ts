@@ -669,7 +669,7 @@ const TECHNICAL_SOLUTION_RULES = `CRITICAL RULES — TECHNICAL FORMAT:
 - Do NOT use markdown bold (**) — plain text only (code blocks are acceptable)
 - Jump straight into solving — no preamble`;
 
-const _mathKws = ["math", "mathematics", "statistics", "probability", "calculus", "algebra", "binomial", "distribution", "integration", "differentiation", "matrix", "vector", "regression", "hypothesis", "variance", "standard deviation", "normal distribution", "poisson", "correlation", "geometry", "trigonometry", "logarithm", "sequence", "series"];
+const _mathKws = ["math", "mathematics", "statistics", "probability", "calculus", "algebra", "binomial", "distribution", "integration", "differentiation", "matrix", "vector", "regression", "hypothesis", "variance", "standard deviation", "normal distribution", "poisson", "correlation", "geometry", "trigonometry", "logarithm", "sequence", "series", "defective", "randomly", "sample of", "percentage", "ratio", "proportion", "what is the probability", "find the probability", "calculate the probability", "solve", "equation", "compute"];
 const _sciKws = ["physics", "chemistry", "biology", "biochemistry", "microbiology", "organic", "inorganic", "thermodynamics", "mechanics", "genetics", "ecology", "anatomy"];
 const _codeKws = ["programming", "algorithm", "code", "software", "database", "python", "java", "javascript", "c++", "data structure", "network", "operating system"];
 
@@ -757,11 +757,7 @@ export async function generateAssignmentContent(payload: {
     ? refs.map((r: any) => formatByStyle(r, data.citation_style as "apa_7" | "harvard")).join("\n")
     : "";
 
-  const problemSubject = isProblemSolving ? detectAssignmentSubject(fullQuestion) : "general";
-  const isStructuredSubject = problemSubject === "mathematics" || problemSubject === "science" || problemSubject === "technical";
-  const sections = isProblemSolving
-    ? (isStructuredSubject ? SOLUTION_SINGLE : QUANTITATIVE_SECTIONS)
-    : ASSIGNMENT_SECTIONS;
+  const sections = isProblemSolving ? SOLUTION_SINGLE : ASSIGNMENT_SECTIONS;
   const problemSolvingRules = isProblemSolving ? getProblemSolvingRules(fullQuestion) : "";
   const sectionsRecord: Record<string, string> = {};
   const generated: { key: string; content: string }[] = [];
@@ -819,7 +815,7 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
   const totalWords = Object.values(sectionsRecord)
     .reduce((sum, text) => sum + countWords(text ?? ""), 0);
   const abstract = isProblemSolving
-    ? ((sectionsRecord["problem_restatement"] ?? sectionsRecord["solution"] ?? "").slice(0, 400))
+    ? (sectionsRecord["solution"] ?? "").slice(0, 400)
     : (sectionsRecord["introduction"] ?? "").slice(0, 400);
 
   // Save to DB — try new columns, fall back to legacy
