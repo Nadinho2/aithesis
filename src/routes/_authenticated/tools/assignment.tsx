@@ -25,6 +25,7 @@ function AssignmentPage() {
   const [gradingTarget, setGradingTarget] = useState<"A" | "B" | "C">("B");
   const [docFile, setDocFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
   const [assignmentType, setAssignmentType] = useState<"essay" | "problem_solving">("essay");
+  const [subject, setSubject] = useState<"mathematics" | "science" | "programming" | "general">("general");
   const docRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const checkAccessFn = useServerFn(checkAccess);
@@ -47,6 +48,7 @@ function AssignmentPage() {
           academic_level: academicLevel,
           grading_target: gradingTarget,
           assignment_type: assignmentType,
+          subject: isEssay ? undefined : subject,
           ...(docFile ? { file_base64: docFile.base64, file_mime: docFile.mime, file_name: docFile.name } : {}),
         },
       }),
@@ -75,13 +77,13 @@ function AssignmentPage() {
     try {
       const access = await checkAccessFn({ data: { product: "assignment" } });
       if (!access.allowed) {
-        saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType });
+        saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType, subject });
         sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
-      saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType });
+      saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType, subject });
       sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
@@ -135,6 +137,25 @@ function AssignmentPage() {
               : "Step-by-step solutions for math, physics, engineering, programming, or calculations."}
           </p>
         </div>
+
+        {/* Subject picker — only for problem-solving */}
+        {!isEssay && (
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1.5 block">
+              Subject Area
+            </label>
+            <select
+              value={subject}
+              onChange={(e) => setSubject(e.target.value as any)}
+              className="w-full sm:w-64 text-xs bg-card border border-ink/15 rounded-sm px-2 py-1.5"
+            >
+              <option value="mathematics">Mathematics / Statistics</option>
+              <option value="science">Sciences (Physics, Chemistry, Biology)</option>
+              <option value="programming">Programming / Technical</option>
+              <option value="general">General (Step-by-Step)</option>
+            </select>
+          </div>
+        )}
 
         {/* Question */}
         <textarea
