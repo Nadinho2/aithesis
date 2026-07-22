@@ -9,7 +9,8 @@ export type BrainPadiTool =
   | "Exam Prep"
   | "Presentation"
   | "CV Maker"
-  | "Side Hustle";
+  | "Side Hustle"
+  | "Seminar";
 
 type SendResult = { success: boolean; error?: string };
 
@@ -42,6 +43,7 @@ function toolSlug(tool: BrainPadiTool): string {
     Presentation: "presentation",
     "CV Maker": "cv",
     "Side Hustle": "side-hustle",
+    Seminar: "seminar",
   };
   return map[tool];
 }
@@ -486,6 +488,35 @@ export async function sendSideHustleReadyEmail({
 ${greeting(name)}
 ${paragraph("Your personalised side hustle guide is ready. It includes actionable ideas, estimated earnings, first steps, and a roadmap tailored to your skills and interests.")}
 ${ctaButton(downloadUrl, "View Your Guide")}`,
+  );
+}
+
+export async function sendSeminarReadyEmail({
+  to,
+  name,
+  seminarTitle,
+  seminarType,
+  downloadUrl,
+}: {
+  to: string;
+  name: string;
+  seminarTitle: string;
+  seminarType: string;
+  downloadUrl: string;
+}): Promise<SendResult> {
+  return send(
+    to,
+    "Your Seminar Paper is ready — MyBrainPadi",
+    `${heading("Your Seminar Paper is ready 🎉")}
+${greeting(name)}
+<div style="background:${BRAND.verdeLight};border-radius:8px;padding:16px 20px;margin:0 0 16px">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+    <tr><td style="padding:2px 0"><span style="font-size:14px;color:${BRAND.inkSecondary}">Title</span></td><td style="padding:2px 0;text-align:right"><span style="font-weight:600;font-size:14px;color:${BRAND.ink}">${seminarTitle}</span></td></tr>
+    <tr><td style="padding:2px 0"><span style="font-size:14px;color:${BRAND.inkSecondary}">Type</span></td><td style="padding:2px 0;text-align:right"><span style="font-weight:600;font-size:14px;color:${BRAND.ink}">${seminarType}</span></td></tr>
+  </table>
+</div>
+${paragraph("Your seminar paper has been generated and is ready for review. It's formatted according to the appropriate academic style for your selected seminar type.")}
+${ctaButton(downloadUrl, "Download Seminar Paper")}`,
   );
 }
 

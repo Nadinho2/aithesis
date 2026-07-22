@@ -8,19 +8,21 @@ import {
   listPresentations, deletePresentation,
   listCvs, deleteCv,
   listSideHustles, deleteSideHustle,
+  listSeminars, deleteSeminar,
 } from "@/lib/tool-history.functions";
 import {
   FileText, GraduationCap, Presentation, UserSquare2, Zap,
-  Loader2, Trash2, Calendar, ChevronRight,
+  BookOpen, Loader2, Trash2, Calendar, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { seminarTypeLabel } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/tools/history")({
   head: () => ({ meta: [{ title: "Tool History — Mybrainpadi" }] }),
   component: ToolHistoryPage,
 });
 
-type Tab = "assignments" | "exams" | "presentations" | "cvs" | "side_hustles";
+type Tab = "assignments" | "exams" | "presentations" | "cvs" | "side_hustles" | "seminars";
 
 const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
   { key: "assignments", label: "Assignments", icon: FileText },
@@ -28,7 +30,10 @@ const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
   { key: "presentations", label: "Presentations", icon: Presentation },
   { key: "cvs", label: "CVs", icon: UserSquare2 },
   { key: "side_hustles", label: "Side Hustles", icon: Zap },
+  { key: "seminars", label: "Seminars", icon: BookOpen },
 ];
+
+
 
 function ToolHistoryPage() {
   const [activeTab, setActiveTab] = useState<Tab>("assignments");
@@ -40,6 +45,7 @@ function ToolHistoryPage() {
     presentations: useServerFn(listPresentations),
     cvs: useServerFn(listCvs),
     side_hustles: useServerFn(listSideHustles),
+    seminars: useServerFn(listSeminars),
   };
 
   const deleteFns: Record<Tab, any> = {
@@ -48,6 +54,7 @@ function ToolHistoryPage() {
     presentations: useServerFn(deletePresentation),
     cvs: useServerFn(deleteCv),
     side_hustles: useServerFn(deleteSideHustle),
+    seminars: useServerFn(deleteSeminar),
   };
 
   const { data, isLoading } = useQuery({
@@ -117,6 +124,7 @@ function ToolHistoryPage() {
                 case "presentations": return "/tools/presentation";
                 case "cvs": return "/tools/cv";
                 case "side_hustles": return "/tools/side-hustle";
+                case "seminars": return "/tools/seminar";
               }
             })()}
             className="text-sm text-sage hover:underline font-medium"
@@ -177,6 +185,11 @@ function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: (
       viewPath = `/tools/side-hustle/${item.id}`;
       break;
     }
+    case "seminars":
+      title = item.title?.slice(0, 80) + (item.title?.length > 80 ? "…" : "") || "Seminar Paper";
+      subtitle = `${seminarTypeLabel(item.seminar_type)} · ${item.academic_level ?? "UG"} · ${item.word_count ?? 0} words`;
+      viewPath = `/tools/seminar/${item.id}`;
+      break;
   }
 
   return (

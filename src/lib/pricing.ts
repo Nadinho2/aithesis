@@ -10,9 +10,14 @@ export const PRICING = {
   exam: { label: "Exam Preparation", price: 1000, currency: "NGN" },
   presentation: { label: "Presentation Assistant", price: 3000, currency: "NGN" },
   cv: { label: "CV Maker", price: 3000, currency: "NGN" },
+  seminar_journal: { label: "Journal / Conference Paper", price: 3500, currency: "NGN" },
+  seminar_departmental: { label: "Departmental Seminar Paper", price: 2000, currency: "NGN" },
+  seminar_postgraduate: { label: "Postgraduate Research Seminar", price: 2500, currency: "NGN" },
+  seminar_technical: { label: "Technical / Engineering Seminar", price: 2500, currency: "NGN" },
+  seminar_book_review: { label: "Book Review Seminar", price: 1500, currency: "NGN" },
 } as const;
 
-export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv";
+export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review";
 export type ThesisLevel = "undergraduate" | "masters" | "phd";
 
 export function getPrice(product: ProductType, level?: ThesisLevel): number {
@@ -31,4 +36,16 @@ export function getLabel(product: ProductType, level?: ThesisLevel): string {
     if (p && typeof p === "object" && "label" in p) return p.label;
   }
   return "";
+}
+
+/** Map a seminar_type to its human-readable label */
+export function seminarTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    seminar_journal: "Journal Paper",
+    seminar_departmental: "Departmental Seminar",
+    seminar_postgraduate: "Postgraduate Seminar",
+    seminar_technical: "Technical Seminar",
+    seminar_book_review: "Book Review",
+  };
+  return map[type] ?? type;
 }

@@ -29,7 +29,7 @@ async function getQueueClient() {
  * Add a job to the generation queue.
  */
 export async function enqueueJob(
-  jobType: "thesis" | "proposal" | "assignment",
+  jobType: "thesis" | "proposal" | "assignment" | "seminar",
   payload: Record<string, unknown>,
 ): Promise<string> {
   const supabase = await getQueueClient();
@@ -55,7 +55,7 @@ export async function enqueueJob(
  */
 export async function claimNextJob(): Promise<{
   id: string;
-  job_type: "thesis" | "proposal" | "assignment";
+  job_type: "thesis" | "proposal" | "assignment" | "seminar";
   payload: Record<string, unknown>;
 } | null> {
   const supabase = await getQueueClient();

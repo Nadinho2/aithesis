@@ -94,6 +94,36 @@ function BillingPage() {
           description="Upload or fill in your details, get a professionally formatted CV"
           onClick={() => openPay("cv")}
         />
+        <PricingCard
+          product="Journal Paper"
+          price={`₦${getPrice("seminar_journal").toLocaleString()}`}
+          description="Formal academic paper for conference or journal submission"
+          onClick={() => openPay("seminar_journal")}
+        />
+        <PricingCard
+          product="Departmental Seminar"
+          price={`₦${getPrice("seminar_departmental").toLocaleString()}`}
+          description="Topic-based seminar for departmental presentation"
+          onClick={() => openPay("seminar_departmental")}
+        />
+        <PricingCard
+          product="Postgraduate Seminar"
+          price={`₦${getPrice("seminar_postgraduate").toLocaleString()}`}
+          description="Research plan seminar for Masters or PhD students"
+          onClick={() => openPay("seminar_postgraduate")}
+        />
+        <PricingCard
+          product="Technical Seminar"
+          price={`₦${getPrice("seminar_technical").toLocaleString()}`}
+          description="Engineering and technology seminar paper"
+          onClick={() => openPay("seminar_technical")}
+        />
+        <PricingCard
+          product="Book Review"
+          price={`₦${getPrice("seminar_book_review").toLocaleString()}`}
+          description="Critical review and analysis of a book or academic work"
+          onClick={() => openPay("seminar_book_review")}
+        />
       </div>
 
       {/* Payment history */}
@@ -200,7 +230,7 @@ function DebugPanel() {
 
       // Also check access for all products
       const accessFn = useServerFn(debugAccess);
-      const products = ["proposal", "thesis", "assignment", "exam", "presentation", "cv"] as const;
+      const products = ["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review"] as const;
       const accessResults: Record<string, any> = {};
       for (const p of products) {
         try {

@@ -29,6 +29,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedToolsSideHustleRouteImport } from './routes/_authenticated/tools/side-hustle'
+import { Route as AuthenticatedToolsSeminarRouteImport } from './routes/_authenticated/tools/seminar'
 import { Route as AuthenticatedToolsPresentationRouteImport } from './routes/_authenticated/tools/presentation'
 import { Route as AuthenticatedToolsHistoryRouteImport } from './routes/_authenticated/tools/history'
 import { Route as AuthenticatedToolsExamRouteImport } from './routes/_authenticated/tools/exam'
@@ -40,6 +41,7 @@ import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedToolsSideHustlePlansRouteImport } from './routes/_authenticated/tools/side-hustle/plans'
 import { Route as AuthenticatedToolsSideHustleJourneyRouteImport } from './routes/_authenticated/tools/side-hustle/journey'
 import { Route as AuthenticatedToolsSideHustleIdRouteImport } from './routes/_authenticated/tools/side-hustle.$id'
+import { Route as AuthenticatedToolsSeminarIdRouteImport } from './routes/_authenticated/tools/seminar.$id'
 import { Route as AuthenticatedToolsPresentationIdRouteImport } from './routes/_authenticated/tools/presentation.$id'
 import { Route as AuthenticatedToolsExamIdRouteImport } from './routes/_authenticated/tools/exam.$id'
 import { Route as AuthenticatedToolsCvIdRouteImport } from './routes/_authenticated/tools/cv.$id'
@@ -147,6 +149,12 @@ const AuthenticatedToolsSideHustleRoute =
     path: '/tools/side-hustle',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedToolsSeminarRoute =
+  AuthenticatedToolsSeminarRouteImport.update({
+    id: '/tools/seminar',
+    path: '/tools/seminar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedToolsPresentationRoute =
   AuthenticatedToolsPresentationRouteImport.update({
     id: '/tools/presentation',
@@ -209,6 +217,12 @@ const AuthenticatedToolsSideHustleIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedToolsSideHustleRoute,
   } as any)
+const AuthenticatedToolsSeminarIdRoute =
+  AuthenticatedToolsSeminarIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedToolsSeminarRoute,
+  } as any)
 const AuthenticatedToolsPresentationIdRoute =
   AuthenticatedToolsPresentationIdRouteImport.update({
     id: '/$id',
@@ -260,11 +274,13 @@ export interface FileRoutesByFullPath {
   '/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/tools/seminar': typeof AuthenticatedToolsSeminarRouteWithChildren
   '/tools/side-hustle': typeof AuthenticatedToolsSideHustleRouteWithChildren
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
+  '/tools/seminar/$id': typeof AuthenticatedToolsSeminarIdRoute
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
@@ -296,11 +312,13 @@ export interface FileRoutesByTo {
   '/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/tools/seminar': typeof AuthenticatedToolsSeminarRouteWithChildren
   '/tools/side-hustle': typeof AuthenticatedToolsSideHustleRouteWithChildren
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
+  '/tools/seminar/$id': typeof AuthenticatedToolsSeminarIdRoute
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
@@ -334,11 +352,13 @@ export interface FileRoutesById {
   '/_authenticated/tools/exam': typeof AuthenticatedToolsExamRouteWithChildren
   '/_authenticated/tools/history': typeof AuthenticatedToolsHistoryRoute
   '/_authenticated/tools/presentation': typeof AuthenticatedToolsPresentationRouteWithChildren
+  '/_authenticated/tools/seminar': typeof AuthenticatedToolsSeminarRouteWithChildren
   '/_authenticated/tools/side-hustle': typeof AuthenticatedToolsSideHustleRouteWithChildren
   '/_authenticated/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/_authenticated/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/_authenticated/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
   '/_authenticated/tools/presentation/$id': typeof AuthenticatedToolsPresentationIdRoute
+  '/_authenticated/tools/seminar/$id': typeof AuthenticatedToolsSeminarIdRoute
   '/_authenticated/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/_authenticated/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/_authenticated/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
@@ -372,11 +392,13 @@ export interface FileRouteTypes {
     | '/tools/exam'
     | '/tools/history'
     | '/tools/presentation'
+    | '/tools/seminar'
     | '/tools/side-hustle'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
     | '/tools/presentation/$id'
+    | '/tools/seminar/$id'
     | '/tools/side-hustle/$id'
     | '/tools/side-hustle/journey'
     | '/tools/side-hustle/plans'
@@ -408,11 +430,13 @@ export interface FileRouteTypes {
     | '/tools/exam'
     | '/tools/history'
     | '/tools/presentation'
+    | '/tools/seminar'
     | '/tools/side-hustle'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
     | '/tools/presentation/$id'
+    | '/tools/seminar/$id'
     | '/tools/side-hustle/$id'
     | '/tools/side-hustle/journey'
     | '/tools/side-hustle/plans'
@@ -445,11 +469,13 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/exam'
     | '/_authenticated/tools/history'
     | '/_authenticated/tools/presentation'
+    | '/_authenticated/tools/seminar'
     | '/_authenticated/tools/side-hustle'
     | '/_authenticated/tools/assignment/$id'
     | '/_authenticated/tools/cv/$id'
     | '/_authenticated/tools/exam/$id'
     | '/_authenticated/tools/presentation/$id'
+    | '/_authenticated/tools/seminar/$id'
     | '/_authenticated/tools/side-hustle/$id'
     | '/_authenticated/tools/side-hustle/journey'
     | '/_authenticated/tools/side-hustle/plans'
@@ -609,6 +635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedToolsSideHustleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tools/seminar': {
+      id: '/_authenticated/tools/seminar'
+      path: '/tools/seminar'
+      fullPath: '/tools/seminar'
+      preLoaderRoute: typeof AuthenticatedToolsSeminarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tools/presentation': {
       id: '/_authenticated/tools/presentation'
       path: '/tools/presentation'
@@ -685,6 +718,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tools/side-hustle/$id'
       preLoaderRoute: typeof AuthenticatedToolsSideHustleIdRouteImport
       parentRoute: typeof AuthenticatedToolsSideHustleRoute
+    }
+    '/_authenticated/tools/seminar/$id': {
+      id: '/_authenticated/tools/seminar/$id'
+      path: '/$id'
+      fullPath: '/tools/seminar/$id'
+      preLoaderRoute: typeof AuthenticatedToolsSeminarIdRouteImport
+      parentRoute: typeof AuthenticatedToolsSeminarRoute
     }
     '/_authenticated/tools/presentation/$id': {
       id: '/_authenticated/tools/presentation/$id'
@@ -771,6 +811,20 @@ const AuthenticatedToolsPresentationRouteWithChildren =
     AuthenticatedToolsPresentationRouteChildren,
   )
 
+interface AuthenticatedToolsSeminarRouteChildren {
+  AuthenticatedToolsSeminarIdRoute: typeof AuthenticatedToolsSeminarIdRoute
+}
+
+const AuthenticatedToolsSeminarRouteChildren: AuthenticatedToolsSeminarRouteChildren =
+  {
+    AuthenticatedToolsSeminarIdRoute: AuthenticatedToolsSeminarIdRoute,
+  }
+
+const AuthenticatedToolsSeminarRouteWithChildren =
+  AuthenticatedToolsSeminarRoute._addFileChildren(
+    AuthenticatedToolsSeminarRouteChildren,
+  )
+
 interface AuthenticatedToolsSideHustleRouteChildren {
   AuthenticatedToolsSideHustleIdRoute: typeof AuthenticatedToolsSideHustleIdRoute
   AuthenticatedToolsSideHustleJourneyRoute: typeof AuthenticatedToolsSideHustleJourneyRoute
@@ -810,6 +864,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedToolsExamRoute: typeof AuthenticatedToolsExamRouteWithChildren
   AuthenticatedToolsHistoryRoute: typeof AuthenticatedToolsHistoryRoute
   AuthenticatedToolsPresentationRoute: typeof AuthenticatedToolsPresentationRouteWithChildren
+  AuthenticatedToolsSeminarRoute: typeof AuthenticatedToolsSeminarRouteWithChildren
   AuthenticatedToolsSideHustleRoute: typeof AuthenticatedToolsSideHustleRouteWithChildren
 }
 
@@ -834,6 +889,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedToolsHistoryRoute: AuthenticatedToolsHistoryRoute,
   AuthenticatedToolsPresentationRoute:
     AuthenticatedToolsPresentationRouteWithChildren,
+  AuthenticatedToolsSeminarRoute: AuthenticatedToolsSeminarRouteWithChildren,
   AuthenticatedToolsSideHustleRoute:
     AuthenticatedToolsSideHustleRouteWithChildren,
 }

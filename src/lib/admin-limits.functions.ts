@@ -63,6 +63,7 @@ export const adminListLimits = createServerFn({ method: "GET" })
         exam_available: lim?.exam_available ?? 0,
         presentation_available: lim?.presentation_available ?? 0,
         cv_available: lim?.cv_available ?? 0,
+        seminar_available: (lim as any)?.seminar_available ?? 0,
       };
     });
   });
@@ -82,6 +83,7 @@ export const updateUserLimits = createServerFn({ method: "POST" })
         exam_available: z.number().int().min(0).max(999).default(0),
         presentation_available: z.number().int().min(0).max(999).default(0),
         cv_available: z.number().int().min(0).max(999).default(0),
+        seminar_available: z.number().int().min(0).max(999).default(0),
       })
       .parse(i),
   )
@@ -89,7 +91,8 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     requireAdmin(context.isAdmin);
     const supabase = context.supabase as any;
 
-    const payload = {
+    const row = {
+      user_id: data.user_id,
       thesis_available_ug: data.thesis_available_ug,
       thesis_available_masters: data.thesis_available_masters,
       thesis_available_phd: data.thesis_available_phd,
@@ -98,8 +101,9 @@ export const updateUserLimits = createServerFn({ method: "POST" })
       exam_available: data.exam_available ?? 0,
       presentation_available: data.presentation_available ?? 0,
       cv_available: data.cv_available ?? 0,
+      seminar_available: data.seminar_available ?? 0,
       updated_at: new Date().toISOString(),
-    };
+    } as any;
 
     // Check if a row exists for this user
     const { data: existing } = await supabase
@@ -111,13 +115,13 @@ export const updateUserLimits = createServerFn({ method: "POST" })
     if (existing && existing.length > 0) {
       const { error } = await supabase
         .from("user_limits")
-        .update(payload)
+        .update(row)
         .eq("user_id", data.user_id);
       if (error) throw new Error(error.message);
     } else {
       const { error } = await supabase
         .from("user_limits")
-        .insert({ user_id: data.user_id, ...payload });
+        .insert({ user_id: data.user_id, ...row });
       if (error) throw new Error(error.message);
     }
 
@@ -133,6 +137,12 @@ function limitsColumn(type: string): string | null {
     case "exam": return "exam_available";
     case "presentation": return "presentation_available";
     case "cv": return "cv_available";
+    case "seminar_journal":
+    case "seminar_departmental":
+    case "seminar_postgraduate":
+    case "seminar_technical":
+    case "seminar_book_review":
+      return "seminar_available";
     default: return null;
   }
 }

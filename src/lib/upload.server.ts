@@ -3,6 +3,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 
+// Polyfill DOMMatrix for server-side PDF parsing (pdfjs-dist may reference it)
+if (typeof globalThis.DOMMatrix === "undefined") {
+  // @ts-ignore — minimal DOMMatrix stub for pdfjs-dist server compat
+  globalThis.DOMMatrix = class {
+    a = 1; b = 0; c = 0; d = 1; e = 0; f = 0;
+    constructor(init?: string | number[]) {
+      if (typeof init === "string" && init.startsWith("matrix(")) {
+        const vals = init.slice(7, -1).split(",").map(Number);
+        if (vals.length >= 6) [this.a, this.b, this.c, this.d, this.e, this.f] = vals;
+      } else if (Array.isArray(init) && init.length >= 6) {
+        [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+      }
+    }
+  } as any;
+}
+
 export async function parseUploadedFile(
   base64: string,
   mimeType: string,
@@ -14,20 +30,13 @@ export async function parseUploadedFile(
 
   if (mimeType === "application/pdf") {
     // Use pdfjs-dist legacy build (no canvas/DOM dependencies) for server-side text extraction
-    try {
-      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
-        const content = await page.getTextContent();
-        const pageText = content.items.map((item: any) => item.str).join(" ");
-        text.push(pageText);
-      }
-    } catch {
-      // Fallback: try pdf-parse (requires DOMMatrix polyfill)
-      const pdfParse: any = await import("pdf-parse");
-      const data = await pdfParse.default(buffer);
-      text.push(data.text);
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item: any) => item.str).join(" ");
+      text.push(pageText);
     }
   } else if (
     mimeType ===

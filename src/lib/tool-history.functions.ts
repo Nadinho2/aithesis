@@ -211,3 +211,45 @@ export const deleteSideHustle = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const listSeminars = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context as any;
+    const { data, error } = await supabase
+      .from("seminars")
+      .select("id, title, seminar_type, academic_level, word_count, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const getSeminar = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const { data: row, error } = await supabase
+      .from("seminars")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteSeminar = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const { error } = await supabase
+      .from("seminars")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

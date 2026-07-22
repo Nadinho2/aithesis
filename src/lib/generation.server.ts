@@ -323,6 +323,274 @@ CRITICAL RULES FOR THESIS:
   return { success: true };
 }
 
+// ─── Seminar Generation ───────────────────────────────────────────────────
+
+const SEMINAR_SECTIONS: Record<string, string[]> = {
+  seminar_journal: [
+    "Title", "Author Details", "Abstract", "Keywords",
+    "1. Introduction", "2. Literature Review", "3. Methodology",
+    "4. Results and Findings", "5. Discussion and Conclusion",
+    "Acknowledgements", "References",
+  ],
+  seminar_departmental: [
+    "Title Page", "Abstract", "Introduction", "Main Body",
+    "Sub-theme 1", "Sub-theme 2", "Sub-theme 3",
+    "Conclusion", "References",
+  ],
+  seminar_postgraduate: [
+    "Title", "Abstract", "Introduction and Background",
+    "Statement of the Problem", "Research Objectives and Questions",
+    "Review of Related Literature", "Theoretical Framework",
+    "Proposed Methodology", "Expected Findings and Contributions",
+    "Research Timeline", "References",
+  ],
+  seminar_technical: [
+    "Title", "Abstract", "1. Introduction", "2. Problem Statement",
+    "3. Review of Existing Solutions", "4. Proposed Solution and System Design",
+    "5. Implementation Plan", "6. Expected Results", "7. Conclusion",
+    "References",
+  ],
+  seminar_book_review: [
+    "Title and Bibliographic Information", "Author Background",
+    "Summary of the Work", "Critical Analysis",
+    "Relevance to Course of Study", "Strengths and Weaknesses",
+    "Personal Evaluation", "Conclusion", "References",
+  ],
+};
+
+const SEMINAR_REF_STYLES: Record<string, string> = {
+  seminar_journal: "apa",
+  seminar_departmental: "apa",
+  seminar_postgraduate: "apa",
+  seminar_technical: "ieee",
+  seminar_book_review: "apa",
+};
+
+function seminarLevelLabel(level: string): string {
+  return level === "phd" ? "PhD" : level === "postgraduate" ? "Postgraduate" : "Undergraduate";
+}
+
+function buildSeminarPrompt(
+  seminarType: string,
+  section: string,
+  academicLevel: string,
+  documentTitle: string,
+  topic: string,
+  wordsPerSection: number,
+  extra?: { numSubThemes?: number; bookAuthor?: string },
+): string {
+  const level = seminarLevelLabel(academicLevel);
+  const refStyle = SEMINAR_REF_STYLES[seminarType] ?? "apa";
+  const refInstr = refStyle === "ieee"
+    ? "Use IEEE referencing style: [1], [2] etc. in-text."
+    : "In-text citations: (Surname, Year).";
+
+  const sharedRules = `RULES:
+- Nigerian university student voice — natural academic English
+- No em dashes (—). Use commas and periods instead.
+- Never use phrases like "It is worth noting that", "Furthermore" (overuse), "In conclusion, it can be said", "This study aims to", "It is important to note".
+- Vary sentence length and structure — write like a human, not an AI.
+- ${refInstr}
+- Output section text only — no markdown, no preamble, no headers.
+- Write approximately ${wordsPerSection} words for this section.`;
+
+  switch (seminarType) {
+    case "seminar_journal":
+      return `You are an experienced Nigerian academic writing a formal journal or conference paper at ${level} level.
+Write the '${section}' section of a paper titled '${documentTitle}' on the topic of '${topic}'.
+
+SECTION-SPECIFIC RULES:
+- Abstract: exactly 150-250 words, one paragraph, covers: problem identified, objective, method, results, conclusion. Do not use "this paper will" — write as if study is complete.
+- Keywords: return exactly 5 keywords as a comma-separated list, no full stop at the end.
+- Introduction: identify a clear gap in existing literature that this paper fills. End with a brief outline of the paper's structure.
+- Literature Review: critically review theory and key scholarly works related to the topic variables. Lead toward hypothesis or research question development.
+- Methodology: describe research design, population, sampling technique, data collection, and analysis method. Past tense — study is complete.
+- Results and Findings: present findings with reference to tables and figures. Format all tables as:
+
+Table [N]
+[Table Title]
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Data     | Data     | Data     |
+Note: [brief note if needed]
+
+Number tables sequentially: Table 1, Table 2. Add a brief interpretation paragraph after each table.
+- Discussion and Conclusion: link findings to theory and prior studies. Draw clear conclusions. Do not introduce new information.
+- Acknowledgements: one short paragraph, generic — thank supervisor and institution.
+- References: generate 8-12 realistic APA 7th Edition references relevant to the topic. Format: Surname, I. (Year). Title of article. Journal Name, Volume(Issue), pages. doi: xxxxx. Use plausible but clearly illustrative references — do not fabricate real DOIs.
+
+${sharedRules}`;
+
+    case "seminar_departmental":
+      const subThemeHint = extra?.numSubThemes
+        ? `This paper should have ${extra.numSubThemes} sub-themes under Main Body.`
+        : "";
+      return `You are a Nigerian university student writing a departmental seminar paper at ${level} level.
+Write the '${section}' section of a seminar paper titled '${documentTitle}' on '${topic}'.
+
+RULES:
+- This is a literature-based paper — no original methodology or data collection.
+- Main Body sub-themes should discuss different dimensions of the topic, each with its own sub-heading.
+- Introduction must state what the seminar covers and why the topic matters.
+- Conclusion must summarise key points and state implications — do not introduce new information.
+- Use present tense for established facts and literature.
+${subThemeHint}
+
+${sharedRules}`;
+
+    case "seminar_postgraduate":
+      return `You are writing a postgraduate research seminar paper at ${level} level for a Nigerian university student.
+Write the '${section}' section of a seminar titled '${documentTitle}' on the proposed study: '${topic}'.
+
+RULES:
+- Use future tense throughout — this is a proposed study not yet conducted: "this study will", "data will be collected", "the researcher intends to".
+- Research Timeline section: present as a simple table with columns: Activity | Duration | Expected Date.
+- Expected Findings: state what the researcher HOPES to find based on literature — do not state actual results.
+
+${sharedRules}`;
+
+    case "seminar_technical":
+      return `You are writing a technical engineering seminar paper at ${level} level for a Nigerian university student.
+Write the '${section}' section of a seminar titled '${documentTitle}' on '${topic}'.
+
+RULES:
+- Use IEEE referencing style: [1], [2] etc. in-text.
+- Proposed Solution section must include a clear system architecture description and tools/technologies to be used.
+- Implementation Plan must be presented as a numbered step-by-step process.
+- Where applicable, describe diagrams or figures: "Figure 1 shows the proposed system architecture..." then describe what the figure would contain.
+
+${sharedRules}`;
+
+    case "seminar_book_review":
+      const authorInfo = extra?.bookAuthor ? `by '${extra.bookAuthor}'` : `'${documentTitle}'`;
+      return `You are writing an academic book review seminar paper at ${level} level for a Nigerian university student.
+Write the '${section}' section reviewing ${authorInfo} (treat as the book being reviewed).
+
+RULES:
+- Summary: objective description of the book's content — no personal opinion here.
+- Critical Analysis: examine the author's arguments, evidence quality, and logical consistency.
+- Strengths and Weaknesses: balanced assessment — at least 2 of each, each as a short paragraph.
+- Personal Evaluation: student's own academic opinion, written in first person: "In my assessment..." "This reviewer finds..."
+- Do not simply retell the book — analyse it.
+
+${sharedRules}`;
+
+    default:
+      return `You are a Nigerian university student writing a seminar paper at ${level} level. Write the '${section}' section of a paper titled '${documentTitle}' on '${topic}'. ${sharedRules}`;
+  }
+}
+
+export async function generateSeminarContent(payload: {
+  userId: string;
+  data: {
+    seminar_type: string;
+    title: string;
+    academic_level: string;
+    target_words: number;
+    topic?: string;
+    num_sub_themes?: number;
+    book_author?: string;
+    taskId?: string;
+  };
+}): Promise<{ success: boolean; error?: string }> {
+  const { userId, data } = payload;
+  const supabase = await getSupabase();
+  const { callAIText } = await import("@/lib/ai-utils.server");
+  const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const seminarType = data.seminar_type;
+  const sectionList = SEMINAR_SECTIONS[seminarType] ?? SEMINAR_SECTIONS["seminar_departmental"];
+
+  // Update task status
+  if (data.taskId) {
+    await (supabase as any)
+      .from("generation_tasks")
+      .update({ status: "processing", updated_at: new Date().toISOString() })
+      .eq("id", data.taskId);
+  }
+
+  const topic = data.topic ?? data.title;
+  const totalSections = sectionList.length;
+  const wordsPerSection = Math.max(300, Math.round(data.target_words / totalSections));
+
+  const sections: Record<string, string> = {};
+  const generated: { key: string; content: string }[] = [];
+
+  for (let i = 0; i < sectionList.length; i++) {
+    const section = sectionList[i];
+    try {
+      const prevCtx = generated
+        .map((s) => `${s.key}: ${s.content.slice(0, 500)}…`)
+        .join("\n\n");
+
+      const system = buildSeminarPrompt(
+        seminarType, section, data.academic_level,
+        data.title, topic, wordsPerSection,
+        { numSubThemes: data.num_sub_themes, bookAuthor: data.book_author },
+      );
+
+      const userMsg = prevCtx
+        ? `PREVIOUS SECTIONS (must remain 100% consistent):\n${prevCtx}\n\nNow write "${section}".`
+        : `Write "${section}".`;
+
+      const text = await callAIText(apiKey, {
+        model: "deepseek-chat",
+        max_tokens: 16000,
+        system,
+        user: userMsg,
+      });
+
+      sections[section] = text;
+      generated.push({ key: section, content: text });
+
+      if (i < sectionList.length - 1) {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    } catch (e: any) {
+      console.error(`[seminar-worker] ${section} failed:`, e?.message);
+      sections[section] = "";
+    }
+  }
+
+  const totalWords = Object.values(sections)
+    .reduce((sum, text) => sum + countWords(text ?? ""), 0);
+
+  // Save to DB
+  try {
+    const { error } = await (supabase as any).from("seminars").insert({
+      user_id: userId,
+      title: data.title,
+      seminar_type: seminarType,
+      academic_level: data.academic_level,
+      word_count: totalWords,
+      target_words: data.target_words,
+      sections,
+      status: "completed",
+    });
+    if (error) console.error("[seminar-worker] Save failed:", error.message);
+  } catch (e: any) {
+    console.error("[seminar-worker] Save failed:", e?.message);
+  }
+
+  // Update task
+  if (data.taskId) {
+    await (supabase as any)
+      .from("generation_tasks")
+      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .eq("id", data.taskId);
+  }
+
+  // Email notification
+  const { notifyToolCompleted } = await import("@/lib/mail-helper");
+  const { seminarTypeLabel } = await import("@/lib/pricing");
+  await notifyToolCompleted(userId, "seminar", {
+    title: data.title,
+    downloadUrl: `${SITE}/tools/history`,
+    seminarType: seminarTypeLabel(seminarType),
+  });
+
+  return { success: true };
+}
+
 // ─── Assignment Generation ─────────────────────────────────────────────────
 
 const QUANTITATIVE_SECTIONS = [

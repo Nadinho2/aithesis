@@ -27,6 +27,12 @@ export function productToTool(product: string): string | null {
     presentation: "Presentation",
     cv: "CV Maker",
     side_hustle: "Side Hustle",
+    seminar: "Seminar",
+    seminar_journal: "Seminar",
+    seminar_departmental: "Seminar",
+    seminar_postgraduate: "Seminar",
+    seminar_technical: "Seminar",
+    seminar_book_review: "Seminar",
   };
   return map[product] ?? null;
 }
@@ -36,26 +42,22 @@ export function productToTool(product: string): string | null {
  * Never throws — runs async and catches errors internally.
  */
 import {
-  sendThesisReadyEmail,
-  sendProposalReadyEmail,
-  sendAssignmentReadyEmail,
-  sendExamPrepReadyEmail,
-  sendPresentationReadyEmail,
-  sendCVReadyEmail,
-  sendSideHustleReadyEmail,
-  sendGenerationFailedEmail,
+  sendThesisReadyEmail, sendProposalReadyEmail, sendAssignmentReadyEmail,
+  sendExamPrepReadyEmail, sendPresentationReadyEmail, sendCVReadyEmail,
+  sendSideHustleReadyEmail, sendSeminarReadyEmail, sendGenerationFailedEmail,
 } from "./mail";
 import type { BrainPadiTool } from "./mail";
 
 export async function notifyToolCompleted(
   userId: string,
-  tool: "thesis" | "proposal" | "assignment" | "exam" | "presentation" | "cv" | "side_hustle",
+  tool: "thesis" | "proposal" | "assignment" | "exam" | "presentation" | "cv" | "side_hustle" | "seminar",
   opts: {
     title?: string;
     downloadUrl?: string;
     aiScore?: number;
     plagiarismScore?: number;
     subject?: string;
+    seminarType?: string;
   },
 ): Promise<void> {
   const email = await getUserEmail(userId);
@@ -121,6 +123,15 @@ export async function notifyToolCompleted(
         await sendSideHustleReadyEmail({
           to: email,
           name,
+          downloadUrl: opts.downloadUrl ?? "",
+        });
+        break;
+      case "seminar":
+        await sendSeminarReadyEmail({
+          to: email,
+          name,
+          seminarTitle: opts.title ?? "Your Seminar Paper",
+          seminarType: opts.seminarType ?? "Seminar",
           downloadUrl: opts.downloadUrl ?? "",
         });
         break;
