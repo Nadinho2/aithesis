@@ -33,6 +33,8 @@ export interface PipelinePayload {
   citationStyle: "apa_7" | "harvard";
   topicContext: string;
   activeChapters: ChapterDef[];
+  documentType?: string;
+  academicLevel?: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -52,12 +54,128 @@ RULES:
 - For numbers above 999, use commas (1,500 not 1500).
 - For equations, use plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, F = MSB/MSW, r = 0.76.`;
 
+const mathKeywords = [
+  "math", "mathematics", "statistics", "probability",
+  "calculus", "algebra", "binomial", "distribution",
+  "integration", "differentiation", "matrix", "vector",
+  "regression", "hypothesis", "variance", "standard deviation",
+  "normal distribution", "poisson", "correlation", "geometry",
+  "trigonometry", "logarithm", "sequence", "series",
+];
+
+const scienceKeywords = [
+  "physics", "chemistry", "biology", "biochemistry",
+  "microbiology", "organic", "inorganic", "thermodynamics",
+  "mechanics", "genetics", "ecology", "anatomy",
+];
+
+const codeKeywords = [
+  "programming", "algorithm", "code", "software",
+  "database", "python", "java", "javascript", "c++",
+  "data structure", "network", "operating system",
+];
+
+/**
+ * Classify a topic into a subject category for assignment generation.
+ */
+function detectSubjectCategory(topic: string): string {
+  const lower = topic.toLowerCase();
+  if (mathKeywords.some((kw) => lower.includes(kw))) return "mathematics";
+  if (scienceKeywords.some((kw) => lower.includes(kw))) return "science";
+  if (codeKeywords.some((kw) => lower.includes(kw))) return "technical";
+  return "humanities";
+}
+
 /**
  * Build the system prompt for a specific chapter.
  */
 function buildSystemPrompt(payload: PipelinePayload, chapter: ChapterDef): string {
   const level = thesisLevelLabel(payload.level);
   const cite = citationLabel(payload.citationStyle);
+
+  // Subject-aware assignment prompts
+  if (payload.documentType === "assignment") {
+    const category = detectSubjectCategory(payload.topic);
+    const academicLevel = payload.academicLevel
+      ? (payload.academicLevel === "masters" ? "Master's" : payload.academicLevel === "phd" ? "PhD" : "Undergraduate")
+      : level;
+
+    switch (category) {
+      case "mathematics":
+        return `You are an expert Nigerian university mathematics lecturer writing a model answer for a ${academicLevel} level assignment.
+
+THE QUESTION IS: ${payload.topic}
+
+CRITICAL RULES — MATHEMATICS FORMAT:
+- Begin by clearly restating each part of the question (a), (b), (c), (d) as a sub-heading
+- For EACH part, follow this exact structure:
+
+  GIVEN:
+  State all given values clearly (e.g. n = 20, p = 0.05, q = 0.95)
+
+  FORMULA:
+  Write the full formula to be applied, clearly stated in words and mathematical notation:
+  e.g. P(X = r) = C(n,r) × p^r × q^(n-r)
+
+  SUBSTITUTION:
+  Show every substitution step explicitly — do not skip steps:
+  e.g. P(X = 3) = C(20,3) × (0.05)^3 × (0.95)^17
+
+  CALCULATION:
+  Show each arithmetic step. Calculate C(n,r), powers, and products separately before combining:
+  e.g. C(20,3) = 20! / (3! × 17!) = 1140
+       (0.05)^3 = 0.000125
+       (0.95)^17 = 0.4181
+       P(X = 3) = 1140 × 0.000125 × 0.4181 = 0.0596
+
+  ANSWER:
+  State the final answer clearly and in context:
+  e.g. Therefore, the probability that exactly 3 bulbs are defective is 0.0596 or approximately 5.96%
+
+- All numerical answers must be accurate to 4 decimal places
+- For cumulative probabilities, show each individual probability first then sum them
+- For mean and standard deviation: show formula then calculation then answer
+- For applied/interpretation questions (part d type): state the numerical answer first, then give a practical recommendation in 2-3 sentences
+- Do not write an abstract, introduction, or literature review
+- Do not use markdown bold (**) or italic (*) syntax — write plain text only, use CAPS for emphasis where needed
+- Output the full worked solution only — no preamble`;
+
+      case "science":
+        return `You are an expert Nigerian university science lecturer writing a model answer for a ${academicLevel} level assignment.
+
+THE QUESTION IS: ${payload.topic}
+
+CRITICAL RULES — SCIENCE FORMAT:
+- Restate each question part as a clear sub-heading
+- Show all formulae before substituting values
+- Include units in every calculation and final answer
+- Diagrams: describe them in text e.g. '[DIAGRAM: Label the parts of a cell here]'
+- Show balanced equations for chemistry questions
+- State laws or principles being applied before using them
+- Final answers must be clearly labelled and boxed in text: e.g. ANSWER: Velocity = 25 m/s
+- Do not write an abstract or literature review
+- Do not use markdown syntax — plain text only
+- Output the full worked solution only — no preamble`;
+
+      case "technical":
+        return `You are an expert Nigerian university computer science lecturer writing a model answer for a ${academicLevel} level assignment.
+
+THE QUESTION IS: ${payload.topic}
+
+CRITICAL RULES — TECHNICAL FORMAT:
+- Restate each question part as a clear sub-heading
+- For algorithm questions: write step-by-step pseudocode first, then explain each step in plain English
+- For code questions: write clean, commented code with explanation of logic below it
+- For theory questions: define terms first, then explain, then give a real-world example
+- For database questions: write SQL queries with explanation of each clause
+- Do not use markdown bold (**) — plain text only (code blocks are acceptable)
+- Output the full answer only — no preamble`;
+
+      case "humanities":
+      default:
+        break; // fall through to default thesis-style prompt
+    }
+  }
 
   return `You are an experienced Nigerian academic writing a completed research thesis at ${level} level. Write ${chapter.label} for a study titled '${payload.documentTitle}' on '${payload.topic}' conducted at a Nigerian university.
 

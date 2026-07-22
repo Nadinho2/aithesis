@@ -17,6 +17,7 @@ import {
   ShadingType,
 } from "docx";
 import { formatAPAParts, formatAPAPartsHarvard, formatPartsByStyle, sortReferences, type ScholarlyRef } from "./scholarly.server";
+import { parseMarkdownToRuns, detectMarkdownHeading, cleanMarkdown } from "./export/parseMarkdown";
 
 const numbering = {
   config: [
@@ -162,17 +163,31 @@ function parseRichText(text: string): (Paragraph | Table)[] {
     }
 
     // Regular paragraph block
+    // Check for markdown headings first
+    const headingMatch = detectMarkdownHeading(block);
+    if (headingMatch) {
+      const headingLevel =
+        headingMatch.level === 1
+          ? HeadingLevel.HEADING_1
+          : headingMatch.level === 2
+            ? HeadingLevel.HEADING_2
+            : HeadingLevel.HEADING_3;
+      out.push(
+        new Paragraph({
+          heading: headingLevel,
+          children: [new TextRun({ text: headingMatch.text, bold: true, font: "Times New Roman" })],
+          spacing: { before: 240, after: 120 },
+        })
+      );
+      continue;
+    }
+
     const lines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
     let buffer: string[] = [];
     const flush = () => {
       if (!buffer.length) return;
-      out.push(
-        new Paragraph({
-          children: [new TextRun({ text: buffer.join(" ") })],
-          spacing: { after: 200, line: 360 },
-          alignment: AlignmentType.JUSTIFIED,
-        }),
-      );
+      const joined = cleanMarkdown(buffer.join(" "));
+      out.push(parseMarkdownToRuns(joined));
       buffer = [];
     };
     for (const line of lines) {
@@ -629,23 +644,41 @@ export async function buildAssignmentDocx(p: {
 
     children.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 }));
     for (const para of content.split(/\n\n+/)) {
-      const trimmed = para.trim();
+      const trimmed = cleanMarkdown(para.trim());
       if (!trimmed) continue;
 
-      // Bold sub-headings
-      if (trimmed.startsWith("**") && trimmed.includes("**")) {
-        const headingText = trimmed.replace(/\*\*/g, "");
-        children.push(new Paragraph({
-          children: [new TextRun({ text: headingText, size: 24, bold: true })],
-          spacing: { before: 200, after: 100 },
-        }));
+      // Check for markdown heading within section content
+      const headingMatch = detectMarkdownHeading(trimmed);
+      if (headingMatch) {
+        const headingLevel =
+          headingMatch.level === 1
+            ? HeadingLevel.HEADING_1
+            : headingMatch.level === 2
+              ? HeadingLevel.HEADING_2
+              : HeadingLevel.HEADING_3;
+        children.push(
+          new Paragraph({
+            heading: headingLevel,
+            children: [new TextRun({ text: headingMatch.text, bold: true, font: "Times New Roman" })],
+            spacing: { before: 200, after: 100 },
+          })
+        );
         continue;
       }
 
-      children.push(new Paragraph({
-        children: [new TextRun({ text: trimmed, size: 22 })],
-        spacing: { after: 120 },
-      }));
+      // Bold sub-headings (legacy **text** on its own line)
+      if (/^\*\*[^*]+\*\*$/.test(trimmed)) {
+        const headingText = trimmed.replace(/\*\*/g, "");
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: headingText, size: 24, bold: true })],
+            spacing: { before: 200, after: 100 },
+          })
+        );
+        continue;
+      }
+
+      children.push(parseMarkdownToRuns(trimmed));
     }
   }
 
