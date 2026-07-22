@@ -17,6 +17,7 @@ const AssignmentInput = z.object({
   academic_level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
   grading_target: z.enum(["A", "B", "C"]).default("B"),
   assignment_type: z.enum(["essay", "problem_solving"]).default("essay"),
+  subject: z.enum(["mathematics", "science", "programming", "general"]).optional(),
   file_base64: z.string().optional(),
   file_mime: z.string().optional(),
   file_name: z.string().optional(),
@@ -61,6 +62,7 @@ export const generateAssignment = createServerFn({ method: "POST" })
         grading_target: data.grading_target,
         file_text: fileText || undefined,
         assignment_type: data.assignment_type,
+        subject: data.subject,
       },
     });
 

@@ -669,23 +669,11 @@ const TECHNICAL_SOLUTION_RULES = `CRITICAL RULES — TECHNICAL FORMAT:
 - Do NOT use markdown bold (**) — plain text only (code blocks are acceptable)
 - Jump straight into solving — no preamble`;
 
-const _mathKws = ["math", "mathematics", "statistics", "probability", "calculus", "algebra", "binomial", "distribution", "integration", "differentiation", "matrix", "vector", "regression", "hypothesis", "variance", "standard deviation", "normal distribution", "poisson", "correlation", "geometry", "trigonometry", "logarithm", "sequence", "series", "defective", "randomly", "sample of", "percentage", "ratio", "proportion", "what is the probability", "find the probability", "calculate the probability", "solve", "equation", "compute"];
-const _sciKws = ["physics", "chemistry", "biology", "biochemistry", "microbiology", "organic", "inorganic", "thermodynamics", "mechanics", "genetics", "ecology", "anatomy"];
-const _codeKws = ["programming", "algorithm", "code", "software", "database", "python", "java", "javascript", "c++", "data structure", "network", "operating system"];
-
-function detectAssignmentSubject(topic: string): string {
-  const lower = topic.toLowerCase();
-  if (_mathKws.some((kw) => lower.includes(kw))) return "mathematics";
-  if (_sciKws.some((kw) => lower.includes(kw))) return "science";
-  if (_codeKws.some((kw) => lower.includes(kw))) return "technical";
-  return "general";
-}
-
-function getProblemSolvingRules(question: string): string {
-  switch (detectAssignmentSubject(question)) {
+function getProblemSolvingRules(subject?: string): string {
+  switch (subject) {
     case "mathematics": return MATH_SOLUTION_RULES;
     case "science": return SCIENCE_SOLUTION_RULES;
-    case "technical": return TECHNICAL_SOLUTION_RULES;
+    case "programming": return TECHNICAL_SOLUTION_RULES;
     default: return QUANTITATIVE_RULES;
   }
 }
@@ -736,6 +724,7 @@ export async function generateAssignmentContent(payload: {
     grading_target: string;
     file_text?: string;
     assignment_type?: string;
+    subject?: string;
   };
 }): Promise<{ success: boolean; error?: string }> {
   const { userId, data } = payload;
@@ -758,7 +747,7 @@ export async function generateAssignmentContent(payload: {
     : "";
 
   const sections = isProblemSolving ? SOLUTION_SINGLE : ASSIGNMENT_SECTIONS;
-  const problemSolvingRules = isProblemSolving ? getProblemSolvingRules(fullQuestion) : "";
+  const problemSolvingRules = isProblemSolving ? getProblemSolvingRules(data.subject) : "";
   const sectionsRecord: Record<string, string> = {};
   const generated: { key: string; content: string }[] = [];
 
