@@ -161,7 +161,7 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
   ].map((d, i) => ({ ...d, target: Math.max(500, Math.round(target * chapterWeights[i])) }));
 
   const { callAIText } = await import("@/lib/ai-utils.server");
-  const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const apiKey = runtimeEnv("DEEPSEEK_API_KEY_THESIS") || runtimeEnv("DEEPSEEK_API_KEY") ?? "";
 
   const chapters: Record<string, string> = {};
 
@@ -827,7 +827,7 @@ export async function generateProposalContent(payload: {
   const methodTarget = Math.round(target * 0.35);    // Chapter 3: Methodology
 
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
-  const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const apiKey = runtimeEnv("DEEPSEEK_API_KEY_PROPOSAL") || runtimeEnv("DEEPSEEK_API_KEY") ?? "";
 
   function parseSections(text: string): Record<string, string> {
     const result: Record<string, string> = {};
