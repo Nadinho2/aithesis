@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, GraduationCap, Presentation, UserSquare2, ArrowRight } from "lucide-react";
+import { FileText, GraduationCap, Presentation, UserSquare2, BookOpen, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/dashboard")({
   head: () => ({ meta: [{ title: "Student Tools — Mybrainpadi" }] }),
@@ -38,6 +38,14 @@ const tools = [
     icon: UserSquare2,
     price: "₦3,000",
     color: "bg-purple-50 text-purple-700",
+  },
+  {
+    to: "/tools/seminar",
+    label: "Seminar Paper",
+    desc: "Generate a complete seminar paper in 5 academic formats — journal paper, departmental, postgraduate, technical, or book review.",
+    icon: BookOpen,
+    price: "₦1,500–₦3,500",
+    color: "bg-sage/10 text-sage",
   },
 ];
 
