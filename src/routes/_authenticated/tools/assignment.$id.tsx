@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const SECTION_LABELS: Record<string, string> = {
+const ESSAY_SECTION_LABELS: Record<string, string> = {
   introduction: "Introduction & Background",
   literature_review: "Literature Review & Conceptual Framework",
   analysis_1: "Analysis — Part 1",
@@ -20,7 +20,20 @@ const SECTION_LABELS: Record<string, string> = {
   conclusion: "Conclusion & Recommendations",
 };
 
-const SECTION_KEYS = Object.keys(SECTION_LABELS);
+const SOLUTION_SECTION_LABELS: Record<string, string> = {
+  solution: "Solution",
+  problem_restatement: "Problem Restatement",
+  solution_steps: "Step-by-Step Solution",
+  final_answer: "Final Answer",
+};
+
+const ALL_SECTION_LABELS: Record<string, string> = {
+  ...ESSAY_SECTION_LABELS,
+  ...SOLUTION_SECTION_LABELS,
+};
+
+const ESSAY_KEYS = Object.keys(ESSAY_SECTION_LABELS);
+const SOLUTION_KEYS = Object.keys(SOLUTION_SECTION_LABELS);
 
 export const Route = createFileRoute("/_authenticated/tools/assignment/$id")({
   head: () => ({ meta: [{ title: "Assignment — Mybrainpadi" }] }),
@@ -90,7 +103,8 @@ function AssignmentDetailPage() {
     if (!data) return;
     const sections = typeof data.sections === "string" ? JSON.parse(data.sections) : (data.sections ?? {});
     const e: Record<string, string> = {};
-    for (const k of SECTION_KEYS) e[k] = sections[k] ?? "";
+    const keys = hasSolutionSections(sections) ? SOLUTION_KEYS : ESSAY_KEYS;
+    for (const k of keys) e[k] = sections[k] ?? "";
     setEditSections(e);
     setEditAbstract(data.abstract ?? "");
     setEditMode(true);
@@ -124,6 +138,9 @@ function AssignmentDetailPage() {
   if (!data) return <div className="max-w-4xl mx-auto px-4 py-8"><p className="text-ink/40">Assignment not found.</p><Link to="/tools/history" className="text-sage text-sm hover:underline mt-2 inline-block">← Back to history</Link></div>;
 
   const sections = typeof data.sections === "string" ? JSON.parse(data.sections) : (data.sections ?? {});
+  const hasSolutionSections = (secs: Record<string, string>) => SOLUTION_KEYS.some((k) => secs[k] && secs[k].trim().length > 0);
+  const isSolution = hasSolutionSections(sections);
+  const sectionKeys = isSolution ? SOLUTION_KEYS : ESSAY_KEYS;
   // Fallback: old assignments only have answer text, no structured sections
   const hasSections = typeof sections === "object" && Object.keys(sections).length > 0;
   const fallbackText = !hasSections ? (data.answer ?? data.question ?? "") : "";
@@ -170,8 +187,8 @@ function AssignmentDetailPage() {
         </div>
       </div>
 
-      {/* Abstract */}
-      {editMode ? (
+      {/* Abstract — skip for solution-type assignments where sections contain the full answer */}
+      {isSolution ? null : editMode ? (
         <EditableSection title="Abstract" value={editAbstract} onChange={setEditAbstract} />
       ) : data.abstract ? (
         <Section title="Abstract" body={data.abstract} />
@@ -181,11 +198,11 @@ function AssignmentDetailPage() {
       {!hasSections && fallbackText ? (
         <Section title="Assignment Answer" body={fallbackText} />
       ) : (
-        SECTION_KEYS.map((key) =>
+        sectionKeys.map((key) =>
           editMode ? (
-            <EditableSection key={key} title={SECTION_LABELS[key]} value={editSections[key] ?? ""} onChange={(v) => setEditSections({ ...editSections, [key]: v })} />
+            <EditableSection key={key} title={ALL_SECTION_LABELS[key] ?? key} value={editSections[key] ?? ""} onChange={(v) => setEditSections({ ...editSections, [key]: v })} />
           ) : (
-            <Section key={key} title={SECTION_LABELS[key]} body={displaySections[key]} />
+            <Section key={key} title={ALL_SECTION_LABELS[key] ?? key} body={displaySections[key]} />
           ),
         )
       )}
