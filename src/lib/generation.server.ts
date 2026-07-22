@@ -611,6 +611,81 @@ const QUANTITATIVE_RULES = `RULES:
 - For code: use \`\`\`language blocks with syntax
 - Never use essay-like introductions, literature reviews, or discussion sections`;
 
+
+const MATH_SOLUTION_RULES = `CRITICAL RULES — MATHEMATICS FORMAT:
+- Begin by clearly restating each part of the question (a), (b), (c), (d) as a sub-heading
+- For EACH part, follow this exact structure:
+
+  GIVEN:
+  State all given values clearly (e.g. n = 20, p = 0.05, q = 0.95)
+
+  FORMULA:
+  Write the full formula to be applied, clearly stated in words and mathematical notation:
+  e.g. P(X = r) = C(n,r) × p^r × q^(n-r)
+
+  SUBSTITUTION:
+  Show every substitution step explicitly — do not skip steps:
+  e.g. P(X = 3) = C(20,3) × (0.05)^3 × (0.95)^17
+
+  CALCULATION:
+  Show each arithmetic step. Calculate C(n,r), powers, and products separately before combining:
+  e.g. C(20,3) = 1140, (0.05)^3 = 0.000125, (0.95)^17 = 0.4181
+       P(X = 3) = 1140 × 0.000125 × 0.4181 = 0.0596
+
+  ANSWER:
+  State the final answer clearly and in context:
+  e.g. Therefore, the probability that exactly 3 bulbs are defective is 0.0596 or approximately 5.96%
+
+- All numerical answers must be accurate to 4 decimal places
+- For cumulative probabilities, show each individual probability first then sum them
+- For mean and standard deviation: show formula then calculation then answer
+- For applied/interpretation questions: state the numerical answer first, then give a practical recommendation in 2-3 sentences
+- Do NOT write an abstract, introduction, or literature review
+- Do NOT use markdown bold (**) or italic (*) syntax — write plain text only, use CAPS for emphasis
+- Jump straight into solving the problem — no preamble, no essay`;
+
+const SCIENCE_SOLUTION_RULES = `CRITICAL RULES — SCIENCE FORMAT:
+- Restate each question part as a clear sub-heading
+- Show all formulae before substituting values
+- Include units in every calculation and final answer
+- Diagrams: describe them in text e.g. '[DIAGRAM: Label the parts of a cell here]'
+- Show balanced equations for chemistry questions
+- State laws or principles being applied before using them
+- Final answers must be clearly labelled: e.g. ANSWER: Velocity = 25 m/s
+- Do NOT write an abstract or literature review
+- Do NOT use markdown syntax — plain text only
+- Jump straight into solving — no preamble`;
+
+const TECHNICAL_SOLUTION_RULES = `CRITICAL RULES — TECHNICAL FORMAT:
+- Restate each question part as a clear sub-heading
+- For algorithm questions: write step-by-step pseudocode first, then explain each step in plain English
+- For code questions: write clean, commented code with explanation of logic below it
+- For theory questions: define terms first, then explain, then give a real-world example
+- For database questions: write SQL queries with explanation of each clause
+- Do NOT use markdown bold (**) — plain text only (code blocks are acceptable)
+- Jump straight into solving — no preamble`;
+
+const _mathKws = ["math", "mathematics", "statistics", "probability", "calculus", "algebra", "binomial", "distribution", "integration", "differentiation", "matrix", "vector", "regression", "hypothesis", "variance", "standard deviation", "normal distribution", "poisson", "correlation", "geometry", "trigonometry", "logarithm", "sequence", "series"];
+const _sciKws = ["physics", "chemistry", "biology", "biochemistry", "microbiology", "organic", "inorganic", "thermodynamics", "mechanics", "genetics", "ecology", "anatomy"];
+const _codeKws = ["programming", "algorithm", "code", "software", "database", "python", "java", "javascript", "c++", "data structure", "network", "operating system"];
+
+function detectAssignmentSubject(topic: string): string {
+  const lower = topic.toLowerCase();
+  if (_mathKws.some((kw) => lower.includes(kw))) return "mathematics";
+  if (_sciKws.some((kw) => lower.includes(kw))) return "science";
+  if (_codeKws.some((kw) => lower.includes(kw))) return "technical";
+  return "general";
+}
+
+function getProblemSolvingRules(question: string): string {
+  switch (detectAssignmentSubject(question)) {
+    case "mathematics": return MATH_SOLUTION_RULES;
+    case "science": return SCIENCE_SOLUTION_RULES;
+    case "technical": return TECHNICAL_SOLUTION_RULES;
+    default: return QUANTITATIVE_RULES;
+  }
+}
+
 const ASSIGNMENT_SECTIONS = [
   { key: "introduction", label: "Introduction & Background", order: 1, target: 600 },
   { key: "literature_review", label: "Literature Review & Conceptual Framework", order: 2, target: 900 },
@@ -679,7 +754,7 @@ export async function generateAssignmentContent(payload: {
     : "";
 
   const sections = isProblemSolving ? QUANTITATIVE_SECTIONS : ASSIGNMENT_SECTIONS;
-  const baseRules = isProblemSolving ? QUANTITATIVE_RULES : ASSIGNMENT_BASE_RULES;
+  const problemSolvingRules = getProblemSolvingRules(fullQuestion);
   const sectionsRecord: Record<string, string> = {};
   const generated: { key: string; content: string }[] = [];
 
@@ -689,14 +764,14 @@ export async function generateAssignmentContent(payload: {
       const prevCtx = generated.map((s) => `${s.key}: ${s.content.slice(0, 400)}…`).join("\n\n");
 
       const system = isProblemSolving
-        ? `You are an expert tutor solving a ${levelLabel(data.academic_level)}-level problem step-by-step.
+        ? `You are an expert Nigerian university lecturer solving a ${levelLabel(data.academic_level)}-level problem step-by-step.
 
 PROBLEM:
 ${fullQuestion}
 
 Write the "${section.label}" section.
 
-${QUANTITATIVE_RULES}
+${problemSolvingRules}
 ${prevCtx ? `\nPREVIOUS SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`
         : `You are an experienced academic writing a ${levelLabel(data.academic_level)}-level assignment answer targeting ${gradingLabel(data.grading_target)}.
 
