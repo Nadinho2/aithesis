@@ -325,6 +325,24 @@ CRITICAL RULES FOR THESIS:
 
 // ─── Assignment Generation ─────────────────────────────────────────────────
 
+const QUANTITATIVE_SECTIONS = [
+  { key: "problem_restatement", label: "Problem Restatement", order: 1, target: 200 },
+  { key: "solution_steps", label: "Step-by-Step Solution", order: 2, target: 1500 },
+  { key: "final_answer", label: "Final Answer", order: 3, target: 200 },
+];
+
+const QUANTITATIVE_RULES = `RULES:
+- Number each step: Step 1, Step 2, Step 3...
+- Show ALL working — no skipped steps
+- Use plain text mathematical notation: √(x), ∫, Σ, ≠, ≈, ×10^3, x², → 
+- Put formulas on their own line for clarity
+- Define variables before using them
+- Mark the final answer clearly: **Answer: ...**
+- Write concisely — clear solutions, not essays
+- Use **bold** for key mathematical terms and results
+- For code: use \`\`\`language blocks with syntax
+- Never use essay-like introductions, literature reviews, or discussion sections`;
+
 const ASSIGNMENT_SECTIONS = [
   { key: "introduction", label: "Introduction & Background", order: 1, target: 600 },
   { key: "literature_review", label: "Literature Review & Conceptual Framework", order: 2, target: 900 },
@@ -370,6 +388,7 @@ export async function generateAssignmentContent(payload: {
     academic_level: string;
     grading_target: string;
     file_text?: string;
+    assignment_type?: string;
   };
 }): Promise<{ success: boolean; error?: string }> {
   const { userId, data } = payload;
@@ -381,22 +400,37 @@ export async function generateAssignmentContent(payload: {
 
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
   const fullQuestion = [data.question, data.file_text].filter(Boolean).join("\n\n");
+  const isProblemSolving = data.assignment_type === "problem_solving";
 
-  // Fetch refs
-  const refs = data.include_refs
+  // Fetch refs (skip for problem-solving)
+  const refs = !isProblemSolving && data.include_refs
     ? await fetchScholarlyRefs(fullQuestion.slice(0, 300), 12)
     : [];
-  const refContext = refs.map((r: any) => formatByStyle(r, data.citation_style)).join("\n");
+  const refContext = !isProblemSolving
+    ? refs.map((r: any) => formatByStyle(r, data.citation_style)).join("\n")
+    : "";
 
+  const sections = isProblemSolving ? QUANTITATIVE_SECTIONS : ASSIGNMENT_SECTIONS;
+  const baseRules = isProblemSolving ? QUANTITATIVE_RULES : ASSIGNMENT_BASE_RULES;
   const sectionsRecord: Record<string, string> = {};
   const generated: { key: string; content: string }[] = [];
 
-  for (let i = 0; i < ASSIGNMENT_SECTIONS.length; i++) {
-    const section = ASSIGNMENT_SECTIONS[i];
+  for (let i = 0; i < sections.length; i++) {
+    const section = sections[i];
     try {
       const prevCtx = generated.map((s) => `${s.key}: ${s.content.slice(0, 400)}…`).join("\n\n");
 
-      const system = `You are an experienced academic writing a ${levelLabel(data.academic_level)}-level assignment answer targeting ${gradingLabel(data.grading_target)}.
+      const system = isProblemSolving
+        ? `You are an expert tutor solving a ${levelLabel(data.academic_level)}-level problem step-by-step.
+
+PROBLEM:
+${fullQuestion}
+
+Write the "${section.label}" section.
+
+${QUANTITATIVE_RULES}
+${prevCtx ? `\nPREVIOUS SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`
+        : `You are an experienced academic writing a ${levelLabel(data.academic_level)}-level assignment answer targeting ${gradingLabel(data.grading_target)}.
 
 ASSIGNMENT QUESTION:
 ${fullQuestion}
@@ -409,6 +443,7 @@ CITATION RULES (${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}):
 - Use 1-2 citations per section, depth over quantity.
 
 ${ASSIGNMENT_BASE_RULES}
+${refContext ? `\n\nAVAILABLE REFERENCES (cite only these):\n${refContext}` : ""}
 ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`;
 
       const text = await callAIText(apiKey, {
@@ -421,7 +456,7 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
       sectionsRecord[section.key] = text;
       generated.push({ key: section.key, content: text });
 
-      if (i < ASSIGNMENT_SECTIONS.length - 1) {
+      if (i < sections.length - 1) {
         await new Promise((r) => setTimeout(r, 500));
       }
     } catch (e: any) {
@@ -432,7 +467,9 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
 
   const totalWords = Object.values(sectionsRecord)
     .reduce((sum, text) => sum + countWords(text ?? ""), 0);
-  const abstract = (sectionsRecord["introduction"] ?? "").slice(0, 400);
+  const abstract = isProblemSolving
+    ? (sectionsRecord["problem_restatement"] ?? "").slice(0, 400)
+    : (sectionsRecord["introduction"] ?? "").slice(0, 400);
 
   // Save to DB — try new columns, fall back to legacy
   try {

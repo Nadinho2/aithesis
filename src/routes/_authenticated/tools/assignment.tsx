@@ -6,7 +6,7 @@ import { generateAssignment } from "@/lib/assignments.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
-  Loader2, Upload, FileText, Info, Send,
+  Loader2, Upload, FileText, Info, Send, FilePen, Calculator,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +24,7 @@ function AssignmentPage() {
   const [academicLevel, setAcademicLevel] = useState<"undergraduate" | "masters" | "phd">("undergraduate");
   const [gradingTarget, setGradingTarget] = useState<"A" | "B" | "C">("B");
   const [docFile, setDocFile] = useState<{ base64: string; mime: string; name: string } | null>(null);
+  const [assignmentType, setAssignmentType] = useState<"essay" | "problem_solving">("essay");
   const docRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const checkAccessFn = useServerFn(checkAccess);
@@ -33,16 +34,19 @@ function AssignmentPage() {
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   if (pathname !== "/tools/assignment") return <Outlet />;
 
+  const isEssay = assignmentType === "essay";
+
   const mut = useMutation({
     mutationFn: () =>
       genFn({
         data: {
           question,
-          include_references: includeRefs,
-          citation_style: citationStyle,
+          include_references: isEssay ? includeRefs : false,
+          citation_style: isEssay ? citationStyle : "apa_7",
           word_count_target: wordCountTarget,
           academic_level: academicLevel,
           grading_target: gradingTarget,
+          assignment_type: assignmentType,
           ...(docFile ? { file_base64: docFile.base64, file_mime: docFile.mime, file_name: docFile.name } : {}),
         },
       }),
@@ -71,13 +75,13 @@ function AssignmentPage() {
     try {
       const access = await checkAccessFn({ data: { product: "assignment" } });
       if (!access.allowed) {
-        saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget });
+        saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType });
         sessionStorage.setItem("return_path", window.location.pathname);
         navigate({ to: "/billing" });
         return;
       }
     } catch {
-      saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget });
+      saveFormBeforePay({ question, includeRefs, citationStyle, wordCountTarget, academicLevel, gradingTarget, assignmentType });
       sessionStorage.setItem("return_path", window.location.pathname);
       navigate({ to: "/billing" });
       return;
@@ -91,13 +95,57 @@ function AssignmentPage() {
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-2">Student Tools · ₦1,000</div>
         <h1 className="font-serif text-3xl">Assignment Assistant</h1>
         <p className="text-ink/60 text-sm mt-1">
-          Paste your question or upload a document. We'll generate a well-structured academic answer with multiple sections and verified sources — then email you when it's ready.
+          Paste your question or upload a document. We'll generate a well-structured answer — then email you when it's ready.
         </p>
       </div>
 
       <div className="space-y-5">
+        {/* ─── Assignment Type Toggle ─── */}
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1.5 block">
+            Assignment Type
+          </label>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setAssignmentType("essay")}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm border transition-colors ${
+                assignmentType === "essay"
+                  ? "bg-ink text-bone border-ink"
+                  : "border-ink/15 text-ink/60 hover:bg-ink/5"
+              }`}
+            >
+              <FilePen className="size-3.5" />
+              Essay / Report
+            </button>
+            <button
+              onClick={() => setAssignmentType("problem_solving")}
+              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-sm border transition-colors ${
+                assignmentType === "problem_solving"
+                  ? "bg-ink text-bone border-ink"
+                  : "border-ink/15 text-ink/60 hover:bg-ink/5"
+              }`}
+            >
+              <Calculator className="size-3.5" />
+              Problem-Solving
+            </button>
+          </div>
+          <p className="text-[10px] text-ink/40 mt-1">
+            {isEssay
+              ? "Full academic essay with introduction, literature review, analysis, discussion, and conclusion."
+              : "Step-by-step solutions for math, physics, engineering, programming, or calculations."}
+          </p>
+        </div>
+
         {/* Question */}
-        <textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Paste your assignment question here…" rows={5} className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-sage resize-y" />
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder={isEssay
+            ? "Paste your assignment question here…"
+            : "Paste your problem or question here… (e.g. 'Solve for x: 2x² + 5x - 3 = 0')"}
+          rows={5}
+          className="w-full bg-card border border-ink/15 rounded-sm px-4 py-3 text-sm focus:outline-none focus:border-sage resize-y"
+        />
 
         {/* Document upload */}
         <div className="flex flex-wrap items-center gap-3">
@@ -111,7 +159,9 @@ function AssignmentPage() {
         {/* Config row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-ink/40 block mb-1">Word Count Target</label>
+            <label className="text-[10px] uppercase tracking-wider text-ink/40 block mb-1">
+              {isEssay ? "Word Count Target" : "Max Word Count"}
+            </label>
             <select value={wordCountTarget} onChange={(e) => setWordCountTarget(Number(e.target.value))} className="w-full text-xs bg-card border border-ink/15 rounded-sm px-2 py-1.5">
               <option value={1500}>1,500 words</option>
               <option value={3000}>3,000 words</option>
@@ -138,17 +188,19 @@ function AssignmentPage() {
           </div>
         </div>
 
-        {/* Checkbox row */}
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={includeRefs} onChange={(e) => setIncludeRefs(e.target.checked)} className="rounded-sm border-ink/30" />
-            Include references
-          </label>
-          <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value as any)} className="text-xs bg-card border border-ink/15 rounded-sm px-2 py-1">
-            <option value="apa_7">APA 7th</option>
-            <option value="harvard">Harvard</option>
-          </select>
-        </div>
+        {/* Citation row — only for essay mode */}
+        {isEssay && (
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={includeRefs} onChange={(e) => setIncludeRefs(e.target.checked)} className="rounded-sm border-ink/30" />
+              Include references
+            </label>
+            <select value={citationStyle} onChange={(e) => setCitationStyle(e.target.value as any)} className="text-xs bg-card border border-ink/15 rounded-sm px-2 py-1">
+              <option value="apa_7">APA 7th</option>
+              <option value="harvard">Harvard</option>
+            </select>
+          </div>
+        )}
 
         {/* Info banner */}
         <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-200 rounded-sm text-sm text-blue-800">
