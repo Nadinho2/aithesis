@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
@@ -105,8 +105,19 @@ function SeminarPage() {
   const [institution, setInstitution] = useState("");
   const [bookAuthor, setBookAuthor] = useState("");
   const [numSubThemes, setNumSubThemes] = useState<2 | 3 | 4>(3);
+  const [hasCredits, setHasCredits] = useState<boolean | null>(null);
 
   const sel = SEMINAR_TYPES.find((t) => t.key === selectedType);
+
+  // Check if user already has credits when entering review step
+  useEffect(() => {
+    if (step === 3 && sel) {
+      setHasCredits(null);
+      checkAccessFn({ data: { product: sel.key as ProductType } })
+        .then((r) => setHasCredits(r.allowed))
+        .catch(() => setHasCredits(false));
+    }
+  }, [step, sel?.key]);
 
   const handleTypeSelect = (type: SeminarTypeKey) => {
     const t = SEMINAR_TYPES.find((s) => s.key === type)!;
@@ -414,12 +425,20 @@ function SeminarPage() {
 
           <button
             onClick={handlePay}
-            disabled={genMut.isPending}
+            disabled={genMut.isPending || hasCredits === null}
             className="px-5 py-2.5 bg-ink text-bone rounded-sm text-sm font-medium hover:bg-sage transition-colors flex items-center gap-2 disabled:opacity-60"
           >
             {genMut.isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" /> Enqueuing…
+              </>
+            ) : hasCredits === null ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Checking credits…
+              </>
+            ) : hasCredits ? (
+              <>
+                <Sparkles className="size-4" /> Generate Seminar Paper
               </>
             ) : (
               <>
