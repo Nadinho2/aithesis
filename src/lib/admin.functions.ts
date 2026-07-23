@@ -370,3 +370,121 @@ export const adminMarkUniversityDone = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ═══════════════════════════════════════════════════════════
+// Admin Settings — pricing, tool toggles, bulk credits
+// ═══════════════════════════════════════════════════════════
+
+const AdminSettingsInput = z.object({
+  settings: z.array(z.object({
+    key: z.string().min(1),
+    value: z.any(),
+  })),
+});
+
+export const adminGetSettings = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as any)
+      .from("settings")
+      .select("*")
+      .order("key");
+    if (error) {
+      console.error("[adminGetSettings]", error.message);
+      return [];
+    }
+    return (data ?? []).map((r: any) => ({ key: r.key, value: r.value }));
+  });
+
+export const adminUpdateSettings = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => AdminSettingsInput.parse(i))
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const results: { key: string; ok: boolean; error?: string }[] = [];
+    for (const s of data.settings) {
+      const { error } = await (supabaseAdmin as any)
+        .from("settings")
+        .upsert({ key: s.key, value: s.value, updated_at: new Date().toISOString(), updated_by: context.userId }, { onConflict: "key" });
+      results.push({ key: s.key, ok: !error, error: error?.message });
+    }
+    return { results };
+  });
+
+// --- Bulk credit assignment ---
+const BulkCreditsInput = z.object({
+  emails: z.array(z.string().email()),
+  thesis_ug: z.number().int().min(0).default(0),
+  thesis_masters: z.number().int().min(0).default(0),
+  thesis_phd: z.number().int().min(0).default(0),
+  proposal: z.number().int().min(0).default(0),
+  assignment: z.number().int().min(0).default(0),
+  exam: z.number().int().min(0).default(0),
+  presentation: z.number().int().min(0).default(0),
+  cv: z.number().int().min(0).default(0),
+  seminar: z.number().int().min(0).default(0),
+});
+
+export const adminBulkSetCredits = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => BulkCreditsInput.parse(i))
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerk = createClerkClient({ secretKey: runtimeEnv("CLERK_SECRET_KEY")! });
+
+    // Resolve emails to user IDs
+    const userIdMap = new Map<string, string>();
+    for (const email of data.emails) {
+      try {
+        const users = await clerk.users.getUserList({ emailAddress: [email] });
+        if (users.data.length > 0) {
+          userIdMap.set(email, users.data[0].id);
+        }
+      } catch { /* skip unresolvable */ }
+    }
+
+    let ok = 0;
+    let skipped = 0;
+    for (const [email, userId] of userIdMap) {
+      const row = {
+        user_id: userId,
+        thesis_available_ug: data.thesis_ug,
+        thesis_available_masters: data.thesis_masters,
+        thesis_available_phd: data.thesis_phd,
+        proposal_limit: data.proposal,
+        assignment_available: data.assignment,
+        exam_available: data.exam,
+        presentation_available: data.presentation,
+        cv_available: data.cv,
+        seminar_available: data.seminar,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: existing } = await (supabaseAdmin as any)
+        .from("user_limits")
+        .select("user_id")
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        const { error } = await (supabaseAdmin as any)
+          .from("user_limits")
+          .update(row)
+          .eq("user_id", userId);
+        if (error) { skipped++; } else { ok++; }
+      } else {
+        const { error } = await (supabaseAdmin as any)
+          .from("user_limits")
+          .insert(row);
+        if (error) { skipped++; } else { ok++; }
+      }
+    }
+
+    return { ok, skipped, notFound: data.emails.length - userIdMap.size };
+  });

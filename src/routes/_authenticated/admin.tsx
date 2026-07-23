@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
-import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone } from "@/lib/admin.functions";
-import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink } from "lucide-react";
+import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits } from "@/lib/admin.functions";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
-  const [tab, setTab] = useState<"limits" | "transactions" | "university">("limits");
+  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral">("limits");
   const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
@@ -99,25 +99,14 @@ function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-ink/10 mb-6">
-          <button
-            onClick={() => setTab("limits")}
-            className={`pb-2 text-sm font-medium transition-colors ${tab === "limits" ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
-          >
-            Usage Limits
-          </button>
-          <button
-            onClick={() => setTab("transactions")}
-            className={`pb-2 text-sm font-medium transition-colors ${tab === "transactions" ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
-          >
-            Transactions
-          </button>
-          <button
-            onClick={() => setTab("university")}
-            className={`pb-2 text-sm font-medium transition-colors ${tab === "university" ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
-          >
-            University Submissions
-          </button>
+        <div className="flex gap-4 border-b border-ink/10 mb-6 overflow-x-auto">
+          <TabBtn tab="limits" active={tab} onClick={() => setTab("limits")} label="Usage Limits" />
+          <TabBtn tab="transactions" active={tab} onClick={() => setTab("transactions")} label="Transactions" />
+          <TabBtn tab="university" active={tab} onClick={() => setTab("university")} label="University" />
+          <TabBtn tab="pricing" active={tab} onClick={() => setTab("pricing")} label="Pricing" />
+          <TabBtn tab="tools" active={tab} onClick={() => setTab("tools")} label="Tools" />
+          <TabBtn tab="credits" active={tab} onClick={() => setTab("credits")} label="Bulk Credits" />
+          <TabBtn tab="referral" active={tab} onClick={() => setTab("referral")} label="Referral" />
         </div>
 
         {tab === "limits" && (
@@ -286,8 +275,23 @@ function AdminPage() {
 
         {tab === "transactions" && <TransactionSearch initialSearch={txSearchEmail} />}
         {tab === "university" && <UniversitySubmissions />}
+        {tab === "pricing" && <PricingManager />}
+        {tab === "tools" && <ToolToggles />}
+        {tab === "credits" && <BulkCredits />}
+        {tab === "referral" && <ReferralTab />}
       </div>
     </div>
+  );
+}
+
+function TabBtn({ tab, active, onClick, label }: { tab: string; active: string; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap ${active === tab ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
+    >
+      {label}
+    </button>
   );
 }
 
@@ -510,5 +514,320 @@ function TransactionSearch({ initialSearch = "" }: { initialSearch?: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Pricing Manager
+// ═══════════════════════════════════════════════════════════
+
+function PricingManager() {
+  const getFn = useServerFn(adminGetSettings);
+  const updateFn = useServerFn(adminUpdateSettings);
+  const qc = useQueryClient();
+
+  const { data: allSettings, isLoading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => getFn(),
+  });
+
+  const settingsMap = new Map<string, any>();
+  if (allSettings) {
+    for (const s of allSettings) settingsMap.set(s.key, s.value);
+  }
+
+  const [edit, setEdit] = useState<Record<string, number>>({});
+
+  const products = [
+    { key: "price:proposal", label: "Research Proposal" },
+    { key: "price:thesis:undergraduate", label: "Undergraduate Thesis" },
+    { key: "price:thesis:masters", label: "Masters Thesis" },
+    { key: "price:thesis:phd", label: "PhD Thesis" },
+    { key: "price:assignment", label: "Assignment Assistant" },
+    { key: "price:exam", label: "Exam Preparation" },
+    { key: "price:presentation", label: "Presentation Assistant" },
+    { key: "price:cv", label: "CV Maker" },
+    { key: "price:seminar_journal", label: "Journal / Conference Paper" },
+    { key: "price:seminar_departmental", label: "Departmental Seminar" },
+    { key: "price:seminar_postgraduate", label: "Postgraduate Seminar" },
+    { key: "price:seminar_technical", label: "Technical / Engineering Seminar" },
+    { key: "price:seminar_book_review", label: "Book Review Seminar" },
+  ];
+
+  useEffect(() => {
+    const e: Record<string, number> = {};
+    for (const p of products) {
+      const s = settingsMap.get(p.key);
+      e[p.key] = s?.price ?? 0;
+    }
+    setEdit(e);
+  }, [allSettings]);
+
+  const mut = useMutation({
+    mutationFn: (updates: { key: string; value: any }[]) =>
+      updateFn({ data: { settings: updates } }),
+    onSuccess: () => {
+      toast.success("Prices saved");
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function saveAll() {
+    const updates = products.map((p) => ({
+      key: p.key,
+      value: { label: p.label, price: edit[p.key] ?? 0, currency: "NGN" },
+    }));
+    mut.mutate(updates);
+  }
+
+  if (isLoading) return <Loader2 className="size-5 animate-spin text-ink/60" />;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <DollarSign className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Set prices for all services. Changes take effect immediately for new purchases.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto mt-4">
+        <table className="w-full max-w-lg text-sm border-collapse">
+          <thead>
+            <tr className="border-b border-ink/10">
+              <th className="text-left py-3 pr-3 font-medium">Product</th>
+              <th className="text-right py-3 font-medium">Price (₦)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.key} className="border-b border-ink/5">
+                <td className="py-2.5 pr-3">{p.label}</td>
+                <td className="py-2.5 text-right">
+                  <input
+                    type="number"
+                    min={0}
+                    step={100}
+                    value={edit[p.key] ?? 0}
+                    onChange={(e) => setEdit({ ...edit, [p.key]: Math.max(0, parseInt(e.target.value) || 0) })}
+                    className="w-28 text-right border border-ink/20 rounded-sm px-2 py-1 text-xs bg-white"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <button
+        onClick={saveAll}
+        disabled={mut.isPending}
+        className="mt-4 px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 transition-all"
+      >
+        {mut.isPending ? <Loader2 className="size-4 animate-spin inline mr-1" /> : <Save className="size-4 inline mr-1" />}
+        Save All Prices
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Tool Enable / Disable Toggles
+// ═══════════════════════════════════════════════════════════
+
+function ToolToggles() {
+  const getFn = useServerFn(adminGetSettings);
+  const updateFn = useServerFn(adminUpdateSettings);
+  const qc = useQueryClient();
+
+  const { data: allSettings, isLoading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => getFn(),
+  });
+
+  const settingsMap = new Map<string, any>();
+  if (allSettings) {
+    for (const s of allSettings) settingsMap.set(s.key, s.value);
+  }
+
+  const tools = [
+    { key: "tool:topics:enabled", label: "Topic Discovery" },
+    { key: "tool:proposal:enabled", label: "Research Proposal" },
+    { key: "tool:thesis:enabled", label: "Thesis" },
+    { key: "tool:assignment:enabled", label: "Assignment Assistant" },
+    { key: "tool:exam:enabled", label: "Exam Preparation" },
+    { key: "tool:presentation:enabled", label: "Presentation" },
+    { key: "tool:cv:enabled", label: "CV Maker" },
+    { key: "tool:seminar:enabled", label: "Seminar" },
+  ];
+
+  const mut = useMutation({
+    mutationFn: (updates: { key: string; value: any }[]) =>
+      updateFn({ data: { settings: updates } }),
+    onSuccess: () => {
+      toast.success("Tool status updated");
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function toggleTool(key: string) {
+    const current = settingsMap.get(key);
+    const enabled = current === true || current === "true";
+    mut.mutate([{ key, value: !enabled }]);
+  }
+
+  if (isLoading) return <Loader2 className="size-5 animate-spin text-ink/60" />;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <ToggleLeft className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Enable or disable tools. Disabled tools show "Coming Soon" to users.
+        </p>
+      </div>
+
+      <div className="space-y-2 mt-4 max-w-md">
+        {tools.map((t) => {
+          const enabled = settingsMap.get(t.key) === true || settingsMap.get(t.key) === "true";
+          return (
+            <div key={t.key} className="flex items-center justify-between py-2.5 px-3 border border-ink/10 rounded-sm">
+              <span className="text-sm">{t.label}</span>
+              <button
+                onClick={() => toggleTool(t.key)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${enabled ? "bg-verde" : "bg-ink/20"}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Bulk Credit Assignment
+// ═══════════════════════════════════════════════════════════
+
+function BulkCredits() {
+  const bulkFn = useServerFn(adminBulkSetCredits);
+
+  const [emails, setEmails] = useState("");
+  const [credits, setCredits] = useState({
+    thesis_ug: 0, thesis_masters: 0, thesis_phd: 0,
+    proposal: 0, assignment: 0, exam: 0,
+    presentation: 0, cv: 0, seminar: 0,
+  });
+
+  const mut = useMutation({
+    mutationFn: (v: any) => bulkFn({ data: v }),
+    onSuccess: (result: any) => {
+      toast.success(`Credits assigned: ${result.ok} users updated, ${result.skipped} skipped, ${result.notFound} not found`);
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function handleSubmit() {
+    const emailList = emails.split(/[\n,]+/).map((e) => e.trim()).filter(Boolean);
+    if (emailList.length === 0) return toast.error("Enter at least one email");
+    mut.mutate({ emails: emailList, ...credits });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Users className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Assign credits to multiple users at once. Paste emails separated by commas or newlines.
+        </p>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-6 mt-4">
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 block mb-1">Email Addresses</label>
+          <textarea
+            value={emails}
+            onChange={(e) => setEmails(e.target.value)}
+            placeholder="user1@uni.edu, user2@uni.edu"
+            className="w-full h-32 border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white"
+          />
+        </div>
+        <div className="space-y-3">
+          {[
+            ["thesis_ug", "Thesis — Undergraduate"],
+            ["thesis_masters", "Thesis — Masters"],
+            ["thesis_phd", "Thesis — PhD"],
+            ["proposal", "Research Proposal"],
+            ["assignment", "Assignment"],
+            ["exam", "Exam Preparation"],
+            ["presentation", "Presentation"],
+            ["cv", "CV Maker"],
+            ["seminar", "Seminar"],
+          ].map(([key, label]) => (
+            <div key={key} className="flex items-center justify-between">
+              <label className="text-xs text-ink/60">{label}</label>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                value={(credits as any)[key]}
+                onChange={(e) => setCredits({ ...credits, [key]: Math.max(0, Math.min(999, parseInt(e.target.value) || 0)) })}
+                className="w-20 text-center border border-ink/20 rounded-sm px-1 py-0.5 text-xs bg-white"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={mut.isPending}
+        className="mt-4 px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 transition-all"
+      >
+        {mut.isPending ? <Loader2 className="size-4 animate-spin inline mr-1" /> : null}
+        Assign Credits
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Referral — Coming Soon
+// ═══════════════════════════════════════════════════════════
+
+function ReferralTab() {
+  return (
+    <div className="text-center py-16">
+      <Gift className="size-12 mx-auto mb-4 text-ink/20" />
+      <h2 className="text-xl font-serif mb-2">Referral Program</h2>
+      <p className="text-ink/50 text-sm max-w-md mx-auto">
+        The referral system is coming soon. Users will be able to share their referral links and earn credits when new users sign up and make a purchase.
+      </p>
+      <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-700">
+        <Clock className="size-3" />
+        Coming Soon
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Tab Button helper
+// ═══════════════════════════════════════════════════════════
+
+function TabBtn({ tab, active, onClick, label }: { tab: string; active: string; onClick: () => void; label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap ${active === tab ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
+    >
+      {label}
+    </button>
   );
 }
