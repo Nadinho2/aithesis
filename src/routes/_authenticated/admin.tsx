@@ -284,17 +284,6 @@ function AdminPage() {
   );
 }
 
-function TabBtn({ tab, active, onClick, label }: { tab: string; active: string; onClick: () => void; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`pb-2 text-sm font-medium transition-colors whitespace-nowrap ${active === tab ? "text-verde border-b-2 border-verde" : "text-ink/50 hover:text-ink"}`}
-    >
-      {label}
-    </button>
-  );
-}
-
 function Input({
   value,
   onChange,
