@@ -837,7 +837,7 @@ function ReferralTab() {
           <div>
             <span className="text-sm font-medium">Referral System</span>
             <p className="text-[10px] text-ink/40 mt-0.5">
-              {enabled ? "Users can share referral links and earn credits" : "Users see "Coming Soon" placeholder"}
+              {enabled ? "Users can share referral links and earn credits" : "Users see Coming Soon placeholder"}
             </p>
           </div>
           <button
