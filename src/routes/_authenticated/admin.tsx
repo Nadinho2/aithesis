@@ -791,16 +791,65 @@ function BulkCredits() {
 // ═══════════════════════════════════════════════════════════
 
 function ReferralTab() {
+  const getFn = useServerFn(adminGetSettings);
+  const updateFn = useServerFn(adminUpdateSettings);
+  const qc = useQueryClient();
+
+  const { data: allSettings, isLoading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => getFn(),
+  });
+
+  const settingsMap = new Map<string, any>();
+  if (allSettings) {
+    for (const s of allSettings) settingsMap.set(s.key, s.value);
+  }
+
+  const enabled = settingsMap.get("tool:referral:enabled") === true || settingsMap.get("tool:referral:enabled") === "true";
+
+  const mut = useMutation({
+    mutationFn: (updates: { key: string; value: any }[]) =>
+      updateFn({ data: { settings: updates } }),
+    onSuccess: () => {
+      toast.success("Referral setting updated");
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function toggle() {
+    mut.mutate([{ key: "tool:referral:enabled", value: !enabled }]);
+  }
+
+  if (isLoading) return <Loader2 className="size-5 animate-spin text-ink/60" />;
+
   return (
-    <div className="text-center py-16">
-      <Gift className="size-12 mx-auto mb-4 text-ink/20" />
-      <h2 className="text-xl font-serif mb-2">Referral Program</h2>
-      <p className="text-ink/50 text-sm max-w-md mx-auto">
-        The referral system is coming soon. Users will be able to share their referral links and earn credits when new users sign up and make a purchase.
-      </p>
-      <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-sm text-xs text-amber-700">
-        <Clock className="size-3" />
-        Coming Soon
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Gift className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Toggle the referral system. When disabled, users see a "Coming Soon" page.
+        </p>
+      </div>
+
+      <div className="mt-4 max-w-md p-4 border border-ink/10 rounded-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-sm font-medium">Referral System</span>
+            <p className="text-[10px] text-ink/40 mt-0.5">
+              {enabled ? "Users can share referral links and earn credits" : "Users see "Coming Soon" placeholder"}
+            </p>
+          </div>
+          <button
+            onClick={toggle}
+            disabled={mut.isPending}
+            className={`relative w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${enabled ? "bg-verde" : "bg-ink/20"}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white transition-transform shadow ${enabled ? "translate-x-6" : "translate-x-0"}`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

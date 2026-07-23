@@ -31,5 +31,6 @@ INSERT INTO settings (key, value) VALUES
   ('tool:exam:enabled', 'true'),
   ('tool:presentation:enabled', 'true'),
   ('tool:cv:enabled', 'true'),
-  ('tool:seminar:enabled', 'true')
+  ('tool:seminar:enabled', 'true'),
+  ('tool:referral:enabled', 'false')
 ON CONFLICT (key) DO NOTHING;

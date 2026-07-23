@@ -165,3 +165,37 @@ export const getBanks = createServerFn({ method: "GET" })
       return [];
     }
   });
+
+// ═══════════════════════════════════════════════════════════
+// Tool enabled check — reads from settings table
+// ═══════════════════════════════════════════════════════════
+
+export const isToolEnabled = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const supabaseUrl = runtimeEnv("SUPABASE_URL");
+    const supabaseKey = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !supabaseKey) {
+      // Can't check DB — assume disabled for safety
+      return { key: "", enabled: false };
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data, error } = await (supabase as any)
+      .from("settings")
+      .select("key,value")
+      .like("key", "tool:%");
+
+    if (error) {
+      console.error("[isToolEnabled]", error.message);
+      return { key: "", enabled: false };
+    }
+
+    // Return the referral toggle specifically
+    const referralRow = (data ?? []).find((r: any) => r.key === "tool:referral:enabled");
+    const enabled = referralRow ? (referralRow.value === true || referralRow.value === "true") : false;
+    return { key: "tool:referral:enabled", enabled };
+  });

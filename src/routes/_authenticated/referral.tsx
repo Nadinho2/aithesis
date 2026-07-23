@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Copy, Check, Share2, Wallet, TrendingUp, ArrowUpRight, Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
-import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks, getMyReferralCount } from "@/lib/referral.functions";
+import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks, getMyReferralCount, isToolEnabled } from "@/lib/referral.functions";
 import { getReferralLink } from "@/lib/referral";
 
 export const Route = createFileRoute("/_authenticated/referral")({
@@ -26,6 +26,15 @@ function ReferralPage() {
   const fnWithdrawals = useServerFn(getMyWithdrawals);
   const fnBanks = useServerFn(getBanks);
   const fnReferralCount = useServerFn(getMyReferralCount);
+  const fnToolCheck = useServerFn(isToolEnabled);
+
+  // Check if referral system is enabled
+  const { data: toolStatus, isLoading: toolCheckLoading } = useQuery({
+    queryKey: ["tool-referral-enabled"],
+    queryFn: () => fnToolCheck(),
+    staleTime: 60_000,
+  });
+  const isReferralEnabled = toolStatus?.enabled ?? false;
 
   // Fetch referral code
   const { data: refCode, isLoading: codeLoading } = useQuery({
@@ -124,6 +133,21 @@ function ReferralPage() {
       failed: "bg-red-100 text-red-800",
     };
     return (
+    <>
+      {!toolCheckLoading && !isReferralEnabled && (
+        <div className="max-w-4xl mx-auto px-2 py-16 text-center">
+          <Gift className="size-16 mx-auto mb-6 text-ink/15" />
+          <h1 className="text-2xl font-serif mb-3">Referral Program</h1>
+          <p className="text-ink/50 text-sm max-w-md mx-auto mb-6">
+            Earn rewards by inviting your friends to MyBrainPadi. Share your referral link and earn credits when they sign up and make their first purchase.
+          </p>
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-50 border border-amber-200 rounded-sm text-sm text-amber-700 font-medium">
+            <Clock className="size-4" />
+            Coming Soon
+          </div>
+        </div>
+      )}
+      {isReferralEnabled && (
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors[status] ?? "bg-gray-100 text-gray-800"}`}>
         {status}
       </span>
@@ -131,6 +155,21 @@ function ReferralPage() {
   };
 
   return (
+    <>
+      {!toolCheckLoading && !isReferralEnabled && (
+        <div className="max-w-4xl mx-auto px-2 py-16 text-center">
+          <Gift className="size-16 mx-auto mb-6 text-ink/15" />
+          <h1 className="text-2xl font-serif mb-3">Referral Program</h1>
+          <p className="text-ink/50 text-sm max-w-md mx-auto mb-6">
+            Earn rewards by inviting your friends to MyBrainPadi. Share your referral link and earn credits when they sign up and make their first purchase.
+          </p>
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-50 border border-amber-200 rounded-sm text-sm text-amber-700 font-medium">
+            <Clock className="size-4" />
+            Coming Soon
+          </div>
+        </div>
+      )}
+      {isReferralEnabled && (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div>
