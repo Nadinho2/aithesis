@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { generateSeminar } from "@/lib/seminar.functions";
-import { getPrice, seminarTypeLabel } from "@/lib/pricing";
+import { seminarTypeLabel } from "@/lib/pricing";
 import type { ProductType } from "@/lib/pricing";
 import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {

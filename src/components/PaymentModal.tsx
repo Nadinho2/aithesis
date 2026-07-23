@@ -5,7 +5,6 @@ import { initPayment as initPaymentFn, verifyPayment as verifyPaymentFn } from "
 import { useUser } from "@clerk/clerk-react";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { getPrice } from "@/lib/pricing";
 import type { ProductType, ThesisLevel } from "@/lib/pricing";
 
 type Props = {
@@ -13,6 +12,7 @@ type Props = {
   onClose: () => void;
   product: ProductType;
   level?: ThesisLevel;
+  price: number;
   onPaid: () => void;
   callbackPath?: string;
 };
@@ -24,10 +24,9 @@ const toolLabels: Record<string, string> = {
   cv: "CV Maker",
 };
 
-export function PaymentModal({ open, onClose, product, level, onPaid, callbackPath }: Props) {
+export function PaymentModal({ open, onClose, product, level, price, onPaid, callbackPath }: Props) {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
-  const price = getPrice(product, level);
   const [reference, setReference] = useState<string | null>(null);
 
   const initPay = useServerFn(initPaymentFn);

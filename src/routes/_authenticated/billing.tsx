@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { getPaymentHistory, debugAccess } from "@/lib/payment.functions";
 import { PaymentModal } from "@/components/PaymentModal";
 import { usePaymentCallback } from "@/lib/usePaymentCallback";
-import { getPrice } from "@/lib/pricing";
+import { fetchAllPrices } from "@/lib/pricing";
 import { CreditCard, CheckCircle, Clock, XCircle, Loader2, Bug } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { ProductType, ThesisLevel } from "@/lib/pricing";
@@ -20,6 +20,19 @@ function BillingPage() {
     queryKey: ["payment-history"],
     queryFn: () => historyFn(),
   });
+
+  // Fetch DB-backed prices
+  const pricesFn = useServerFn(fetchAllPrices);
+  const { data: dbPrices } = useQuery({
+    queryKey: ["prices"],
+    queryFn: () => pricesFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const dbPrice = (product: string, level?: string): number => {
+    const key = product === "thesis" && level ? `price:thesis:${level}` : `price:${product}`;
+    return dbPrices?.[key]?.price ?? 0;
+  };
 
   const [payProduct, setPayProduct] = useState<ProductType | null>(null);
   const [payLevel, setPayLevel] = useState<ThesisLevel | undefined>(undefined);
@@ -48,79 +61,79 @@ function BillingPage() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
         <PricingCard
           product="Proposal"
-          price={`₦${getPrice("proposal").toLocaleString()}`}
+          price={`₦${dbPrice("proposal").toLocaleString()}`}
           description="Draft a full research proposal with verified references"
           onClick={() => openPay("proposal")}
         />
         <PricingCard
           product="Undergrad Thesis"
-          price={`₦${getPrice("thesis", "undergraduate").toLocaleString()}`}
+          price={`₦${dbPrice("thesis", "undergraduate").toLocaleString()}`}
           description="Complete undergraduate thesis (5 chapters, 6,000-15,000 words)"
           onClick={() => openPay("thesis", "undergraduate")}
         />
         <PricingCard
           product="Masters Thesis"
-          price={`₦${getPrice("thesis", "masters").toLocaleString()}`}
+          price={`₦${dbPrice("thesis", "masters").toLocaleString()}`}
           description="Complete masters thesis (5 chapters, 6,000-15,000 words)"
           onClick={() => openPay("thesis", "masters")}
         />
         <PricingCard
           product="PhD Thesis"
-          price={`₦${getPrice("thesis", "phd").toLocaleString()}`}
+          price={`₦${dbPrice("thesis", "phd").toLocaleString()}`}
           description="Complete PhD thesis (5 chapters, 6,000-15,000 words)"
           onClick={() => openPay("thesis", "phd")}
         />
         <PricingCard
           product="Assignment"
-          price={`₦${getPrice("assignment").toLocaleString()}`}
+          price={`₦${dbPrice("assignment").toLocaleString()}`}
           description="Get well-researched answers with verified scholarly sources"
           onClick={() => openPay("assignment")}
         />
         <PricingCard
           product="Exam Prep"
-          price={`₦${getPrice("exam").toLocaleString()}`}
+          price={`₦${dbPrice("exam").toLocaleString()}`}
           description="Generate practice questions from your notes and documents"
           onClick={() => openPay("exam")}
         />
         <PricingCard
           product="Presentation"
-          price={`₦${getPrice("presentation").toLocaleString()}`}
+          price={`₦${dbPrice("presentation").toLocaleString()}`}
           description="Create slides with speaker notes, download as PPTX or DOCX"
           onClick={() => openPay("presentation")}
         />
         <PricingCard
           product="CV Maker"
-          price={`₦${getPrice("cv").toLocaleString()}`}
+          price={`₦${dbPrice("cv").toLocaleString()}`}
           description="Upload or fill in your details, get a professionally formatted CV"
           onClick={() => openPay("cv")}
         />
         <PricingCard
           product="Journal Paper"
-          price={`₦${getPrice("seminar_journal").toLocaleString()}`}
+          price={`₦${dbPrice("seminar_journal").toLocaleString()}`}
           description="Formal academic paper for conference or journal submission"
           onClick={() => openPay("seminar_journal")}
         />
         <PricingCard
           product="Departmental Seminar"
-          price={`₦${getPrice("seminar_departmental").toLocaleString()}`}
+          price={`₦${dbPrice("seminar_departmental").toLocaleString()}`}
           description="Topic-based seminar for departmental presentation"
           onClick={() => openPay("seminar_departmental")}
         />
         <PricingCard
           product="Postgraduate Seminar"
-          price={`₦${getPrice("seminar_postgraduate").toLocaleString()}`}
+          price={`₦${dbPrice("seminar_postgraduate").toLocaleString()}`}
           description="Research plan seminar for Masters or PhD students"
           onClick={() => openPay("seminar_postgraduate")}
         />
         <PricingCard
           product="Technical Seminar"
-          price={`₦${getPrice("seminar_technical").toLocaleString()}`}
+          price={`₦${dbPrice("seminar_technical").toLocaleString()}`}
           description="Engineering and technology seminar paper"
           onClick={() => openPay("seminar_technical")}
         />
         <PricingCard
           product="Book Review"
-          price={`₦${getPrice("seminar_book_review").toLocaleString()}`}
+          price={`₦${dbPrice("seminar_book_review").toLocaleString()}`}
           description="Critical review and analysis of a book or academic work"
           onClick={() => openPay("seminar_book_review")}
         />
@@ -179,6 +192,7 @@ function BillingPage() {
           onClose={() => setPayProduct(null)}
           product={payProduct}
           level={payLevel}
+          price={dbPrice(payProduct, payLevel)}
           callbackPath={typeof window !== "undefined" ? window.location.pathname : undefined}
           onPaid={() => {
             setPayProduct(null);

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { getPrice, type ProductType, type ThesisLevel } from "./pricing";
+import { getPriceFromDB, type ProductType, type ThesisLevel } from "./pricing";
 import { sendPaymentConfirmedEmail, sendPaymentFailedEmail } from "./mail";
 import type { BrainPadiTool } from "./mail";
 import { getUserEmail, productToTool } from "./mail-helper";
@@ -33,7 +33,7 @@ export const initPayment = createServerFn({ method: "POST" })
     const secretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
     if (!secretKey) throw new Error("Payment is not configured.");
 
-    const amount = getPrice(data.product, data.level as ThesisLevel);
+    const amount = await getPriceFromDB(data.product, data.level as ThesisLevel);
     if (amount <= 0) throw new Error("Invalid product or level");
 
     const metadata = {
@@ -247,7 +247,7 @@ export const checkAccess = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => CheckAccessInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const price = getPrice(data.product, data.level as ThesisLevel);
+    const price = await getPriceFromDB(data.product, data.level as ThesisLevel);
 
     // Count unused completed transactions for this product/level
     const unused = await countUnusedTx(context.supabase, userId, data.product, data.level as string | undefined);

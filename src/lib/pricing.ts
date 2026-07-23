@@ -1,3 +1,5 @@
+import { createServerFn } from "@tanstack/react-start";
+
 export const PRICING = {
   topics: { label: "Topic Discovery", price: 0, currency: "NGN" },
   proposal: { label: "Research Proposal", price: 5000, currency: "NGN" },
@@ -139,3 +141,12 @@ export async function getPriceFromDB(product: ProductType, level?: ThesisLevel):
 export async function getAllPrices(): Promise<Record<string, { label: string; price: number; currency: string }>> {
   return getPriceMap();
 }
+
+// ═══════════════════════════════════════════════════════════
+// Server function for client-side price fetching
+// ═══════════════════════════════════════════════════════════
+
+export const fetchAllPrices = createServerFn({ method: "GET" })
+  .handler(async () => {
+    return getAllPrices();
+  });
