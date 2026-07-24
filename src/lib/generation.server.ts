@@ -802,7 +802,7 @@ export async function generateAssignmentContent(payload: {
 PROBLEM:
 ${fullQuestion}
 
-Write the "${section.label}" section.
+Write a complete solution of approximately ${data.word_count_target} words.
 
 ${problemSolvingRules}
 ${prevCtx ? `\nPREVIOUS SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`
@@ -822,11 +822,12 @@ ${ASSIGNMENT_BASE_RULES}
 ${refContext ? `\n\nAVAILABLE REFERENCES (cite only these):\n${refContext}` : ""}
 ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consistent):\n${prevCtx}` : ""}`;
 
+      const target = isProblemSolving ? data.word_count_target : section.target;
       const text = await callAIText(apiKey, {
         model: "deepseek-chat",
         max_tokens: 16000,
         system,
-        user: `Write the "${section.label}" section now — approximately ${section.target} words.`,
+        user: `Write the "${section.label}" section now — approximately ${target} words.`,
       });
 
       sectionsRecord[section.key] = text;

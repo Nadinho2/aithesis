@@ -608,8 +608,9 @@ export async function buildAssignmentDocx(p: {
     analysis_2: "Analysis — Part 2",
     discussion: "Discussion",
     conclusion: "Conclusion & Recommendations",
+    solution: "Solution",
   };
-  const sectionKeys = ["introduction", "literature_review", "analysis_1", "analysis_2", "discussion", "conclusion"];
+  const sectionKeys = ["introduction", "literature_review", "analysis_1", "analysis_2", "discussion", "conclusion", "solution"];
 
   const children: any[] = [];
 
