@@ -24,7 +24,7 @@ export async function parseUploadedFile(
   mimeType: string,
   fileName: string,
 ): Promise<{ text: string; images: string[] }> {
-  const buffer = Buffer.from(base64, "base64");
+  const buffer = new Uint8Array(Buffer.from(base64, "base64"));
   const text: string[] = [];
   const images: string[] = [];
 
