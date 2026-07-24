@@ -51,7 +51,7 @@ export async function parseUploadedFile(
     // Images are sent as base64 context to the AI — no OCR needed
   } else {
     // Plain text fallback
-    text.push(buffer.toString("utf-8"));
+    text.push(new TextDecoder().decode(buffer));
   }
 
   return { text: text.join("\n\n").trim(), images };
