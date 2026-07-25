@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Menu, X } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -308,70 +310,138 @@ const tiers = [
   ];
 
 /* ─── Landing Page ─── */
-function LandingPage() {
+function LandingNav({ refSearch }: { refSearch?: { ref: string } }) {
   const [mobileNav, setMobileNav] = useState(false);
-  const urlRef = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : null;
-  const refSearch = urlRef ? { ref: urlRef } : undefined;
+  const isMobile = useIsMobile();
+
+  const navLinkClass = "text-sm font-medium transition-colors";
+  const navLinkStyle = { color: "rgba(255,255,255,0.7)" };
 
   return (
-    <div className="min-h-screen bg-paper text-ink font-sans">
-      {/* ─── Header ─── */}
-      <nav className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-[#E5E2D8] bg-white/80">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="w-9 h-9 bg-ink rounded-lg flex items-center justify-center">
-            <span className="w-4 h-0.5 bg-paper" />
+    <>
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-8 border-b border-white/10"
+        style={{ backgroundColor: "#0B3527", height: isMobile ? 56 : 64 }}
+      >
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2.5 shrink-0">
+          <span className="size-8 bg-white/15 rounded-md flex items-center justify-center">
+            <span className="w-3.5 h-0.5 bg-white" />
           </span>
-          <span className="font-serif italic text-xl font-bold tracking-tight text-ink">Mybrainpadi</span>
+          <span
+            className="font-serif italic text-lg md:text-xl font-bold tracking-tight"
+            style={{ color: "#ffffff" }}
+          >
+            Mybrainpadi
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8 text-sm text-ink-secondary">
-          <a href="#methodology" className="hover:text-ink transition-colors">Methodology</a>
-          <a href="#features" className="hover:text-ink transition-colors">Features</a>
-          <a href="#pricing" className="hover:text-ink transition-colors">Pricing</a>
+        {/* Desktop nav links */}
+        <div className="hidden md:flex items-center gap-8">
+          <a href="#methodology" className={navLinkClass} style={navLinkStyle}>Methodology</a>
+          <a href="#features" className={navLinkClass} style={navLinkStyle}>Features</a>
+          <a href="#pricing" className={navLinkClass} style={navLinkStyle}>Pricing</a>
         </div>
 
+        {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-4">
-          <Link to="/auth" search={refSearch} className="text-sm text-ink-secondary hover:text-ink transition-colors">
+          <Link
+            to="/auth"
+            search={refSearch}
+            className="text-sm font-medium transition-colors"
+            style={{ color: "rgba(255,255,255,0.8)" }}
+          >
             Log in
           </Link>
           <Link
             to="/auth"
             search={refSearch}
-            className="px-5 py-2.5 bg-ink text-paper text-sm font-medium rounded-lg hover:opacity-90 transition-all"
+            className="px-5 py-2 rounded-md text-sm font-medium transition-all"
+            style={{ backgroundColor: "#4ADE80", color: "#0B3527" }}
           >
             Enter workspace
           </Link>
-          <span className="text-[10px] uppercase tracking-wider text-verde font-semibold">Free plan available</span>
+          <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: "#4ADE80" }}>
+            Free plan available
+          </span>
         </div>
 
         {/* Mobile hamburger */}
-        <button onClick={() => setMobileNav(!mobileNav)} className="md:hidden p-2">
-          <svg className="w-6 h-6 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            {mobileNav ? (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            )}
-          </svg>
+        <button
+          onClick={() => setMobileNav(!mobileNav)}
+          className="md:hidden p-2"
+          style={{ color: "rgba(255,255,255,0.8)" }}
+        >
+          {mobileNav ? <X className="size-5" /> : <Menu className="size-5" />}
         </button>
       </nav>
 
       {/* Mobile nav drawer */}
       {mobileNav && (
-        <div className="md:hidden border-b border-[#E5E2D8] bg-white px-6 py-4 space-y-4">
-          <a href="#methodology" className="block text-sm text-ink-secondary hover:text-ink" onClick={() => setMobileNav(false)}>Methodology</a>
-          <a href="#features" className="block text-sm text-ink-secondary hover:text-ink" onClick={() => setMobileNav(false)}>Features</a>
-          <a href="#pricing" className="block text-sm text-ink-secondary hover:text-ink" onClick={() => setMobileNav(false)}>Pricing</a>
-          <div className="pt-2 flex flex-col gap-3">
-            <Link to="/auth" search={refSearch} className="w-full py-2.5 text-center text-sm border border-[#E5E2D8] rounded-lg">Log in</Link>
-            <Link to="/auth" search={refSearch} className="w-full py-2.5 text-center text-sm bg-ink text-paper rounded-lg">Enter workspace</Link>
+        <div
+          className="md:hidden fixed top-[56px] left-0 right-0 z-40 px-6 py-5 space-y-4 border-b border-white/10"
+          style={{ backgroundColor: "#0B3527" }}
+        >
+          <a
+            href="#methodology"
+            className="block text-sm font-medium"
+            style={{ color: "rgba(255,255,255,0.7)" }}
+            onClick={() => setMobileNav(false)}
+          >
+            Methodology
+          </a>
+          <a
+            href="#features"
+            className="block text-sm font-medium"
+            style={{ color: "rgba(255,255,255,0.7)" }}
+            onClick={() => setMobileNav(false)}
+          >
+            Features
+          </a>
+          <a
+            href="#pricing"
+            className="block text-sm font-medium"
+            style={{ color: "rgba(255,255,255,0.7)" }}
+            onClick={() => setMobileNav(false)}
+          >
+            Pricing
+          </a>
+          <div className="pt-2 flex flex-col gap-3 border-t border-white/10">
+            <Link
+              to="/auth"
+              search={refSearch}
+              className="w-full py-2.5 text-center text-sm font-medium rounded-md border border-white/20"
+              style={{ color: "rgba(255,255,255,0.8)" }}
+              onClick={() => setMobileNav(false)}
+            >
+              Log in
+            </Link>
+            <Link
+              to="/auth"
+              search={refSearch}
+              className="w-full py-2.5 text-center text-sm font-medium rounded-md"
+              style={{ backgroundColor: "#4ADE80", color: "#0B3527" }}
+              onClick={() => setMobileNav(false)}
+            >
+              Enter workspace
+            </Link>
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function LandingPage() {
+  const urlRef = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("ref") : null;
+  const refSearch = urlRef ? { ref: urlRef } : undefined;
+
+  return (
+    <div className="min-h-screen bg-paper text-ink font-sans">
+      <LandingNav refSearch={refSearch} />
 
       {/* ─── Hero ─── */}
-      <header className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
+      <header className="max-w-6xl mx-auto px-6 pt-[88px] md:pt-[104px] pb-16 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-bg text-amber-text text-xs font-semibold mb-8">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
