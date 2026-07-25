@@ -106,10 +106,12 @@ export const Route = createFileRoute("/api/chat")({
             .order("created_at", { ascending: true })
             .limit(10);
 
-          const previousMessages = (prevMessages ?? []).map((m: any) => ({
-            role: m.role,
-            content: m.content,
-          }));
+          const previousMessages = (prevMessages ?? [])
+            .filter((m: any) => m.role && typeof m.content === "string" && m.content.trim().length > 0)
+            .map((m: any) => ({
+              role: m.role,
+              content: m.content.trim(),
+            }));
 
           // Step 4: Call DeepSeek API
           const deepseekKey = runtimeEnv("DEEPSEEK_API_KEY");
@@ -124,6 +126,11 @@ export const Route = createFileRoute("/api/chat")({
           try {
             const systemPrompt =
               "You are a helpful, encouraging study assistant for Nigerian university students on MyBrainPadi. Explain concepts clearly and simply, as if teaching a student who is still learning. Use short paragraphs. When explaining academic concepts, ground examples in real-world or Nigerian context where natural. Do not use markdown bold or italic syntax — write in plain text. Keep responses focused and not overly long unless the student asks for detail. If asked something outside academic or career topics, gently redirect to how you can help with their studies or career.";
+
+            const messagesForDebug = [
+              { role: "system", content: systemPrompt.slice(0, 80) + "..." },
+              ...previousMessages,
+            ];
 
             const deepseekResp = await fetch("https://api.deepseek.com/chat/completions", {
               method: "POST",
@@ -145,7 +152,11 @@ export const Route = createFileRoute("/api/chat")({
             if (!deepseekResp.ok) {
               const errText = await deepseekResp.text();
               console.error("DeepSeek API error:", deepseekResp.status, errText);
-              throw new Error(`DeepSeek API error ${deepseekResp.status}`);
+              console.error("Messages sent:", JSON.stringify(messagesForDebug).slice(0, 500));
+              return new Response(
+                JSON.stringify({ error: `AI service error: ${errText.slice(0, 200)}` }),
+                { status: 502, headers: { "Content-Type": "application/json" } }
+              );
             }
 
             const payload = await deepseekResp.json();
