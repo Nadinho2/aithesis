@@ -8,7 +8,7 @@ function runtimeEnv(key: string): string | undefined {
   }
 }
 
-export const Route = createFileRoute("/api/chat" as any)({
+export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async (ctx) => {

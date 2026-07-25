@@ -220,7 +220,7 @@ function DashboardPage() {
 
       {/* ─── Ask AI Card ─── */}
       <Link
-        to={"/chat" as any}
+        to="/chat"
         className={`group block cursor-pointer transition-all hover:shadow-md ${
           isMobile
             ? "mx-4 mt-4 p-5 rounded-2xl"

@@ -3,7 +3,7 @@ import { ComingSoon } from "@/components/ComingSoon";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GraduationCap } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/learn/$" as any)({
+export const Route = createFileRoute("/_authenticated/learn/$")({
   component: LearnCatchAllPage,
 });
 

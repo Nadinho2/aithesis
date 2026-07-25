@@ -3,7 +3,7 @@ import { ComingSoon } from "@/components/ComingSoon";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Users } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/community/" as any)({
+export const Route = createFileRoute("/_authenticated/community/")({
   component: CommunityPage,
 });
 

@@ -26,7 +26,7 @@ const suggestedPrompts = [
   "Help me prepare for an interview",
 ];
 
-export const Route = createFileRoute("/_authenticated/chat/" as any)({
+export const Route = createFileRoute("/_authenticated/chat/")({
   component: ChatPage,
 });
 

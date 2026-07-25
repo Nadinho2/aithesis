@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ChatPage } from "./index";
 
-export const Route = createFileRoute("/_authenticated/chat/$" as any)({
+export const Route = createFileRoute("/_authenticated/chat/$")({
   component: ChatCatchAllPage,
 });
 
