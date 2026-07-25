@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyPayment } from "@/lib/payment.functions";
@@ -8,8 +8,11 @@ import {
   Sparkles, Bookmark, CheckCircle, Loader2, XCircle,
   FileText, GraduationCap, Presentation, UserSquare2, BookOpen,
   Library, History, Settings, ChevronDown, FlaskConical, Zap, Target,
+  ArrowRight, CreditCard, Gift, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useClerk } from "@clerk/clerk-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Mybrainpadi" }] }),
@@ -118,27 +121,162 @@ function ActiveJourneyCard() {
 
 function DashboardPage() {
   const [open, setOpen] = useState<Section>("research");
+  const isMobile = useIsMobile();
+  const { user, signOut: clerkSignOut } = useClerk();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuStartY, setMenuStartY] = useState(0);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const toggle = (s: Section) => setOpen(open === s ? open : s);
 
+  const userInitial = user?.firstName?.charAt(0) ?? user?.emailAddresses?.[0]?.emailAddress?.charAt(0) ?? "?";
+
+  // Close menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function handleMenuTouchStart(e: React.TouchEvent) {
+    setMenuStartY(e.touches[0].clientY);
+  }
+  function handleMenuTouchEnd(e: React.TouchEvent) {
+    if (e.changedTouches[0].clientY - menuStartY > 60) setMenuOpen(false);
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+    <div className={`mx-auto pb-8 ${isMobile ? "px-0" : "max-w-4xl px-4 sm:px-6 py-8 md:py-12"}`}>
       <PaymentVerifier />
 
-      {/* ─── Hero ─── */}
-      <div className="mb-10">
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
-          Education Ecosystem
+      {/* Mobile: Home header with avatar menu */}
+      {isMobile && (
+        <div className="px-4 py-3 flex items-center justify-between border-b border-ink/10 bg-white">
+          <div>
+            <h1 className="font-serif text-lg font-bold text-ink">MyBrainPadi</h1>
+            <p className="text-[11px] text-muted-foreground">Education Ecosystem</p>
+          </div>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="size-9 rounded-full flex items-center justify-center text-sm font-semibold"
+              style={{ backgroundColor: "#0B3527", color: "#4ADE80" }}
+            >
+              {userInitial.toUpperCase()}
+            </button>
+
+            {menuOpen && (
+              <div
+                onTouchStart={handleMenuTouchStart}
+                onTouchEnd={handleMenuTouchEnd}
+                className="absolute right-0 top-full mt-2 w-52 rounded-lg shadow-lg py-1 z-50 border"
+                style={{ backgroundColor: "#0B3527", borderColor: "rgba(255,255,255,0.1)" }}
+              >
+                <Link
+                  to="/billing"
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 transition-colors"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <CreditCard className="size-4" style={{ color: "rgba(255,255,255,0.55)" }} />
+                  Billing
+                </Link>
+                <Link
+                  to="/referral"
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 transition-colors"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Gift className="size-4" style={{ color: "rgba(255,255,255,0.55)" }} />
+                  Referral Program
+                </Link>
+                <Link
+                  to="/billing"
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 transition-colors"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <Settings className="size-4" style={{ color: "rgba(255,255,255,0.55)" }} />
+                  Settings
+                </Link>
+                <div className="border-t border-white/10 my-1" />
+                <button
+                  onClick={() => { setMenuOpen(false); clerkSignOut(); }}
+                  className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 transition-colors w-full"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  <LogOut className="size-4" style={{ color: "rgba(255,255,255,0.55)" }} />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Welcome back.</h1>
-        <p className="text-ink/60 max-w-xl text-sm sm:text-base">
-          Everything you need — from research topics to assignments, exam prep, presentations, and
-          your professional CV.
-        </p>
-      </div>
+      )}
+
+      {/* ─── Ask AI Card ─── */}
+      <Link
+        to={"/chat" as any}
+        className={`group block cursor-pointer transition-all hover:shadow-md ${
+          isMobile
+            ? "mx-4 mt-4 p-5 rounded-2xl"
+            : "mb-10 p-5 rounded-xl"
+        }`}
+        style={{ backgroundColor: "#0B3527" }}
+      >
+        <div className={`flex ${isMobile ? "flex-col items-center text-center gap-3" : "items-center gap-5"}`}>
+          {/* Icon */}
+          <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobile ? "size-12" : "size-11"}`}
+            style={{ backgroundColor: "rgba(74, 222, 128, 0.15)" }}>
+            <Sparkles className={isMobile ? "size-6" : "size-5"} style={{ color: "#4ADE80" }} />
+          </div>
+
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white" style={{ fontSize: isMobile ? "15px" : "15px" }}>
+              Ask AI anything about your coursework
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+              Get instant help with concepts, assignments, and exam prep
+            </p>
+          </div>
+
+          {/* Input pill (desktop only) */}
+          {!isMobile && (
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm"
+              style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+              <span>Type your question...</span>
+              <ArrowRight className="size-4" style={{ color: "#4ADE80" }} />
+            </div>
+          )}
+
+          {/* Mobile arrow */}
+          {isMobile && (
+            <ArrowRight className="size-5" style={{ color: "#4ADE80" }} />
+          )}
+        </div>
+      </Link>
+
+      {/* ─── Hero (desktop only) ─── */}
+      {!isMobile && (
+        <div className="mb-10">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
+            Education Ecosystem
+          </div>
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl mb-3">Welcome back.</h1>
+          <p className="text-ink/60 max-w-xl text-sm sm:text-base">
+            Everything you need — from research topics to assignments, exam prep, presentations, and
+            your professional CV.
+          </p>
+        </div>
+      )}
 
       {/* ─── Sections ─── */}
-      <div className="space-y-4">
+      <div className={`space-y-4 ${isMobile ? "px-4 mt-3" : ""}`}>
         {/* ===== RESEARCH STUDIO ===== */}
         <SectionBlock
           id="research"

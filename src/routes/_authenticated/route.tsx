@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@clerk/clerk-react";
-import { AppSidebar } from "@/components/AppSidebar";
+import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -13,12 +13,5 @@ function AuthenticatedLayout() {
   if (!isLoaded) return null;
   if (!isSignedIn) return <Navigate to="/auth" />;
 
-  return (
-    <div className="min-h-screen md:flex bg-bone">
-      <AppSidebar />
-      <main className="flex-1 min-w-0">
-        <Outlet />
-      </main>
-    </div>
-  );
+  return <AppShell />;
 }

@@ -63,6 +63,7 @@ export const adminListLimits = createServerFn({ method: "GET" })
         exam_available: lim?.exam_available ?? 0,
         presentation_available: lim?.presentation_available ?? 0,
         cv_available: lim?.cv_available ?? 0,
+        chat_available: lim?.chat_available ?? 0,
         seminar_available: (lim as any)?.seminar_available ?? 0,
       };
     });
@@ -83,6 +84,7 @@ export const updateUserLimits = createServerFn({ method: "POST" })
         exam_available: z.number().int().min(0).max(999).default(0),
         presentation_available: z.number().int().min(0).max(999).default(0),
         cv_available: z.number().int().min(0).max(999).default(0),
+        chat_available: z.number().int().min(0).max(99999).default(0),
         seminar_available: z.number().int().min(0).max(999).default(0),
       })
       .parse(i),
@@ -101,6 +103,7 @@ export const updateUserLimits = createServerFn({ method: "POST" })
       exam_available: data.exam_available ?? 0,
       presentation_available: data.presentation_available ?? 0,
       cv_available: data.cv_available ?? 0,
+      chat_available: data.chat_available ?? 0,
       seminar_available: data.seminar_available ?? 0,
       updated_at: new Date().toISOString(),
     } as any;
@@ -137,6 +140,7 @@ function limitsColumn(type: string): string | null {
     case "exam": return "exam_available";
     case "presentation": return "presentation_available";
     case "cv": return "cv_available";
+    case "chat": return "chat_available";
     case "seminar_journal":
     case "seminar_departmental":
     case "seminar_postgraduate":
