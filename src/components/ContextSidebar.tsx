@@ -40,13 +40,20 @@ function ToolsSidebar() {
   const location = useLocation();
   const path = location.pathname;
 
-  const academicTools = [
-    { to: "/new-thesis", label: "Thesis", icon: Sparkles },
+  const researchTools = [
+    { to: "/topic-generator", label: "Topic Discovery", icon: Search },
+    { to: "/my-topics", label: "My Topics", icon: BookmarkCheck },
     { to: "/quick-proposal", label: "Proposal", icon: FileText },
+    { to: "/proposals", label: "My Proposals", icon: Library },
+    { to: "/new-thesis", label: "Thesis", icon: Sparkles },
+    { to: "/theses", label: "My Theses", icon: BookOpen },
+  ];
+
+  const academicTools = [
     { to: "/tools/assignment", label: "Assignment", icon: FileEdit },
     { to: "/tools/exam", label: "Exam Prep", icon: GraduationCap },
     { to: "/tools/presentation", label: "Presentation", icon: Presentation },
-    { to: "/tools/seminar", label: "Seminar", icon: BookOpen },
+    { to: "/tools/seminar", label: "Seminar", icon: BookOpenCheck },
   ];
 
   const careerTools = [
@@ -71,6 +78,28 @@ function ToolsSidebar() {
       </div>
       <nav className="flex-1 overflow-y-auto py-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 px-4 py-1.5">
+          Research
+        </div>
+        {researchTools.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.to);
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
+                active
+                  ? "bg-verde/10 text-verde-dark font-medium border-r-2 border-verde"
+                  : "text-ink/70 hover:bg-ink/5 hover:text-ink"
+              }`}
+            >
+              <Icon className="size-4 flex-shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 px-4 py-1.5 mt-3">
           Academic Tools
         </div>
         {academicTools.map((item) => {

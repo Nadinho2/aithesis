@@ -4,11 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyPayment } from "@/lib/payment.functions";
 import { getActivePlan } from "@/lib/side-hustle.functions";
+import { getUserLimits, getRecentItems, getQuickStats } from "@/lib/dashboard.functions";
 import {
-  Sparkles, Bookmark, CheckCircle, Loader2, XCircle,
-  FileText, GraduationCap, Presentation, UserSquare2, BookOpen,
-  Library, History, Settings, ChevronDown, FlaskConical, Zap, Target,
-  ArrowRight, CreditCard, Gift, LogOut,
+  Sparkles, CheckCircle, Loader2, XCircle,
+  FileText, BookOpen, Zap, Target,
+  ArrowRight, Clock, Search,
+  CreditCard, Gift, Settings, LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -67,8 +68,6 @@ function PaymentVerifier() {
   );
 }
 
-type Section = "research" | "student" | "career" | "account";
-
 /* ─── Active Journey Card ─── */
 function ActiveJourneyCard() {
   const activeFn = useServerFn(getActivePlan);
@@ -120,18 +119,34 @@ function ActiveJourneyCard() {
 }
 
 function DashboardPage() {
-  const [open, setOpen] = useState<Section>("research");
   const isMobile = useIsMobile();
   const { user, signOut: clerkSignOut } = useClerk();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuStartY, setMenuStartY] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const toggle = (s: Section) => setOpen(open === s ? open : s);
+  const limitsFn = useServerFn(getUserLimits);
+  const recentFn = useServerFn(getRecentItems);
+  const statsFn = useServerFn(getQuickStats);
+
+  const { data: limits } = useQuery({
+    queryKey: ["dashboard-limits"],
+    queryFn: () => limitsFn(),
+    staleTime: 30_000,
+  });
+  const { data: recentItems } = useQuery({
+    queryKey: ["dashboard-recent"],
+    queryFn: () => recentFn(),
+    staleTime: 30_000,
+  });
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => statsFn(),
+    staleTime: 60_000,
+  });
 
   const userInitial = user?.firstName?.charAt(0) ?? user?.emailAddresses?.[0]?.emailAddress?.charAt(0) ?? "?";
 
-  // Close menu on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -148,6 +163,22 @@ function DashboardPage() {
   function handleMenuTouchEnd(e: React.TouchEvent) {
     if (e.changedTouches[0].clientY - menuStartY > 60) setMenuOpen(false);
   }
+
+  function formatRelativeTime(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  const totalThesisCredits = (limits?.thesis_available_ug ?? 0) + (limits?.thesis_available_masters ?? 0) + (limits?.thesis_available_phd ?? 0);
 
   return (
     <div className={`mx-auto pb-8 ${isMobile ? "px-0" : "max-w-4xl px-4 sm:px-6 py-8 md:py-12"}`}>
@@ -195,7 +226,7 @@ function DashboardPage() {
                   Referral Program
                 </Link>
                 <Link
-                  to="/billing"
+                  to="/settings"
                   className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/10 transition-colors"
                   style={{ color: "rgba(255,255,255,0.85)" }}
                   onClick={() => setMenuOpen(false)}
@@ -229,13 +260,10 @@ function DashboardPage() {
         style={{ backgroundColor: "#0B3527" }}
       >
         <div className={`flex ${isMobile ? "flex-col items-center text-center gap-3" : "items-center gap-5"}`}>
-          {/* Icon */}
           <div className={`rounded-full flex items-center justify-center flex-shrink-0 ${isMobile ? "size-12" : "size-11"}`}
             style={{ backgroundColor: "rgba(74, 222, 128, 0.15)" }}>
             <Sparkles className={isMobile ? "size-6" : "size-5"} style={{ color: "#4ADE80" }} />
           </div>
-
-          {/* Text */}
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white" style={{ fontSize: isMobile ? "15px" : "15px" }}>
               Ask AI anything about your coursework
@@ -244,8 +272,6 @@ function DashboardPage() {
               Get instant help with concepts, assignments, and exam prep
             </p>
           </div>
-
-          {/* Input pill (desktop only) */}
           {!isMobile && (
             <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm"
               style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
@@ -253,8 +279,6 @@ function DashboardPage() {
               <ArrowRight className="size-4" style={{ color: "#4ADE80" }} />
             </div>
           )}
-
-          {/* Mobile arrow */}
           {isMobile && (
             <ArrowRight className="size-5" style={{ color: "#4ADE80" }} />
           )}
@@ -275,173 +299,110 @@ function DashboardPage() {
         </div>
       )}
 
-      {/* ─── Sections ─── */}
+      {/* ─── Dashboard Overview ─── */}
       <div className={`space-y-4 ${isMobile ? "px-4 mt-3" : ""}`}>
-        {/* ===== RESEARCH STUDIO ===== */}
-        <SectionBlock
-          id="research"
-          isOpen={open === "research"}
-          onToggle={() => toggle("research")}
-          icon={BookOpen}
-          label="Research Studio"
-          desc="Discover topics, draft proposals and theses"
-          gradient="from-emerald-600 to-teal-600"
-        >
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <FeatureCard to="/topic-generator" icon={Sparkles} label="Discover Topics" desc="Up to seven original research topics, scored on novelty and feasibility." accent="text-emerald-600" />
-            <FeatureCard to="/my-topics" icon={Bookmark} label="My Topics" desc="Review and manage every topic in your research library." accent="text-teal-600" />
-            <FeatureCard to="/quick-proposal" icon={FileText} label="Draft Proposal" desc="Turn a topic into a structured proposal with verified references." accent="text-emerald-600" />
-            <FeatureCard to="/new-thesis" icon={BookOpen} label="Draft Thesis" desc="Full 5-chapter thesis with verified APA 7 references." accent="text-emerald-600" />
-            <FeatureCard to="/proposals" icon={Library} label="My Proposals" desc="Browse, review, and continue your saved proposals." accent="text-teal-600" />
-            <FeatureCard to="/theses" icon={Library} label="My Theses" desc="Browse, review, and continue your saved theses." accent="text-teal-600" />
-          </div>
-        </SectionBlock>
 
-        {/* ===== STUDENT TOOLS ===== */}
-        <SectionBlock
-          id="student"
-          isOpen={open === "student"}
-          onToggle={() => toggle("student")}
-          icon={FlaskConical}
-          label="Student Tools"
-          desc="Assignments, exam prep, presentations"
-          gradient="from-blue-600 to-indigo-600"
-        >
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <PricedCard to="/tools/assignment" icon={FileText} label="Assignment Assistant" desc="Upload a question and get a well-researched answer with verified sources." price="₦1,000" color="bg-blue-100 text-blue-700" />
-            <PricedCard to="/tools/exam" icon={GraduationCap} label="Exam Preparation" desc="Generate practice questions from your notes — objectives, theory, or both." price="₦1,000" color="bg-emerald-100 text-emerald-700" />
-            <PricedCard to="/tools/presentation" icon={Presentation} label="Presentation Assistant" desc="Create slides with speaker notes. Download as PDF, DOCX, or PPTX." price="₦3,000" color="bg-amber-100 text-amber-700" />
-            <PricedCard to="/tools/history" icon={History} label="Tools History" desc="View your past assignments, exams, presentations, and CVs." price="" color="bg-gray-100 text-gray-700" />
+        {/* Credits Summary */}
+        <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
+          <div className="px-5 py-4 border-b border-ink/5">
+            <h2 className="font-bold text-sm uppercase tracking-[0.12em]">Your Credits</h2>
+            <p className="text-xs text-ink/40 mt-0.5">Remaining usage across all tools</p>
           </div>
-        </SectionBlock>
+          <div className="p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <CreditBadge label="Thesis" value={totalThesisCredits} color="bg-emerald-50 text-emerald-700" />
+              <CreditBadge label="Proposal" value={limits?.proposal_remaining ?? 0} color="bg-teal-50 text-teal-700" />
+              <CreditBadge label="Assignment" value={limits?.assignment_available ?? 0} color="bg-blue-50 text-blue-700" />
+              <CreditBadge label="Exam Prep" value={limits?.exam_available ?? 0} color="bg-amber-50 text-amber-700" />
+              <CreditBadge label="AI Chat" value={limits?.chat_available ?? 0} color="bg-purple-50 text-purple-700" />
+            </div>
+          </div>
+        </div>
 
-        {/* ===== CAREER TOOLS ===== */}
-        <SectionBlock
-          id="career"
-          isOpen={open === "career"}
-          onToggle={() => toggle("career")}
-          icon={UserSquare2}
-          label="Career Tools"
-          desc="Side hustles, presentations, and CV building"
-          gradient="from-purple-600 to-pink-600"
-        >
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <PricedCard to="/tools/side-hustle" icon={Zap} label="Side Hustle Finder" desc="Answer 5 questions and discover personalised side hustle ideas tailored to you." price="₦1,000" color="bg-yellow-100 text-yellow-700" />
-            <PricedCard to="/tools/presentation" icon={Presentation} label="Presentation Assistant" desc="Create professional slide decks with speaker notes for your career talks." price="₦3,000" color="bg-amber-100 text-amber-700" />
-            <PricedCard to="/tools/cv" icon={UserSquare2} label="CV Maker" desc="Upload or fill in your details. Get a professionally formatted CV." price="₦3,000" color="bg-purple-100 text-purple-700" />
+        {/* Recent Items */}
+        <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
+          <div className="px-5 py-4 border-b border-ink/5">
+            <h2 className="font-bold text-sm uppercase tracking-[0.12em]">Continue Where You Left Off</h2>
+            <p className="text-xs text-ink/40 mt-0.5">Your most recent activity</p>
           </div>
-          <ActiveJourneyCard />
-        </SectionBlock>
+          <div className="p-5">
+            {(!recentItems || recentItems.length === 0) ? (
+              <p className="text-sm text-ink/40 text-center py-4">
+                No recent activity yet. Start by creating a topic or drafting a proposal.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {recentItems.map((item) => {
+                  const TypeIcon = item.type === "topic" ? Search : item.type === "thesis" ? BookOpen : FileText;
+                  return (
+                    <Link
+                      key={item.id}
+                      to={item.route}
+                      className="flex items-center gap-3 p-3 rounded-md hover:bg-ink/[0.03] transition-colors group"
+                    >
+                      <div className="p-1.5 rounded-md bg-ink/5 text-ink/50">
+                        <TypeIcon className="size-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate group-hover:text-sage transition-colors">{item.title}</p>
+                        {item.subtitle && (
+                          <p className="text-[10px] text-ink/40">{item.subtitle}</p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-ink/30 flex items-center gap-1 flex-shrink-0">
+                        <Clock className="size-3" />
+                        {formatRelativeTime(item.created_at)}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* ===== ACCOUNT ===== */}
-        <SectionBlock
-          id="account"
-          isOpen={open === "account"}
-          onToggle={() => toggle("account")}
-          icon={Settings}
-          label="Account"
-          desc="Billing, credits, and settings"
-          gradient="from-gray-600 to-slate-600"
-        >
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <AccountCard to="/billing" icon={Settings} label="Billing & Credits" desc="Manage your subscription and view your credit balance." />
+        {/* Quick Stats */}
+        <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
+          <div className="px-5 py-4 border-b border-ink/5">
+            <h2 className="font-bold text-sm uppercase tracking-[0.12em]">Quick Stats</h2>
           </div>
-        </SectionBlock>
+          <div className="p-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <StatCard label="Total Projects" value={stats?.totalProjects ?? 0} />
+              <StatCard label="Research" value={(stats?.topics ?? 0) + (stats?.proposals ?? 0) + (stats?.theses ?? 0)} />
+              <StatCard label="Tools Used" value={stats?.toolsCount ?? 0} />
+            </div>
+          </div>
+        </div>
+
+        {/* Active Journey */}
+        <ActiveJourneyCard />
+
       </div>
     </div>
   );
 }
 
-/* ─── Accordion Section ─── */
+/* ─── Dashboard Sub-Components ─── */
 
-function SectionBlock({
-  id,
-  isOpen,
-  onToggle,
-  icon: Icon,
-  label,
-  desc,
-  gradient,
-  children,
-}: {
-  id: string;
-  isOpen: boolean;
-  onToggle: () => void;
-  icon: any;
-  label: string;
-  desc: string;
-  gradient: string;
-  children: React.ReactNode;
-}) {
+function CreditBadge({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-ink/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-3.5">
-          <div className={`p-2.5 rounded-lg bg-gradient-to-br ${gradient} text-white shadow-sm`}>
-            <Icon className="size-5" />
-          </div>
-          <div>
-            <h2 className="font-bold text-sm uppercase tracking-[0.12em]">{label}</h2>
-            <p className="text-xs text-ink/40 mt-0.5">{desc}</p>
-          </div>
-        </div>
-        <ChevronDown
-          className={`size-5 text-ink/30 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-      <div
-        className={`overflow-hidden transition-all duration-200 ${
-          isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="px-5 pb-5 pt-1">{children}</div>
-      </div>
+    <div className={`p-3 rounded-md text-center ${color}`}>
+      <div className="text-2xl font-serif font-bold">{value}</div>
+      <div className="text-[10px] font-medium uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   );
 }
 
-/* ─── Card Components ─── */
-
-function FeatureCard({ to, icon: Icon, label, desc, accent }: { to: string; icon: any; label: string; desc: string; accent: string }) {
+function StatCard({ label, value }: { label: string; value: number | React.ReactNode }) {
   return (
-    <Link to={to} className="group p-4 bg-paper border border-ink/10 rounded-md hover:border-ink/30 transition-all">
-      <Icon className={`size-5 ${accent} mb-2.5`} />
-      <h3 className="font-serif text-sm mb-0.5 group-hover:text-sage transition-colors">{label}</h3>
-      <p className="text-[11px] text-ink/50 leading-relaxed">{desc}</p>
-    </Link>
-  );
-}
-
-function PricedCard({ to, icon: Icon, label, desc, price, color }: { to: string; icon: any; label: string; desc: string; price: string; color: string }) {
-  return (
-    <Link to={to} className="group p-4 bg-paper border border-ink/10 rounded-md hover:border-sage/40 transition-all hover:shadow-sm">
-      <div className="flex items-start justify-between mb-2.5">
-        <div className={`p-1.5 rounded-md ${color}`}>
-          <Icon className="size-4" />
-        </div>
-        {price && <span className="text-[10px] font-medium text-ink/40">{price}</span>}
-      </div>
-      <h3 className="font-serif text-sm mb-0.5 group-hover:text-sage transition-colors">{label}</h3>
-      <p className="text-[11px] text-ink/50 leading-relaxed">{desc}</p>
-    </Link>
-  );
-}
-
-function AccountCard({ to, icon: Icon, label, desc }: { to: string; icon: any; label: string; desc: string }) {
-  return (
-    <Link to={to} className="group p-4 bg-paper border border-ink/10 rounded-md hover:border-ink/30 transition-all flex items-start gap-3.5">
-      <div className="p-1.5 rounded-md bg-gray-100 text-gray-600">
-        <Icon className="size-4" />
-      </div>
-      <div>
-        <h3 className="font-serif text-sm mb-0.5 group-hover:text-sage transition-colors">{label}</h3>
-        <p className="text-[11px] text-ink/50">{desc}</p>
-      </div>
-    </Link>
+    <div className="p-4 bg-paper border border-ink/10 rounded-md text-center">
+      {typeof value === "number" ? (
+        <div className="text-2xl font-serif font-bold text-ink">{value}</div>
+      ) : (
+        value
+      )}
+      <div className="text-[10px] font-medium uppercase tracking-wider text-ink/40 mt-1">{label}</div>
+    </div>
   );
 }
