@@ -17,9 +17,10 @@ export const PRICING = {
   seminar_postgraduate: { label: "Postgraduate Research Seminar", price: 2500, currency: "NGN" },
   seminar_technical: { label: "Technical / Engineering Seminar", price: 2500, currency: "NGN" },
   seminar_book_review: { label: "Book Review Seminar", price: 1500, currency: "NGN" },
+  chat: { label: "Chat", price: 500, currency: "NGN" },
 } as const;
 
-export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review";
+export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review" | "chat";
 export type ThesisLevel = "undergraduate" | "masters" | "phd";
 
 export function getPrice(product: ProductType, level?: ThesisLevel): number {

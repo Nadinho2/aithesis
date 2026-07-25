@@ -33,6 +33,7 @@ export function productToTool(product: string): string | null {
     seminar_postgraduate: "Seminar",
     seminar_technical: "Seminar",
     seminar_book_review: "Seminar",
+    chat: "AI Chat",
   };
   return map[product] ?? null;
 }

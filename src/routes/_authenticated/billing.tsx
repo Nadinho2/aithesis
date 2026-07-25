@@ -137,6 +137,12 @@ function BillingPage() {
           description="Critical review and analysis of a book or academic work"
           onClick={() => openPay("seminar_book_review")}
         />
+        <PricingCard
+          product="AI Chat"
+          price={`₦${dbPrice("chat").toLocaleString()}`}
+          description="50 messages with the AI study assistant — ask about coursework, assignments, and exam prep"
+          onClick={() => openPay("chat")}
+        />
       </div>
 
       {/* Payment history */}

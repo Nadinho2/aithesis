@@ -58,6 +58,7 @@ function ToolsSidebar() {
     { to: "/tools/history", label: "My History", icon: Bookmark },
     { to: "/billing", label: "Billing", icon: CreditCard },
     { to: "/referral", label: "Referral Program", icon: Gift },
+    { to: "/settings", label: "Settings", icon: Settings },
   ];
 
   const isActive = (to: string) => path === to || path.startsWith(to + "/");

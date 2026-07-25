@@ -23,18 +23,19 @@ function AdminPage() {
   });
 
   const mut = useMutation({
-    mutationFn: (v: {
-      user_id: string;
-      thesis_available_ug: number;
-      thesis_available_masters: number;
-      thesis_available_phd: number;
-      proposal_limit: number;
-      assignment_available: number;
-      exam_available: number;
-      presentation_available: number;
-      cv_available: number;
-      seminar_available: number;
-    }) => up({ data: v }),
+      mutationFn: (v: {
+        user_id: string;
+        thesis_available_ug: number;
+        thesis_available_masters: number;
+        thesis_available_phd: number;
+        proposal_limit: number;
+        assignment_available: number;
+        exam_available: number;
+        presentation_available: number;
+        cv_available: number;
+        seminar_available: number;
+        chat_available: number;
+      }) => up({ data: v }),
     onSuccess: () => {
       toast.success("Limits saved");
       qc.invalidateQueries({ queryKey: ["admin-limits"] });
@@ -53,6 +54,7 @@ function AdminPage() {
     presentation_available: 0,
     cv_available: 0,
     seminar_available: 0,
+    chat_available: 0,
   });
 
   function startEdit(user: NonNullable<typeof data>[number]) {
@@ -67,6 +69,7 @@ function AdminPage() {
       presentation_available: user.presentation_available ?? 0,
       cv_available: user.cv_available ?? 0,
       seminar_available: user.seminar_available ?? 0,
+      chat_available: (user as any).chat_available ?? 0,
     });
   }
 
@@ -142,6 +145,7 @@ function AdminPage() {
                       <th className="text-center py-3 px-1 font-medium text-[11px]">Pres</th>
                       <th className="text-center py-3 px-1 font-medium text-[11px]">CV</th>
                       <th className="text-center py-3 px-1 font-medium text-[11px]">Sem</th>
+                      <th className="text-center py-3 px-1 font-medium text-[11px]">Chat</th>
                       <th className="text-right py-3 pl-4 font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -234,6 +238,13 @@ function AdminPage() {
                               <Input value={form.seminar_available} onChange={(v) => setForm({ ...form, seminar_available: v })} />
                             ) : (
                               <span>{user.seminar_available ?? 0}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-1 text-center">
+                            {isEditing ? (
+                              <Input value={form.chat_available} onChange={(v) => setForm({ ...form, chat_available: v })} />
+                            ) : (
+                              <span>{user.chat_available ?? 0}</span>
                             )}
                           </td>
                           <td className="py-3 pl-4 text-right">
