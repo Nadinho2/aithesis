@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useClerk } from "@clerk/clerk-react";
-import { User, Mail, Calendar, Shield, CreditCard, Gift, ExternalLink } from "lucide-react";
+import { User, Mail, Calendar, Shield, CreditCard, Gift } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -89,25 +89,6 @@ function SettingsPage() {
           <SettingsLink to="/referral" icon={Gift} label="Referral Program" desc="Invite friends and earn credits" />
           <SettingsLink to="/tools/history" icon={Calendar} label="Tools History" desc="View past assignments, exams, and more" />
         </div>
-      </div>
-
-      {/* Clerk profile management */}
-      <div className="border border-ink/10 rounded-lg bg-card p-6">
-        <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40 mb-4">
-          Account Management
-        </h2>
-        <p className="text-sm text-ink/60 mb-4">
-          Manage your password, connected accounts, and security settings via your account portal.
-        </p>
-        <a
-          href="https://accounts.mybrainpadi.com/user"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          style={{ backgroundColor: "#0B3527", color: "#fff" }}
-        >
-          Open Account Portal <ExternalLink className="size-3.5" />
-        </a>
       </div>
     </div>
   );
