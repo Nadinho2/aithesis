@@ -21,6 +21,7 @@ import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedTopicGeneratorRouteImport } from './routes/_authenticated/topic-generator'
 import { Route as AuthenticatedThesesRouteImport } from './routes/_authenticated/theses'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReferralRouteImport } from './routes/_authenticated/referral'
 import { Route as AuthenticatedQuickProposalRouteImport } from './routes/_authenticated/quick-proposal'
 import { Route as AuthenticatedProposalsRouteImport } from './routes/_authenticated/proposals'
@@ -112,6 +113,11 @@ const AuthenticatedTopicGeneratorRoute =
 const AuthenticatedThesesRoute = AuthenticatedThesesRouteImport.update({
   id: '/theses',
   path: '/theses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedReferralRoute = AuthenticatedReferralRouteImport.update({
@@ -307,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/quick-proposal': typeof AuthenticatedQuickProposalRoute
   '/referral': typeof AuthenticatedReferralRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/chat': typeof ApiChatRoute
@@ -352,6 +359,7 @@ export interface FileRoutesByTo {
   '/proposals': typeof AuthenticatedProposalsRoute
   '/quick-proposal': typeof AuthenticatedQuickProposalRoute
   '/referral': typeof AuthenticatedReferralRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/chat': typeof ApiChatRoute
@@ -399,6 +407,7 @@ export interface FileRoutesById {
   '/_authenticated/proposals': typeof AuthenticatedProposalsRoute
   '/_authenticated/quick-proposal': typeof AuthenticatedQuickProposalRoute
   '/_authenticated/referral': typeof AuthenticatedReferralRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/theses': typeof AuthenticatedThesesRoute
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
   '/api/chat': typeof ApiChatRoute
@@ -446,6 +455,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/quick-proposal'
     | '/referral'
+    | '/settings'
     | '/theses'
     | '/topic-generator'
     | '/api/chat'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/quick-proposal'
     | '/referral'
+    | '/settings'
     | '/theses'
     | '/topic-generator'
     | '/api/chat'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/_authenticated/proposals'
     | '/_authenticated/quick-proposal'
     | '/_authenticated/referral'
+    | '/_authenticated/settings'
     | '/_authenticated/theses'
     | '/_authenticated/topic-generator'
     | '/api/chat'
@@ -664,6 +676,13 @@ declare module '@tanstack/react-router' {
       path: '/theses'
       fullPath: '/theses'
       preLoaderRoute: typeof AuthenticatedThesesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/referral': {
@@ -990,6 +1009,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProposalsRoute: typeof AuthenticatedProposalsRoute
   AuthenticatedQuickProposalRoute: typeof AuthenticatedQuickProposalRoute
   AuthenticatedReferralRoute: typeof AuthenticatedReferralRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedThesesRoute: typeof AuthenticatedThesesRoute
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedChatSplatRoute: typeof AuthenticatedChatSplatRoute
@@ -1019,6 +1039,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProposalsRoute: AuthenticatedProposalsRoute,
   AuthenticatedQuickProposalRoute: AuthenticatedQuickProposalRoute,
   AuthenticatedReferralRoute: AuthenticatedReferralRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedThesesRoute: AuthenticatedThesesRoute,
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedChatSplatRoute: AuthenticatedChatSplatRoute,

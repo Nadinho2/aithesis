@@ -129,6 +129,20 @@ export const verifyPayment = createServerFn({ method: "POST" })
 
     if (txError) throw new Error("Failed to record payment");
 
+    // Chat: increment chat_available by 50 messages (₦500 = 50 messages)
+    if (metadata.product === "chat") {
+      const { data: existing } = await (supabase as any)
+        .from("user_limits")
+        .select("chat_available")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const current = existing?.chat_available ?? 0;
+      await (supabase as any)
+        .from("user_limits")
+        .upsert({ user_id: userId, chat_available: current + 50, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    }
+
     // Send payment confirmed email (fire-and-forget)
     const userEmail = await getUserEmail(userId);
     const toolName = productToTool(metadata.product) as BrainPadiTool | null;

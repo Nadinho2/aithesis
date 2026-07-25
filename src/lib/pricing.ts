@@ -99,6 +99,7 @@ function buildFallbackMap(): Record<string, { label: string; price: number; curr
     "price:exam": "exam",
     "price:presentation": "presentation",
     "price:cv": "cv",
+    "price:chat": "chat",
   };
   for (const [k, pk] of Object.entries(simpleKeys)) {
     const p = PRICING[pk] as any;
