@@ -142,7 +142,6 @@ export const Route = createFileRoute("/api/chat")({
                 model: "deepseek-v4-flash",
                 temperature: 0.7,
                 max_tokens: 1000,
-                thinking: { type: "disabled" },
                 messages: [
                   { role: "system", content: systemPrompt },
                   ...previousMessages,
@@ -162,7 +161,16 @@ export const Route = createFileRoute("/api/chat")({
 
             const payload = await deepseekResp.json();
             aiResponse = payload?.choices?.[0]?.message?.content;
-            if (!aiResponse) throw new Error("Empty response from AI");
+
+            // V4 model defaults to thinking ON — fallback to reasoning_content
+            if (!aiResponse || aiResponse.trim().length === 0) {
+              aiResponse = payload?.choices?.[0]?.message?.reasoning_content;
+            }
+
+            if (!aiResponse) {
+              console.error("DeepSeek V4 empty response:", JSON.stringify(payload).slice(0, 500));
+              throw new Error("Empty response from AI");
+            }
           } catch (err: any) {
             console.error("DeepSeek call failed:", err?.message ?? err);
             return new Response(

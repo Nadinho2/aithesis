@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { listChats, getChatMessages } from "@/lib/chat.functions";
 import { useClerk } from "@clerk/clerk-react";
 import { ArrowUp, Sparkles, Plus, Clock, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -35,6 +36,9 @@ export function ChatPage() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
+  const listChatsFn = useServerFn(listChats);
+  const getMsgsFn = useServerFn(getChatMessages);
+
   const [activeChatId, setActiveChatId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return new URLSearchParams(window.location.search).get("chatId");
@@ -55,34 +59,16 @@ export function ChatPage() {
     queryKey: ["chat-messages", activeChatId],
     queryFn: async () => {
       if (!activeChatId) return [];
-      const { data, error } = await (supabase as any)
-        .from("chat_messages")
-        .select("*")
-        .eq("chat_id", activeChatId)
-        .order("created_at", { ascending: true });
-      if (error) {
-        console.error("Failed to fetch messages:", error);
-        return [];
-      }
-      return (data ?? []) as ChatMessage[];
+      const data = await getMsgsFn({ data: activeChatId });
+      return data;
     },
     enabled: !!activeChatId,
   });
 
   // Fetch chat history for mobile bottom sheet
   const { data: chatHistory } = useQuery({
-    queryKey: ["chat-list", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await (supabase as any)
-        .from("chats")
-        .select("id, title, updated_at")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(50);
-      if (error) return [];
-      return (data ?? []) as ChatLink[];
-    },
+    queryKey: ["chat-list"],
+    queryFn: () => listChatsFn(),
     enabled: !!user?.id,
     staleTime: 30_000,
   });

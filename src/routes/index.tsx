@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X } from "lucide-react";
+import {
+  Menu, X, BookOpen, FlaskConical, UserSquare2, Sparkles,
+  ChevronDown, ArrowRight, Lock, FileText, Library,
+  GraduationCap, Presentation, Zap, CreditCard,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -159,70 +163,118 @@ function MethodologyPipeline() {
   );
 }
 
-/* ─── Features ─── */
-const features = [
-  {
-    title: "Topic Discovery",
-    desc: "Enter your department, area of interest, and country. Find up to 50 candidate topics with novelty and feasibility scores to help you decide.",
-  },
-  {
-    title: "Proposal Drafts",
-    desc: "Chapter One and Chapter Three structured to your university's expectations, with a verified reference list you can trust. APA 7th or Harvard citation style.",
-  },
-  {
-    title: "Full Thesis",
-    desc: "Undergraduate, Master's, or PhD structure — 3,000-8,000 words per chapter with APA 7th or Harvard citations verified against real sources.",
-  },
-  {
-    title: "Assignment Assistant",
-    desc: "Upload your assignment question or a document. Get a well-structured answer with verified scholarly sources — or no references if you choose.",
-  },
-  {
-    title: "Exam Preparation",
-    desc: "Upload your notes, documents, and images. Generate practice questions — objectives, theory, or both with a custom split.",
-  },
-  {
-    title: "Presentation Assistant",
-    desc: "Upload your content and images. Generate slides with speaker notes. Download as PowerPoint (PPTX) or DOCX.",
-  },
-  {
-    title: "CV Maker",
-    desc: "Upload your existing CV (PDF/DOCX) to auto-fill all fields, or use the manual form. Add a headshot. Get a professionally formatted CV.",
-  },
-  {
-    title: "Research Library",
-    desc: "Save topics permanently, resume any project, and track citations across every chapter you write.",
-  },
-];
-
-function FeaturesSection() {
+/* ─── Dashboard-Style Section Block (auth-gated) ─── */
+function LandingSectionBlock({
+  icon: Icon,
+  label,
+  desc,
+  gradient,
+  defaultOpen = true,
+  children,
+}: {
+  icon: any;
+  label: string;
+  desc: string;
+  gradient: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <section id="features" className="border-y border-[#E5E2D8] bg-white/40 py-24">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="max-w-2xl mb-14">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-verde font-bold mb-4">The ecosystem</div>
-          <h2 className="font-serif text-4xl md:text-5xl text-ink mb-5">
-            Everything you need to excel, from first assignment to final defence.
-          </h2>
-          <p className="text-ink-secondary leading-[1.7]">
-            Mybrainpadi is an all-in-one education ecosystem — discover research topics, draft
-            proposals and theses, tackle assignments, prepare for exams, build presentations,
-            and create a professional CV. All backed by verified citations.
-          </p>
+    <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-ink/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-3.5">
+          <div className={`p-2.5 rounded-lg bg-gradient-to-br ${gradient} text-white shadow-sm`}>
+            <Icon className="size-5" />
+          </div>
+          <div>
+            <h2 className="font-bold text-sm uppercase tracking-[0.12em]">{label}</h2>
+            <p className="text-xs text-ink/40 mt-0.5">{desc}</p>
+          </div>
         </div>
-        <div className="grid md:grid-cols-2 gap-5">
-          {features.map((f) => (
-            <div
-              key={f.title}
-              className="p-8 bg-white border border-[#E5E2D8] rounded-lg hover:border-ink/20 transition-colors"
-            >
-              <h3 className="font-serif text-2xl text-ink mb-3">{f.title}</h3>
-              <p className="text-sm text-ink-secondary leading-[1.7]">{f.desc}</p>
-            </div>
-          ))}
+        <ChevronDown
+          className={`size-5 text-ink/30 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-200 ${isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"}`}
+      >
+        <div className="px-5 pb-5 pt-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function LandingFeatureCard({
+  icon: Icon, label, desc, accent, refSearch,
+}: {
+  icon: any; label: string; desc: string; accent: string; refSearch?: { ref: string };
+}) {
+  return (
+    <Link to="/auth" search={refSearch}
+      className="group p-4 bg-paper border border-ink/10 rounded-md hover:border-ink/30 transition-all flex items-start gap-3"
+    >
+      <Icon className={`size-5 ${accent} mt-0.5 shrink-0`} />
+      <div className="flex-1 min-w-0">
+        <h3 className="font-serif text-sm mb-0.5 group-hover:text-sage transition-colors">{label}</h3>
+        <p className="text-[11px] text-ink/50 leading-relaxed">{desc}</p>
+      </div>
+      <Lock className="size-3.5 text-ink/15 shrink-0 mt-0.5" />
+    </Link>
+  );
+}
+
+function LandingPricedCard({
+  icon: Icon, label, desc, price, color, refSearch,
+}: {
+  icon: any; label: string; desc: string; price: string; color: string; refSearch?: { ref: string };
+}) {
+  return (
+    <Link to="/auth" search={refSearch}
+      className="group p-4 bg-paper border border-ink/10 rounded-md hover:border-sage/40 transition-all hover:shadow-sm"
+    >
+      <div className="flex items-start justify-between mb-2.5">
+        <div className={`p-1.5 rounded-md ${color}`}>
+          <Icon className="size-4" />
+        </div>
+        <div className="flex items-center gap-2">
+          {price && <span className="text-[10px] font-medium text-ink/40">{price}</span>}
+          <Lock className="size-3 text-ink/15" />
         </div>
       </div>
-    </section>
+      <h3 className="font-serif text-sm mb-0.5 group-hover:text-sage transition-colors">{label}</h3>
+      <p className="text-[11px] text-ink/50 leading-relaxed">{desc}</p>
+    </Link>
+  );
+}
+
+function AskAIPreview({ refSearch }: { refSearch?: { ref: string } }) {
+  return (
+    <Link to="/auth" search={refSearch}
+      className="group block cursor-pointer transition-all hover:shadow-md mb-4 p-5 rounded-xl"
+      style={{ backgroundColor: "#0B3527" }}
+    >
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="rounded-full flex items-center justify-center size-11 flex-shrink-0"
+          style={{ backgroundColor: "rgba(74, 222, 128, 0.15)" }}>
+          <Sparkles className="size-5" style={{ color: "#4ADE80" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-white text-[15px]">Ask AI anything about your coursework</h3>
+          <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+            Get instant help with concepts, assignments, and exam prep
+          </p>
+        </div>
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm"
+          style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)" }}>
+          <span>Sign up to start chatting</span>
+          <ArrowRight className="size-4" style={{ color: "#4ADE80" }} />
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -493,11 +545,49 @@ function LandingPage() {
       {/* ─── Methodology Pipeline ─── */}
       <MethodologyPipeline />
 
-      {/* ─── Features ─── */}
-      <FeaturesSection />
+      {/* ─── Dashboard-Style Sections ─── */}
+      <section id="features" className="max-w-6xl mx-auto px-6 pt-16 pb-8 space-y-4">
+        <div className="max-w-2xl mb-10">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-verde font-bold mb-4">The ecosystem</div>
+          <h2 className="font-serif text-4xl md:text-5xl text-ink mb-5">
+            Everything you need to excel, from first assignment to final defence.
+          </h2>
+          <p className="text-ink-secondary leading-[1.7]">
+            Mybrainpadi is an all-in-one education ecosystem — discover research topics, draft
+            proposals and theses, tackle assignments, prepare for exams, build presentations,
+            and create a professional CV. All backed by verified citations.
+          </p>
+        </div>
+
+        <AskAIPreview refSearch={refSearch} />
+
+        <LandingSectionBlock icon={BookOpen} label="Research Studio" desc="Discover topics, draft proposals and theses" gradient="from-emerald-600 to-teal-600">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <LandingFeatureCard icon={Sparkles} label="Topic Discovery" desc="Enter your department, area of interest, and country. Find up to 50 candidate topics with novelty and feasibility scores to help you decide." accent="text-emerald-600" refSearch={refSearch} />
+            <LandingFeatureCard icon={FileText} label="Proposal Drafts" desc="Chapter One and Chapter Three structured to your university's expectations, with a verified reference list you can trust. APA 7th or Harvard citation style." accent="text-teal-600" refSearch={refSearch} />
+            <LandingFeatureCard icon={BookOpen} label="Full Thesis" desc="Undergraduate, Master's, or PhD structure with APA 7th or Harvard citations verified against real sources." accent="text-emerald-600" refSearch={refSearch} />
+            <LandingFeatureCard icon={Library} label="Research Library" desc="Save topics permanently, resume any project, and track citations across every chapter you write." accent="text-teal-600" refSearch={refSearch} />
+          </div>
+        </LandingSectionBlock>
+
+        <LandingSectionBlock icon={FlaskConical} label="Student Tools" desc="Assignments, exam prep, presentations" gradient="from-blue-600 to-indigo-600">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <LandingPricedCard icon={FileText} label="Assignment Assistant" desc="Upload your assignment question or a document. Get a well-structured answer with verified scholarly sources." price="₦1,000" color="bg-blue-100 text-blue-700" refSearch={refSearch} />
+            <LandingPricedCard icon={GraduationCap} label="Exam Preparation" desc="Upload your notes, documents, and images. Generate practice questions — objectives, theory, or both." price="₦1,000" color="bg-emerald-100 text-emerald-700" refSearch={refSearch} />
+            <LandingPricedCard icon={Presentation} label="Presentation Assistant" desc="Upload your content and images. Generate slides with speaker notes. Download as PPTX or DOCX." price="₦3,000" color="bg-amber-100 text-amber-700" refSearch={refSearch} />
+          </div>
+        </LandingSectionBlock>
+
+        <LandingSectionBlock icon={UserSquare2} label="Career Tools" desc="Side hustles, presentations, and CV building" gradient="from-purple-600 to-pink-600">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <LandingPricedCard icon={Zap} label="Side Hustle Finder" desc="Answer 5 questions and discover personalised side hustle ideas tailored to you." price="₦1,000" color="bg-yellow-100 text-yellow-700" refSearch={refSearch} />
+            <LandingPricedCard icon={UserSquare2} label="CV Maker" desc="Upload your existing CV (PDF/DOCX) to auto-fill all fields, or use the manual form. Get a professionally formatted CV." price="₦3,000" color="bg-purple-100 text-purple-700" refSearch={refSearch} />
+          </div>
+        </LandingSectionBlock>
+      </section>
 
       {/* ─── Pricing ─── */}
-      <section id="pricing" className="max-w-6xl mx-auto px-6 py-24">
+      <section id="pricing" className="max-w-6xl mx-auto px-6 pb-24">
         <div className="text-center mb-16">
           <h2 className="font-serif text-4xl md:text-5xl text-ink mb-4">Access the archive</h2>
           <p className="text-ink-secondary max-w-md mx-auto">
