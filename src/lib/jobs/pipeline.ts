@@ -309,7 +309,7 @@ export async function generateChapters(
       const userMessage = `${payload.topicContext}\n\nWrite ${chapter.label} now — approximately ${chapter.target} words. Follow the numbered sub-section structure exactly: ${subSectionList}`;
 
       const content = await callAIText(apiKey, {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         max_tokens: 64000,
         system: systemPrompt,
         user: userMessage,

@@ -65,7 +65,7 @@ ${data.goal}
 ${data.experience}`;
 
     const result = await callAI(apiKey, {
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       system: systemPrompt,
       user: userPrompt,
     });
@@ -181,7 +181,7 @@ Generate a personalised 7-phase roadmap to help this user get their first client
 
       try {
         const result = await callAI(apiKey, {
-          model: "deepseek-chat",
+          model: "deepseek-v4-flash",
           system: systemPrompt,
           user: userPrompt,
         });
@@ -341,7 +341,7 @@ Give me practical, personalised advice for this specific phase.`;
 
     try {
       const result = await callAIText(apiKey, {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         system: systemPrompt,
         user: userPrompt,
       });

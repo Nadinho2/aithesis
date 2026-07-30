@@ -3,7 +3,7 @@
  * Supports DeepSeek and Gemini with the same interface.
  *
  * Model naming convention:
- *   deepseek-chat       → DeepSeek V3 (JSON mode supported)
+ *   deepseek-v4-flash   → DeepSeek V4 Flash (JSON mode supported)
  *   deepseek-reasoner   → DeepSeek R1 (no JSON mode, has reasoning tags)
  *   gemini-2.5-flash    → Gemini 2.5 Flash (JSON mode via mime_type)
  *   gemini-2.5-pro      → Gemini 2.5 Pro (JSON mode via mime_type)
@@ -69,8 +69,15 @@ async function callDeepSeek(
   }
 
   const payload = await resp.json();
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Did not receive a response.");
+  let content = payload?.choices?.[0]?.message?.content;
+  // V4 model defaults to thinking ON — fallback to reasoning_content
+  if (!content || content.trim().length === 0) {
+    content = payload?.choices?.[0]?.message?.reasoning_content;
+  }
+  if (!content) {
+    console.error("DeepSeek empty response:", JSON.stringify(payload).slice(0, 500));
+    throw new Error("Did not receive a response.");
+  }
   return { content, isReasoner };
 }
 

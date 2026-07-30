@@ -213,7 +213,7 @@ CRITICAL RULES FOR THESIS:
         system += buildChapterFiveRules();
       }
 
-      chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
+      chapters[def.key] = await callAIText(apiKey, { model: "deepseek-v4-flash", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
 
       // STRICT per-chapter word count enforcement — re-prompt up to 3 times if below target
       let chapterWords = countWords(chapters[def.key] ?? "");
@@ -223,7 +223,7 @@ CRITICAL RULES FOR THESIS:
         const shortfall = def.target - chapterWords;
         try {
           const expandSystem = `You are a senior academic. Your previous ${def.label} was too short — only ${chapterWords} words, but the target is AT LEAST ${def.target} words. You MUST expand it by ${shortfall}+ words with NEW content, additional analysis, deeper explanation, and more examples. Keep ALL existing content. Do NOT use filler phrases. Target: AT LEAST ${def.target} words. Output the FULL updated chapter as plain text.`;
-          chapters[def.key] = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${chapters[def.key]}` });
+          chapters[def.key] = await callAIText(apiKey, { model: "deepseek-v4-flash", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${chapters[def.key]}` });
           chapterWords = countWords(chapters[def.key] ?? "");
         } catch (e) {
           break; // stop retrying if API fails
@@ -266,7 +266,7 @@ CRITICAL RULES FOR THESIS:
         const current = countWords(chapters[c.key] ?? "");
         const newTarget = current + share;
         const system = `You are a senior academic writing ${c.label} of a ${data.level} thesis.\n${baseRules}\nYou previously wrote a version. EXPAND it substantially with NEW content, more detailed analysis, additional examples, and deeper explanation. Keep ALL existing content. Do NOT use filler phrases like "Furthermore", "In addition", "It is important to note". Write naturally. Your current word count is ${current} words. You MUST reach AT LEAST ${newTarget} words. Output the FULL updated chapter as plain text.`;
-        const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-chat", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
+        const content = await callAIText(apiKey, { max_tokens: 64000, model: "deepseek-v4-flash", system, user: `${topicContext}\n\nCURRENT DRAFT:\n${chapters[c.key]}` });
         chapters[c.key] = content;
       } catch (e) {
         // Skip expansion if it fails
@@ -533,7 +533,7 @@ export async function generateSeminarContent(payload: {
         : `Write "${section}".`;
 
       const text = await callAIText(apiKey, {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         max_tokens: 16000,
         system,
         user: userMsg,
@@ -824,7 +824,7 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
 
       const target = isProblemSolving ? data.word_count_target : section.target;
       const text = await callAIText(apiKey, {
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         max_tokens: 16000,
         system,
         user: `Write the "${section.label}" section now — approximately ${target} words.`,
@@ -1018,7 +1018,7 @@ CRITICAL RULES FOR PROPOSALS:
       system += buildPreviousContext(genChapters, proposalPayload as any);
 
       const sectionNames = ch.sections.map((s) => s.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
-      let text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
+      let text = await callAIText(apiKey, { model: "deepseek-v4-flash", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${ch.label} now — approximately ${ch.target} words. Include these sections with ## headers:\n${sectionNames.join("\n")}\n\nFor Chapter 3, include statistical formulas in plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, r = 0.76.` });
 
       // STRICT per-chapter word count enforcement — re-prompt up to 2 times if below target (proposals are shorter, fewer retries needed)
       let chapterWords = countWords(text);
@@ -1028,7 +1028,7 @@ CRITICAL RULES FOR PROPOSALS:
         const shortfall = ch.target - chapterWords;
         try {
           const expandSystem = `You are a senior academic. Your previous ${ch.label} was too short — only ${chapterWords} words, but the target is AT LEAST ${ch.target} words. You MUST expand it by ${shortfall}+ words with NEW content, additional detail, deeper analysis, and more examples. Keep ALL existing content. Do NOT use filler phrases. Target: AT LEAST ${ch.target} words. Output the FULL updated chapter as plain text.`;
-          text = await callAIText(apiKey, { model: "deepseek-chat", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${text}` });
+          text = await callAIText(apiKey, { model: "deepseek-v4-flash", max_tokens: 64000, system: expandSystem, user: `CURRENT DRAFT:\n${text}` });
           chapterWords = countWords(text);
         } catch {
           break;
@@ -1070,7 +1070,7 @@ Current length: ${f.len} words. Target: approximately ${newTarget} words.
 Add substantive depth with synthesised citations, extended analysis, and concrete examples.
 Write only the paragraph text — no headings, no JSON.`;
       try {
-        const padText = await callAIText(apiKey, { model: "deepseek-chat", system: `You are a senior academic writing in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} style.`, user: expandPrompt });
+        const padText = await callAIText(apiKey, { model: "deepseek-v4-flash", system: `You are a senior academic writing in ${data.citation_style === "harvard" ? "Harvard" : "APA 7"} style.`, user: expandPrompt });
         sections[f.key as keyof typeof sections] = String(sections[f.key as keyof typeof sections] ?? "") + "\n\n" + padText;
       } catch {
         // Continue with what we have

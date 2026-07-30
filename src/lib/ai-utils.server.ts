@@ -107,11 +107,11 @@ export function trimToExactWords(text: string, n: number): string {
  * Call any supported AI model and return a parsed JSON object.
  *
  * Works with:
- *   deepseek-chat / deepseek-reasoner (via DeepSeek API)
+ *   deepseek-v4-flash / deepseek-reasoner (via DeepSeek API)
  *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
  *
  * @param apiKey - Provider API key. Optional for Gemini (reads GEMINI_API_KEY env).
- * @param opts.model - Model name (e.g. "deepseek-chat", "gemini-2.5-flash")
+ * @param opts.model - Model name (e.g. "deepseek-v4-flash", "gemini-2.5-flash")
  * @param opts.system - System prompt
  * @param opts.user - User prompt
  * @param opts.max_tokens - Max output tokens (optional)
@@ -133,7 +133,7 @@ export async function callAI(
  * Call any supported AI model and return raw text content.
  *
  * Works with:
- *   deepseek-chat / deepseek-reasoner (via DeepSeek API)
+ *   deepseek-v4-flash / deepseek-reasoner (via DeepSeek API)
  *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
  *
  * Useful for long-form prose where embedding text inside JSON would risk

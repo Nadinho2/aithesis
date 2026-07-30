@@ -63,7 +63,7 @@ Research type: ${data.research_type || "(unspecified)"}
 Generate exactly ${data.count} topics now.`;
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       system: systemPrompt,
       user: userPrompt,
     });
