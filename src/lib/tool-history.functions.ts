@@ -253,3 +253,45 @@ export const deleteSeminar = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const listAssessments = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context as any;
+    const { data, error } = await supabase
+      .from("custom_analyses")
+      .select("id, title, scenario_text, fields, status, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const getAssessment = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const { data: row, error } = await supabase
+      .from("custom_analyses")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const deleteAssessment = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const { error } = await supabase
+      .from("custom_analyses")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

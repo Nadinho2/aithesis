@@ -426,6 +426,7 @@ const BulkCreditsInput = z.object({
   presentation: z.number().int().min(0).default(0),
   cv: z.number().int().min(0).default(0),
   seminar: z.number().int().min(0).default(0),
+  assessment: z.number().int().min(0).default(0),
 });
 
 export const adminBulkSetCredits = createServerFn({ method: "POST" })
@@ -463,6 +464,7 @@ export const adminBulkSetCredits = createServerFn({ method: "POST" })
         presentation_available: data.presentation,
         cv_available: data.cv,
         seminar_available: data.seminar,
+        assessment_available: data.assessment,
         updated_at: new Date().toISOString(),
       };
 

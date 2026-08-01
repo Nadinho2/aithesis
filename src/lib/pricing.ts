@@ -18,9 +18,10 @@ export const PRICING = {
   seminar_technical: { label: "Technical / Engineering Seminar", price: 2500, currency: "NGN" },
   seminar_book_review: { label: "Book Review Seminar", price: 1500, currency: "NGN" },
   chat: { label: "Chat", price: 500, currency: "NGN" },
+  custom_analysis: { label: "Assessment", price: 0, currency: "NGN" },
 } as const;
 
-export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review" | "chat";
+export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review" | "chat" | "custom_analysis";
 export type ThesisLevel = "undergraduate" | "masters" | "phd";
 
 export function getPrice(product: ProductType, level?: ThesisLevel): number {
@@ -100,6 +101,7 @@ function buildFallbackMap(): Record<string, { label: string; price: number; curr
     "price:presentation": "presentation",
     "price:cv": "cv",
     "price:chat": "chat",
+    "price:custom_analysis": "custom_analysis",
   };
   for (const [k, pk] of Object.entries(simpleKeys)) {
     const p = PRICING[pk] as any;

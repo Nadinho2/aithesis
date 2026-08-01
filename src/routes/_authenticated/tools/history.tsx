@@ -9,10 +9,11 @@ import {
   listCvs, deleteCv,
   listSideHustles, deleteSideHustle,
   listSeminars, deleteSeminar,
+  listAssessments, deleteAssessment,
 } from "@/lib/tool-history.functions";
 import {
   FileText, GraduationCap, Presentation, UserSquare2, Zap,
-  BookOpen, Loader2, Trash2, Calendar, ChevronRight,
+  BookOpen, Loader2, Trash2, Calendar, ChevronRight, BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seminarTypeLabel } from "@/lib/pricing";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/tools/history")({
   component: ToolHistoryPage,
 });
 
-type Tab = "assignments" | "exams" | "presentations" | "cvs" | "side_hustles" | "seminars";
+type Tab = "assignments" | "exams" | "presentations" | "cvs" | "side_hustles" | "seminars" | "assessments";
 
 const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
   { key: "assignments", label: "Assignments", icon: FileText },
@@ -31,6 +32,7 @@ const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
   { key: "cvs", label: "CVs", icon: UserSquare2 },
   { key: "side_hustles", label: "Side Hustles", icon: Zap },
   { key: "seminars", label: "Seminars", icon: BookOpen },
+  { key: "assessments", label: "Assessments", icon: BarChart3 },
 ];
 
 
@@ -46,6 +48,7 @@ function ToolHistoryPage() {
     cvs: useServerFn(listCvs),
     side_hustles: useServerFn(listSideHustles),
     seminars: useServerFn(listSeminars),
+    assessments: useServerFn(listAssessments),
   };
 
   const deleteFns: Record<Tab, any> = {
@@ -55,6 +58,7 @@ function ToolHistoryPage() {
     cvs: useServerFn(deleteCv),
     side_hustles: useServerFn(deleteSideHustle),
     seminars: useServerFn(deleteSeminar),
+    assessments: useServerFn(deleteAssessment),
   };
 
   const { data, isLoading } = useQuery({
@@ -125,6 +129,7 @@ function ToolHistoryPage() {
                 case "cvs": return "/tools/cv";
                 case "side_hustles": return "/tools/side-hustle";
                 case "seminars": return "/tools/seminar";
+                case "assessments": return "/tools/custom-analysis";
               }
             })()}
             className="text-sm text-sage hover:underline font-medium"
@@ -190,6 +195,13 @@ function HistoryCard({ item, tab, onDelete }: { item: any; tab: Tab; onDelete: (
       subtitle = `${seminarTypeLabel(item.seminar_type)} · ${item.academic_level ?? "UG"} · ${item.word_count ?? 0} words`;
       viewPath = `/tools/seminar/${item.id}`;
       break;
+    case "assessments": {
+      const fields = typeof item.fields === "string" ? JSON.parse(item.fields) : item.fields;
+      title = item.title?.slice(0, 80) + (item.title?.length > 80 ? "…" : "") || "Assessment";
+      subtitle = `${(fields ?? []).length} fields · ${item.scenario_text?.slice(0, 60) + (item.scenario_text?.length > 60 ? "…" : "")}`;
+      viewPath = `/tools/custom-analysis`;
+      break;
+    }
   }
 
   return (

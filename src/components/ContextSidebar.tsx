@@ -54,6 +54,7 @@ function ToolsSidebar() {
     { to: "/tools/exam", label: "Exam Prep", icon: GraduationCap },
     { to: "/tools/presentation", label: "Presentation", icon: Presentation },
     { to: "/tools/seminar", label: "Seminar", icon: BookOpenCheck },
+    { to: "/tools/custom-analysis", label: "Assessment", icon: BarChart3 },
   ];
 
   const careerTools = [

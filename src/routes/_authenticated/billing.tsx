@@ -143,6 +143,12 @@ function BillingPage() {
           description="50 messages with the AI study assistant — ask about coursework, assignments, and exam prep"
           onClick={() => openPay("chat")}
         />
+        <PricingCard
+          product="Assessment"
+          price="Free"
+          description="Submit a scenario and define custom fields — AI analyzes it with genuine insight"
+          onClick={() => { /* Free — navigate directly */ window.location.href = "/tools/custom-analysis"; }}
+        />
       </div>
 
       {/* Payment history */}

@@ -35,6 +35,7 @@ function AdminPage() {
         cv_available: number;
         seminar_available: number;
         chat_available: number;
+        assessment_available: number;
       }) => up({ data: v }),
     onSuccess: () => {
       toast.success("Limits saved");
@@ -55,6 +56,7 @@ function AdminPage() {
     cv_available: 0,
     seminar_available: 0,
     chat_available: 0,
+    assessment_available: 0,
   });
 
   function startEdit(user: NonNullable<typeof data>[number]) {
@@ -70,6 +72,7 @@ function AdminPage() {
       cv_available: user.cv_available ?? 0,
       seminar_available: user.seminar_available ?? 0,
       chat_available: (user as any).chat_available ?? 0,
+      assessment_available: (user as any).assessment_available ?? 0,
     });
   }
 
@@ -146,6 +149,7 @@ function AdminPage() {
                       <th className="text-center py-3 px-1 font-medium text-[11px]">CV</th>
                       <th className="text-center py-3 px-1 font-medium text-[11px]">Sem</th>
                       <th className="text-center py-3 px-1 font-medium text-[11px]">Chat</th>
+                      <th className="text-center py-3 px-1 font-medium text-[11px]">Asmt</th>
                       <th className="text-right py-3 pl-4 font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -245,6 +249,13 @@ function AdminPage() {
                               <Input value={form.chat_available} onChange={(v) => setForm({ ...form, chat_available: v })} />
                             ) : (
                               <span>{user.chat_available ?? 0}</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-1 text-center">
+                            {isEditing ? (
+                              <Input value={form.assessment_available} onChange={(v) => setForm({ ...form, assessment_available: v })} />
+                            ) : (
+                              <span>{(user as any).assessment_available ?? 0}</span>
                             )}
                           </td>
                           <td className="py-3 pl-4 text-right">
@@ -552,6 +563,7 @@ function PricingManager() {
     { key: "price:seminar_postgraduate", label: "Postgraduate Seminar" },
     { key: "price:seminar_technical", label: "Technical / Engineering Seminar" },
     { key: "price:seminar_book_review", label: "Book Review Seminar" },
+    { key: "price:custom_analysis", label: "Assessment" },
   ];
 
   useEffect(() => {
@@ -660,6 +672,7 @@ function ToolToggles() {
     { key: "tool:presentation:enabled", label: "Presentation" },
     { key: "tool:cv:enabled", label: "CV Maker" },
     { key: "tool:seminar:enabled", label: "Seminar" },
+    { key: "tool:custom_analysis:enabled", label: "Assessment" },
   ];
 
   const mut = useMutation({
@@ -722,7 +735,7 @@ function BulkCredits() {
   const [credits, setCredits] = useState({
     thesis_ug: 0, thesis_masters: 0, thesis_phd: 0,
     proposal: 0, assignment: 0, exam: 0,
-    presentation: 0, cv: 0, seminar: 0,
+    presentation: 0, cv: 0, seminar: 0, assessment: 0,
   });
 
   const mut = useMutation({
@@ -769,6 +782,7 @@ function BulkCredits() {
             ["presentation", "Presentation"],
             ["cv", "CV Maker"],
             ["seminar", "Seminar"],
+            ["assessment", "Assessment"],
           ].map(([key, label]) => (
             <div key={key} className="flex items-center justify-between">
               <label className="text-xs text-ink/60">{label}</label>

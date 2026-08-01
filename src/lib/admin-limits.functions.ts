@@ -65,6 +65,7 @@ export const adminListLimits = createServerFn({ method: "GET" })
         cv_available: lim?.cv_available ?? 0,
         chat_available: lim?.chat_available ?? 0,
         seminar_available: (lim as any)?.seminar_available ?? 0,
+        assessment_available: (lim as any)?.assessment_available ?? 0,
       };
     });
   });
@@ -86,6 +87,7 @@ export const updateUserLimits = createServerFn({ method: "POST" })
         cv_available: z.number().int().min(0).max(999).default(0),
         chat_available: z.number().int().min(0).max(99999).default(0),
         seminar_available: z.number().int().min(0).max(999).default(0),
+        assessment_available: z.number().int().min(0).max(999).default(0),
       })
       .parse(i),
   )
@@ -105,6 +107,7 @@ export const updateUserLimits = createServerFn({ method: "POST" })
       cv_available: data.cv_available ?? 0,
       chat_available: data.chat_available ?? 0,
       seminar_available: data.seminar_available ?? 0,
+      assessment_available: data.assessment_available ?? 0,
       updated_at: new Date().toISOString(),
     } as any;
 
@@ -147,6 +150,7 @@ function limitsColumn(type: string): string | null {
     case "seminar_technical":
     case "seminar_book_review":
       return "seminar_available";
+    case "custom_analysis": return "assessment_available";
     default: return null;
   }
 }

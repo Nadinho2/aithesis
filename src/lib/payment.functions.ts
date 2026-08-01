@@ -19,7 +19,7 @@ function runtimeEnv(key: string): string | undefined {
 // --- Initialize Paystack Payment ---
 
 const InitPaymentInput = z.object({
-  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat"]),
+  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat", "custom_analysis"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
   email: z.string().email(),
   callbackUrl: z.string().optional(),
@@ -192,7 +192,7 @@ export const handlePaymentFailed = createServerFn({ method: "POST" })
 // --- Check Access ---
 
 const CheckAccessInput = z.object({
-  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat"]),
+  product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat", "custom_analysis"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
 });
 
@@ -386,7 +386,7 @@ export const debugTxState = createServerFn({ method: "POST" })
 // --- Mark transaction as used (for non-document tools) ---
 
 const MarkUsedInput = z.object({
-  product: z.enum(["assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat"]),
+  product: z.enum(["assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat", "custom_analysis"]),
 });
 
 export const markTransactionUsed = createServerFn({ method: "POST" })
