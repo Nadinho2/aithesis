@@ -168,17 +168,6 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
   // Track generated chapters for context passing (sequential generation)
   const generatedChapters: Array<{ key: string; chapterTitle: string; order: number; content: string }> = [];
 
-  // Generate abstract + chapters SEQUENTIALLY to avoid rate limits
-  // Abstract first (using reasoner for quality)
-  const abstract = await (async () => {
-    try {
-      const system = `You are a senior academic writing the abstract of a ${data.level} thesis.\n${baseRules}\nTarget: EXACTLY ${abstractTarget} words. Single paragraph.`;
-      return await callAIText(apiKey, { model: "deepseek-reasoner", max_tokens: 8000, system, user: `${topicContext}\n\nWrite the abstract.` });
-    } catch (e) {
-      return "";
-    }
-  })();
-
   // Generate each chapter one at a time WITH context from previous chapters
   const thesisLevel = data.level === "undergraduate" ? "Undergraduate" : data.level === "masters" ? "Master's" : "PhD";
   const pipelinePayload = { topic: topicCtx.title, documentTitle: topicCtx.title };
@@ -284,6 +273,78 @@ CRITICAL RULES FOR THESIS:
     return { success: false, error: `Only reached ${total} words (target: ${target}). Please try again.` };
   }
 
+  // ─── Generate abstract AFTER chapters ──────────────────────────────────
+  // Now that all chapters exist, the AI can write a genuine results-based
+  // abstract instead of a procedural preview of what the thesis "will" do.
+  const ch4Content = chapters["chapter_4_results_findings"] ?? "";
+  const ch5Content = chapters["chapter_5_discussion_conclusion"] ?? "";
+  const chapterSummary = [
+    `FINDINGS (Chapter 4 excerpt): ${ch4Content.slice(0, 1200)}`,
+    `CONCLUSIONS (Chapter 5 excerpt): ${ch5Content.slice(0, 800)}`,
+  ].join("\n\n");
+
+  let abstract = "";
+  try {
+    const { callAI } = await import("@/lib/ai-utils.server");
+    const abstractSystem = [
+      `You are a senior academic. Below are the completed chapters of a ${data.level} thesis.`,
+      `Write a RESULTS-BASED abstract as a single JSON object: {"abstract":"..."}`,
+      ``,
+      `CRITICAL RULES:`,
+      `- Write in PAST TENSE — describe what the study DID, what it FOUND, and what it MEANS.`,
+      `- Do NOT describe what the thesis "will do", "aims to do", or "explores".`,
+      `- Summarise the actual methodology, findings, and conclusions from the chapters below.`,
+      `- ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} style.`,
+      `- Target: EXACTLY ${abstractTarget} words. Single paragraph.`,
+      `- Use 1-2 citations from the reference list only where they genuinely support a finding.`,
+      `- Never invent citations.`,
+      `- Vary sentence length and structure. Write natural academic English.`,
+    ].join("\n");
+
+    const raw = await callAI(apiKey, {
+      model: "deepseek-v4-pro",
+      max_tokens: 8000,
+      system: abstractSystem,
+      user: `${topicContext}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}\n\nWrite the abstract now.`,
+    });
+    abstract = raw?.abstract ?? "";
+
+    // Scrub AI tells from the abstract
+    if (abstract) {
+      const { scrubAITells } = await import("@/lib/ai-utils.server");
+      abstract = scrubAITells(abstract);
+    }
+
+    // Word count retry — re-prompt once if too short
+    const abstractWords = countWords(abstract);
+    if (abstractWords < abstractTarget && abstract) {
+      try {
+        const retrySystem = [
+          `You are a senior academic. Your previous abstract was too short — only ${abstractWords} words, but the target is AT LEAST ${abstractTarget} words.`,
+          `Expand it with more specific findings from the completed chapters. Keep the same JSON format: {"abstract":"..."}`,
+        ].join("\n");
+        const retry = await callAI(apiKey, {
+          model: "deepseek-v4-pro",
+          max_tokens: 8000,
+          system: retrySystem,
+          user: `CURRENT ABSTRACT:\n${abstract}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}`,
+        });
+        const expanded = retry?.abstract ?? "";
+        if (expanded && countWords(expanded) > abstractWords) {
+          abstract = expanded;
+        }
+      } catch {
+        // Keep original if retry fails
+      }
+    }
+  } catch (e) {
+    console.error("[thesis] Abstract generation failed, saving without abstract:", e);
+    abstract = "";
+  }
+
+  // Final word count includes the actual abstract
+  const finalWordCount = countWords(abstract) + chapterDefs.reduce((s, d) => s + countWords(chapters[d.key] ?? ""), 0);
+
   // Save completed thesis
   const { data: created, error } = await supabase
     .from("theses")
@@ -294,7 +355,7 @@ CRITICAL RULES FOR THESIS:
       abstract,
       chapters,
       references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}. ${r.journal ?? ""}` })),
-      word_count: total,
+      word_count: finalWordCount,
       citation_style: data.citation_style,
       status: "completed",
     } as any)
@@ -407,13 +468,11 @@ SECTION-SPECIFIC RULES:
 - Methodology: describe research design, population, sampling technique, data collection, and analysis method. Past tense — study is complete.
 - Results and Findings: present findings with reference to tables and figures. Format all tables as:
 
-Table [N]
-[Table Title]
+[TABLE: Table [N]: Table Title]
 | Header 1 | Header 2 | Header 3 |
-|----------|----------|----------|
 | Data     | Data     | Data     |
-Note: [brief note if needed]
 
+Do NOT include separator rows (no |---|---| lines). The first row after the [TABLE:] tag is the header row.
 Number tables sequentially: Table 1, Table 2. Add a brief interpretation paragraph after each table.
 - Discussion and Conclusion: link findings to theory and prior studies. Draw clear conclusions. Do not introduce new information.
 - Acknowledgements: one short paragraph, generic — thank supervisor and institution.

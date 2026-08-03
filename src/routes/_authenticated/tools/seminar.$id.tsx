@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getSeminar } from "@/lib/tool-history.functions";
+import { getSeminar, exportSeminarDocx } from "@/lib/tool-history.functions";
 import { seminarTypeLabel } from "@/lib/pricing";
-import { Loader2, ArrowLeft, BookOpen } from "lucide-react";
+import { Loader2, ArrowLeft, BookOpen, Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tools/seminar/$id")({
   head: () => ({ meta: [{ title: "Seminar Paper — Mybrainpadi" }] }),
@@ -17,6 +17,27 @@ function SeminarDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["seminar", id],
     queryFn: () => getFn({ data: { id } }),
+  });
+
+  const expFn = useServerFn(exportSeminarDocx);
+  const dlMut = useMutation({
+    mutationFn: () => expFn({ data: { id } }),
+    onSuccess: (result: any) => {
+      const byteChars = atob(result.base64);
+      const byteNums = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+      const u8 = new Uint8Array(byteNums);
+      const blob = new Blob([u8], { type: result.mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    onError: (e: any) => alert(e?.message ?? "Download failed"),
   });
 
   if (isLoading) {
@@ -62,6 +83,14 @@ function SeminarDetailPage() {
           </span>
           <span className="text-xs text-ink/40 capitalize">{seminar.academic_level}</span>
           <span className="text-xs text-ink/40">{seminar.word_count?.toLocaleString() ?? 0} words</span>
+          <button
+            onClick={() => dlMut.mutate()}
+            disabled={dlMut.isPending}
+            className="ml-auto px-3 py-1.5 bg-ink text-bone rounded-sm text-sm flex items-center gap-1.5 disabled:opacity-60 hover:bg-sage transition-colors"
+          >
+            {dlMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            .docx
+          </button>
         </div>
       </div>
 

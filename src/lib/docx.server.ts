@@ -594,6 +594,79 @@ export async function buildThesisDocx(p: {
   return new Uint8Array(buf);
 }
 
+export async function buildSeminarDocx(p: {
+  title: string;
+  seminar_type: string;
+  academic_level: string;
+  word_count: number;
+  sections: Record<string, string>;
+}): Promise<Uint8Array> {
+  const typeLabels: Record<string, string> = {
+    seminar_journal: "Journal / Conference Paper",
+    seminar_departmental: "Departmental Seminar Paper",
+    seminar_postgraduate: "Postgraduate Research Seminar",
+    seminar_technical: "Technical / Engineering Seminar",
+    seminar_book_review: "Book Review Seminar",
+  };
+  const levelLabel = p.academic_level === "phd" ? "PhD" : p.academic_level === "postgraduate" ? "Postgraduate" : "Undergraduate";
+  const typeLabel = typeLabels[p.seminar_type] ?? p.seminar_type;
+
+  const children: (Paragraph | Table)[] = [];
+
+  // Title page
+  children.push(
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "" })], spacing: { before: 1600 } }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: p.title, bold: true, size: 44 })],
+      spacing: { after: 400 },
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: typeLabel, italics: true, size: 26 })],
+      spacing: { after: 100 },
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: `${levelLabel} Level`, size: 24, color: "555555" })],
+      spacing: { after: 200 },
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: `${p.word_count.toLocaleString()} words`, color: "777777", size: 20 })],
+      spacing: { before: 200 },
+    }),
+    new Paragraph({ children: [new PageBreak()] }),
+  );
+
+  // Sections — iterate keys in insertion order
+  const sectionEntries = Object.entries(p.sections);
+  for (let i = 0; i < sectionEntries.length; i++) {
+    const [key, content] = sectionEntries[i];
+    const text = String(content ?? "").trim();
+    if (!text) continue;
+
+    children.push(heading(key, 1));
+
+    // Use parseRichText to handle [TABLE:] blocks and markdown
+    const blocks = parseRichText(text);
+    children.push(...blocks);
+
+    // Page break between major sections, not after last
+    if (i < sectionEntries.length - 1) {
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+    }
+  }
+
+  const doc = new Document({
+    numbering,
+    styles: baseStyles,
+    sections: [{ properties: pageSection, children }],
+  });
+  const buf = await Packer.toBuffer(doc);
+  return new Uint8Array(buf);
+}
+
 export async function buildAssignmentDocx(p: {
   title: string;
   answer?: string;

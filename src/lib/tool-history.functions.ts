@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
+import { buildSeminarDocx, toBase64 } from "./docx.server";
 
 export const listAssignments = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
@@ -252,6 +253,34 @@ export const deleteSeminar = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const exportSeminarDocx = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const { data: row, error } = await supabase
+      .from("seminars")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !row) throw new Error("Seminar not found");
+
+    const sections: Record<string, string> = typeof row.sections === "string"
+      ? JSON.parse(row.sections)
+      : (row.sections ?? {});
+
+    const bytes = await buildSeminarDocx({
+      title: row.title,
+      seminar_type: row.seminar_type,
+      academic_level: row.academic_level,
+      word_count: row.word_count,
+      sections,
+    });
+    const filename = `${row.title.replace(/[^a-z0-9._-]+/gi, "_").slice(0, 60)}-seminar.docx`;
+    return { base64: toBase64(bytes), filename, mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
   });
 
 export const listAssessments = createServerFn({ method: "POST" })
