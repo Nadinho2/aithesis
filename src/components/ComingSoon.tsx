@@ -43,16 +43,24 @@ export function ComingSoon({
           user_id: user?.id ?? null,
         });
       if (insertError) {
-        if (insertError.message?.toLowerCase().includes("duplicate")) {
+        // Supabase unique_violation = 23505, or duplicate key message
+        const msg = String(insertError.message ?? "").toLowerCase();
+        const code = String((insertError as any).code ?? "");
+        if (code === "23505" || msg.includes("duplicate") || msg.includes("unique")) {
           setSubmitted(true);
+        } else if (code === "42501" || msg.includes("permission")) {
+          setError("Signup unavailable right now. Please try again later.");
+          console.error("[ComingSoon] Permission denied:", insertError);
         } else {
-          setError("Something went wrong. Try again.");
+          setError(insertError.message || "Something went wrong. Try again.");
+          console.error("[ComingSoon] Insert error:", insertError);
         }
       } else {
         setSubmitted(true);
       }
-    } catch {
-      setError("Something went wrong. Try again.");
+    } catch (err: any) {
+      console.error("[ComingSoon] Unexpected error:", err?.message ?? err);
+      setError(err?.message || "Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
