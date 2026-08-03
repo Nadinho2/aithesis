@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
-import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits } from "@/lib/admin.functions";
-import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift } from "lucide-react";
+import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification } from "@/lib/admin.functions";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
-  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral">("limits");
+  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral" | "waitlist">("limits");
   const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
@@ -113,6 +113,7 @@ function AdminPage() {
           <TabBtn tab="tools" active={tab} onClick={() => setTab("tools")} label="Tools" />
           <TabBtn tab="credits" active={tab} onClick={() => setTab("credits")} label="Bulk Credits" />
           <TabBtn tab="referral" active={tab} onClick={() => setTab("referral")} label="Referral" />
+          <TabBtn tab="waitlist" active={tab} onClick={() => setTab("waitlist")} label="Waitlist" />
         </div>
 
         {tab === "limits" && (
@@ -301,6 +302,7 @@ function AdminPage() {
         {tab === "tools" && <ToolToggles />}
         {tab === "credits" && <BulkCredits />}
         {tab === "referral" && <ReferralTab />}
+        {tab === "waitlist" && <WaitlistTab />}
       </div>
     </div>
   );
@@ -876,6 +878,119 @@ function ReferralTab() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Waitlist — Coming Soon Notifications
+// ═══════════════════════════════════════════════════════════
+
+function WaitlistTab() {
+  const listFn = useServerFn(adminListNotifications);
+  const deleteFn = useServerFn(adminDeleteNotification);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-waitlist"],
+    queryFn: () => listFn(),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-waitlist"] });
+      toast.success("Entry removed");
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const learnCount = data?.filter((n: any) => n.feature === "learn").length ?? 0;
+  const communityCount = data?.filter((n: any) => n.feature === "community").length ?? 0;
+  const totalCount = data?.length ?? 0;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <Mail className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Users who signed up for "Notify Me" on the Learn and Community coming-soon pages.
+        </p>
+      </div>
+
+      {/* Summary cards */}
+      <div className="flex gap-3 mb-6">
+        <div className="flex-1 max-w-[140px] border border-ink/10 rounded-sm p-3 text-center">
+          <p className="text-2xl font-bold text-ink">{totalCount}</p>
+          <p className="text-[10px] font-medium text-ink/50 uppercase tracking-wide mt-0.5">Total</p>
+        </div>
+        <div className="flex-1 max-w-[140px] border border-ink/10 rounded-sm p-3 text-center">
+          <p className="text-2xl font-bold text-sage">{learnCount}</p>
+          <p className="text-[10px] font-medium text-ink/50 uppercase tracking-wide mt-0.5">Learn</p>
+        </div>
+        <div className="flex-1 max-w-[140px] border border-ink/10 rounded-sm p-3 text-center">
+          <p className="text-2xl font-bold text-verde">{communityCount}</p>
+          <p className="text-[10px] font-medium text-ink/50 uppercase tracking-wide mt-0.5">Community</p>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center gap-3 text-ink/60">
+          <Loader2 className="size-4 animate-spin" /> Loading waitlist…
+        </div>
+      )}
+
+      {data && data.length === 0 && (
+        <p className="text-sm text-ink/40">No signups yet.</p>
+      )}
+
+      {data && data.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-ink/10">
+                <th className="text-left py-3 pr-3 font-medium">Date</th>
+                <th className="text-left py-3 pr-3 font-medium">Email</th>
+                <th className="text-center py-3 pr-3 font-medium">Feature</th>
+                <th className="text-left py-3 pr-3 font-medium">User ID</th>
+                <th className="text-right py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((entry: any) => (
+                <tr key={entry.id} className="border-b border-ink/5 hover:bg-ink/[0.02]">
+                  <td className="py-3 pr-3 text-xs text-ink/60 whitespace-nowrap">
+                    {new Date(entry.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td className="py-3 pr-3 text-sm">
+                    <a href={`mailto:${entry.email}`} className="text-verde hover:underline">
+                      {entry.email}
+                    </a>
+                  </td>
+                  <td className="py-3 pr-3 text-center">
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-sm ${entry.feature === "learn" ? "bg-sage/10 text-sage" : "bg-verde/10 text-verde"}`}>
+                      {entry.feature === "learn" ? "Learn" : "Community"}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-3 text-xs text-ink/40 font-mono">
+                    {entry.user_id ? entry.user_id.slice(0, 12) + "…" : "—"}
+                  </td>
+                  <td className="py-3 text-right">
+                    <button
+                      onClick={() => { if (confirm("Delete this waitlist entry?")) deleteMut.mutate(entry.id); }}
+                      disabled={deleteMut.isPending}
+                      className="text-xs text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                      title="Delete"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

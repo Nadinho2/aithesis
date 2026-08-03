@@ -490,3 +490,33 @@ export const adminBulkSetCredits = createServerFn({ method: "POST" })
 
     return { ok, skipped, notFound: data.emails.length - userIdMap.size };
   });
+
+// ─── Coming Soon Notification Waitlist ────────────────────────────────────
+
+export const adminListNotifications = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as any)
+      .from("coming_soon_notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminDeleteNotification = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    assertAdmin(context.isAdmin);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("coming_soon_notifications")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
