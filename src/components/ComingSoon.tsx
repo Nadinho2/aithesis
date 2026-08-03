@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useClerk } from "@clerk/clerk-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useServerFn } from "@tanstack/react-start";
+import { subscribeToWaitlist } from "@/lib/admin.functions";
 
 interface ComingSoonProps {
   title: string;
@@ -22,6 +23,7 @@ export function ComingSoon({
 }: ComingSoonProps) {
   const { user } = useClerk();
   const isMobile = useIsMobile();
+  const notifyFn = useServerFn(subscribeToWaitlist);
   const [email, setEmail] = useState(user?.emailAddresses?.[0]?.emailAddress ?? "");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,31 +37,23 @@ export function ComingSoon({
     setLoading(true);
     setError("");
     try {
-      const { error: insertError } = await (supabase as any)
-        .from("coming_soon_notifications")
-        .insert({
+      const result = await notifyFn({
+        data: {
           email: email.trim(),
           feature: featureName,
-          user_id: user?.id ?? null,
-        });
-      if (insertError) {
-        // Supabase unique_violation = 23505, or duplicate key message
-        const msg = String(insertError.message ?? "").toLowerCase();
-        const code = String((insertError as any).code ?? "");
-        if (code === "23505" || msg.includes("duplicate") || msg.includes("unique")) {
+          userId: user?.id ?? null,
+        },
+      });
+      if (result.error) {
+        if (String(result.error).toLowerCase().includes("already subscribed")) {
           setSubmitted(true);
-        } else if (code === "42501" || msg.includes("permission")) {
-          setError("Signup unavailable right now. Please try again later.");
-          console.error("[ComingSoon] Permission denied:", insertError);
         } else {
-          setError(insertError.message || "Something went wrong. Try again.");
-          console.error("[ComingSoon] Insert error:", insertError);
+          setError(result.error);
         }
       } else {
         setSubmitted(true);
       }
     } catch (err: any) {
-      console.error("[ComingSoon] Unexpected error:", err?.message ?? err);
       setError(err?.message || "Something went wrong. Try again.");
     } finally {
       setLoading(false);

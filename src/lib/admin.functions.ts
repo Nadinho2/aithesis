@@ -493,6 +493,35 @@ export const adminBulkSetCredits = createServerFn({ method: "POST" })
 
 // ─── Coming Soon Notification Waitlist ────────────────────────────────────
 
+export const subscribeToWaitlist = createServerFn({ method: "POST" })
+  .inputValidator((i: unknown) =>
+    z.object({
+      email: z.string().email(),
+      feature: z.string().min(1),
+      userId: z.string().nullable().optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("coming_soon_notifications")
+      .insert({
+        email: data.email,
+        feature: data.feature,
+        user_id: data.userId ?? null,
+      });
+
+    if (error) {
+      const msg = String(error.message ?? "").toLowerCase();
+      const code = String((error as any).code ?? "");
+      if (code === "23505" || msg.includes("duplicate") || msg.includes("unique")) {
+        return { error: "You're already subscribed to this list." };
+      }
+      return { error: error.message || "Something went wrong." };
+    }
+    return { success: true };
+  });
+
 export const adminListNotifications = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
