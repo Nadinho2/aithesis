@@ -59,7 +59,7 @@ export function scrubAITells(input: string): string {
   let out = stripMarkdown(input);
   for (const re of AI_TELLS) out = out.replace(re, "");
   return out
-    .replace(/—{2,}/g, "—")
+    .replace(/—+/g, ", ")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/ +([,.;:!?])/g, "$1")
     .replace(/\(\s+/g, "(")

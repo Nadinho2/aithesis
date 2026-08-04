@@ -62,6 +62,7 @@ export async function generateThesisContent(payload: {
   const baseRules = `CITATION STYLE: ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}
 Write natural academic English as a human researcher would. Vary sentence length and structure.
 RULES:
+- No em dashes (—). Use commas, semicolons, and periods instead.
 - Never use phrases like "This chapter explores", "It is noteworthy", "In conclusion, it can be said", "This study aims to", "The following", "It is important to note".
 - Use only 1-2 key citations per section — focus on depth, not quantity.
 - Never invent citations.
@@ -233,7 +234,6 @@ CRITICAL RULES FOR THESIS:
   }
 
   // Word count enforcement — expand any chapter below its target
-  const { scrubObject } = await import("@/lib/ai-utils.server");
   let total = abstractTarget + chapterDefs.reduce((s, d) => s + countWords(chapters[d.key] ?? ""), 0);
 
   let expandAttempts = 0;
@@ -342,8 +342,13 @@ CRITICAL RULES FOR THESIS:
     abstract = "";
   }
 
+  // Scrub AI tells and em dashes from all chapters + abstract
+  const { scrubObject } = await import("@/lib/ai-utils.server");
+  const scrubbedChapters = scrubObject(chapters) as Record<string, string>;
+  const scrubbedAbstract = abstract ? scrubObject(abstract) : "";
+
   // Final word count includes the actual abstract
-  const finalWordCount = countWords(abstract) + chapterDefs.reduce((s, d) => s + countWords(chapters[d.key] ?? ""), 0);
+  const finalWordCount = countWords(scrubbedAbstract) + chapterDefs.reduce((s, d) => s + countWords(scrubbedChapters[d.key] ?? ""), 0);
 
   // Save completed thesis
   const { data: created, error } = await supabase
@@ -352,8 +357,8 @@ CRITICAL RULES FOR THESIS:
       user_id: userId,
       title: topicCtx.title,
       level: data.level,
-      abstract,
-      chapters,
+      abstract: scrubbedAbstract,
+      chapters: scrubbedChapters,
       references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}. ${r.journal ?? ""}` })),
       word_count: finalWordCount,
       citation_style: data.citation_style,
@@ -1147,6 +1152,13 @@ Write only the paragraph text — no headings, no JSON.`;
     return { success: false, error: `Only reached ${totalWords2} words (target: ${target}). Please try again.` };
   }
 
+  // Scrub AI tells and em dashes from proposal sections + abstract
+  const { scrubObject } = await import("@/lib/ai-utils.server");
+  const scrubbedSections = scrubObject(sections) as Record<string, string>;
+  const scrubbedProposalAbstract = abstract ? scrubObject(abstract) : "";
+  const finalWords = countWords(scrubbedProposalAbstract) +
+    Object.values(scrubbedSections).reduce((s: number, v: any) => s + countWords(String(v ?? "")), 0);
+
   // Save completed proposal
   const { data: created, error } = await supabase
     .from("proposals")
@@ -1155,10 +1167,10 @@ Write only the paragraph text — no headings, no JSON.`;
       topic_id: topicCtx.id ?? null,
       title: topicCtx.title,
       level: data.level,
-      abstract,
-      sections,
+      abstract: scrubbedProposalAbstract,
+      sections: scrubbedSections,
       references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}` })),
-      word_count: totalWords2,
+      word_count: finalWords,
       citation_style: data.citation_style,
       status: "completed",
     } as any)
