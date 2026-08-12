@@ -218,6 +218,32 @@ function assertAdmin(isAdmin: boolean) {
   if (!isAdmin) throw new Error("Forbidden: admin role required");
 }
 
+// Fetch Clerk contact info (name/email/phone) for a batch of user ids.
+// Used to enrich admin tables, which only store Clerk user_ids.
+async function getClerkUserMap(ids: string[]) {
+  const map = new Map<string, { name: string | null; email: string | null; phone: string | null }>();
+  const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+  if (!clerkSecretKey || ids.length === 0) return map;
+  try {
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerk = createClerkClient({ secretKey: clerkSecretKey });
+    for (let i = 0; i < ids.length; i += 100) {
+      const batch = ids.slice(i, i + 100);
+      const res = await clerk.users.getUserList({ userId: batch, limit: batch.length });
+      for (const u of res.data) {
+        map.set(u.id, {
+          name: [u.firstName, u.lastName].filter(Boolean).join(" ") || null,
+          email: u.emailAddresses?.[0]?.emailAddress ?? null,
+          phone: u.phoneNumbers?.[0]?.phoneNumber ?? null,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[getClerkUserMap] Clerk enrich failed", (err as any)?.message ?? err);
+  }
+  return map;
+}
+
 export const getMyReferralProfile = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
@@ -351,7 +377,22 @@ export const adminListReferralApplications = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(200);
 
-    return (data ?? []) as any[];
+    const apps = (data ?? []) as any[];
+
+    // The application stores email as "" (contact info lives in Clerk).
+    // Enrich with Clerk name/email/phone so admins can actually reach the applicant.
+    const ids = [...new Set(apps.map((a) => a.user_id).filter(Boolean))];
+    const userMap = await getClerkUserMap(ids as string[]);
+
+    return apps.map((a) => {
+      const clerk = userMap.get(a.user_id);
+      return {
+        ...a,
+        email: a.email || clerk?.email || null,
+        phone: a.phone || clerk?.phone || null,
+        clerk_name: clerk?.name ?? null,
+      };
+    });
   });
 
 const ReviewApplicationInput = z.object({
@@ -434,7 +475,21 @@ export const adminListReferralCodes = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(200);
 
-    return (data ?? []) as any[];
+    const codes = (data ?? []) as any[];
+
+    // Enrich with Clerk name/email/phone so admins know who owns each code.
+    const ids = [...new Set(codes.map((c) => c.user_id).filter(Boolean))];
+    const userMap = await getClerkUserMap(ids as string[]);
+
+    return codes.map((c) => {
+      const clerk = userMap.get(c.user_id);
+      return {
+        ...c,
+        user_name: clerk?.name ?? null,
+        user_email: clerk?.email ?? null,
+        user_phone: clerk?.phone ?? null,
+      };
+    });
   });
 
 const SetCodeTypeInput = z.object({

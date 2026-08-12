@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
 import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification } from "@/lib/admin.functions";
 import { adminListReferralApplications, adminReviewReferralApplication, adminListReferralCodes, adminSetCodeType } from "@/lib/referral.functions";
@@ -325,6 +325,15 @@ function Input({
       onChange={(e) => onChange(Math.max(0, Math.min(999, parseInt(e.target.value) || 0)))}
       className="w-16 text-center border border-ink/20 rounded-sm px-1 py-0.5 text-xs bg-white"
     />
+  );
+}
+
+function Field({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
+  return (
+    <div>
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-ink/40">{label}</dt>
+      <dd className={`mt-0.5 text-ink/80 ${mono ? "font-mono text-xs break-all" : ""}`}>{value || "—"}</dd>
+    </div>
   );
 }
 
@@ -830,6 +839,7 @@ function ReferralTab() {
   const [newUserId, setNewUserId] = useState("");
   const [newCodeType, setNewCodeType] = useState<"standard" | "ambassador" | "influencer">("ambassador");
   const [newCustomCode, setNewCustomCode] = useState("");
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
   const { data: allSettings, isLoading } = useQuery({
     queryKey: ["admin-settings"],
@@ -988,6 +998,7 @@ function ReferralTab() {
               <thead>
                 <tr className="border-b border-ink/10 text-left text-ink/50">
                   <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Contact</th>
                   <th className="px-3 py-2 font-medium">School / Dept</th>
                   <th className="px-3 py-2 font-medium">Requested Code</th>
                   <th className="px-3 py-2 font-medium">Status</th>
@@ -996,35 +1007,70 @@ function ReferralTab() {
               </thead>
               <tbody>
                 {applications.map((a: any) => (
-                  <tr key={a.id} className="border-b border-ink/5">
-                    <td className="px-3 py-2">{a.full_name}</td>
-                    <td className="px-3 py-2 text-ink/70">{a.school ?? "—"} · {a.department ?? "—"}</td>
-                    <td className="px-3 py-2">{a.requested_code ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        a.status === "approved" ? "bg-green-100 text-green-800" :
-                        a.status === "rejected" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
-                      }`}>{a.status}</span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {a.status === "pending" && (
-                        <div className="flex justify-end gap-2">
+                  <Fragment key={a.id}>
+                    <tr className="border-b border-ink/5">
+                      <td className="px-3 py-2">{a.full_name}</td>
+                      <td className="px-3 py-2 text-ink/70">
+                        <div>{a.email ?? "—"}</div>
+                        {a.phone && <div className="text-xs text-ink/50">{a.phone}</div>}
+                      </td>
+                      <td className="px-3 py-2 text-ink/70">{a.school ?? "—"} · {a.department ?? "—"}</td>
+                      <td className="px-3 py-2">{a.requested_code ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          a.status === "approved" ? "bg-green-100 text-green-800" :
+                          a.status === "rejected" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                        }`}>{a.status}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex justify-end gap-2 items-center">
                           <button
-                            onClick={() => reviewMut.mutate({ applicationId: a.id, action: "approve" })}
-                            className="text-green-600 hover:underline text-xs"
+                            onClick={() => setExpandedAppId(expandedAppId === a.id ? null : a.id)}
+                            className="text-ink/60 hover:text-verde text-xs font-medium"
                           >
-                            Approve
+                            {expandedAppId === a.id ? "Hide" : "View"}
                           </button>
-                          <button
-                            onClick={() => reviewMut.mutate({ applicationId: a.id, action: "reject" })}
-                            className="text-red-600 hover:underline text-xs"
-                          >
-                            Reject
-                          </button>
+                          {a.status === "pending" && (
+                            <>
+                              <button
+                                onClick={() => reviewMut.mutate({ applicationId: a.id, action: "approve" })}
+                                className="text-green-600 hover:underline text-xs"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => reviewMut.mutate({ applicationId: a.id, action: "reject" })}
+                                className="text-red-600 hover:underline text-xs"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                         </div>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    {expandedAppId === a.id && (
+                      <tr className="border-b border-ink/5 bg-ink/[0.02]">
+                        <td colSpan={6} className="px-4 py-4">
+                          <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+                            <Field label="Full Name" value={a.full_name} />
+                            <Field label="Email" value={a.email} />
+                            <Field label="Phone" value={a.phone} />
+                            <Field label="School" value={a.school} />
+                            <Field label="Department" value={a.department} />
+                            <Field label="Level" value={a.level} />
+                            <Field label="Requested Code" value={a.requested_code} />
+                            <Field label="Social Handles" value={a.social_handles} />
+                            <Field label="User ID" value={a.user_id} mono />
+                            <div className="sm:col-span-2">
+                              <dt className="text-[10px] font-bold uppercase tracking-wide text-ink/40">Promotion Plan</dt>
+                              <dd className="mt-0.5 whitespace-pre-wrap text-ink/80">{a.promo_plan || "—"}</dd>
+                            </div>
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -1044,6 +1090,9 @@ function ReferralTab() {
                 <tr className="border-b border-ink/10 text-left text-ink/50">
                   <th className="px-3 py-2 font-medium">Code</th>
                   <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Email</th>
+                  <th className="px-3 py-2 font-medium">Phone</th>
                   <th className="px-3 py-2 font-medium">User ID</th>
                 </tr>
               </thead>
@@ -1057,6 +1106,13 @@ function ReferralTab() {
                         c.code_type === "influencer" ? "bg-purple-100 text-purple-800" : "bg-ink/5 text-ink/60"
                       }`}>{c.code_type}</span>
                     </td>
+                    <td className="px-3 py-2">{c.user_name ?? "—"}</td>
+                    <td className="px-3 py-2 text-ink/70">
+                      {c.user_email ? (
+                        <a href={`mailto:${c.user_email}`} className="text-verde hover:underline">{c.user_email}</a>
+                      ) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-ink/70">{c.user_phone ?? "—"}</td>
                     <td className="px-3 py-2 text-ink/60 font-mono text-xs">{c.user_id}</td>
                   </tr>
                 ))}

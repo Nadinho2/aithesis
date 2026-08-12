@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useSignIn, useSignUp } from "@clerk/clerk-react";
-import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound, Gift } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -66,6 +66,7 @@ function AuthForms() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [refCode, setRefCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
@@ -76,23 +77,34 @@ function AuthForms() {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
     if (ref) {
+      setRefCode(ref);
       sessionStorage.setItem("ref_code", ref);
       localStorage.setItem("ref_code", ref);
     }
   }, []);
 
+  // Resolve the effective referral code: typed input > URL > stored cookie/local
+  const getEffectiveRefCode = (): string | null => {
+    return (
+      refCode.trim() ||
+      new URLSearchParams(window.location.search).get("ref") ||
+      sessionStorage.getItem("ref_code") ||
+      localStorage.getItem("ref_code") ||
+      null
+    );
+  };
+
   // Track referral after successful signup
   const trackReferralIfNeeded = async (userId: string) => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refCode = urlParams.get("ref") || sessionStorage.getItem("ref_code") || localStorage.getItem("ref_code");
-    if (!refCode) return;
+    const effectiveRefCode = getEffectiveRefCode();
+    if (!effectiveRefCode) return;
     sessionStorage.removeItem("ref_code");
     localStorage.removeItem("ref_code");
     try {
       await fetch("/api/track-referral", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ referredUserId: userId, refCode }),
+        body: JSON.stringify({ referredUserId: userId, refCode: effectiveRefCode }),
       });
     } catch {
       // Silent failure
@@ -153,15 +165,12 @@ function AuthForms() {
     try {
       // Pass the referral code as unsafeMetadata so the Clerk webhook can
       // reliably attribute this signup (catches OAuth & password flows alike).
-      const refCode =
-        new URLSearchParams(window.location.search).get("ref") ||
-        sessionStorage.getItem("ref_code") ||
-        localStorage.getItem("ref_code");
+      const refCodeForSignup = getEffectiveRefCode();
       const result = await signUp.create({
         emailAddress: email,
         password,
         username: username.trim(),
-        unsafeMetadata: refCode ? { ref_code: refCode } : undefined,
+        unsafeMetadata: refCodeForSignup ? { ref_code: refCodeForSignup } : undefined,
       });
       if (result.status === "complete") {
         await setSignUpActive({ session: result.createdSessionId });
@@ -323,6 +332,24 @@ function AuthForms() {
                         className="w-full bg-card border border-ink/15 rounded-sm px-3 py-2.5 pl-10 text-sm focus:outline-none focus:border-sage"
                       />
                       <User className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
+                    </div>
+                  </div>
+                )}
+
+                {mode === "signup" && (
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
+                      Referral Code <span className="normal-case font-normal tracking-normal text-ink/40">(optional)</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={refCode}
+                        onChange={(e) => setRefCode(e.target.value)}
+                        placeholder="Have a code? Enter it here"
+                        className="w-full bg-card border border-ink/15 rounded-sm px-3 py-2.5 pl-10 text-sm focus:outline-none focus:border-sage"
+                      />
+                      <Gift className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink/30" />
                     </div>
                   </div>
                 )}
