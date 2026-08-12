@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
 import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification } from "@/lib/admin.functions";
+import { adminListReferralApplications, adminReviewReferralApplication, adminListReferralCodes, adminSetCodeType } from "@/lib/referral.functions";
 import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -820,7 +821,15 @@ function BulkCredits() {
 function ReferralTab() {
   const getFn = useServerFn(adminGetSettings);
   const updateFn = useServerFn(adminUpdateSettings);
+  const listAppsFn = useServerFn(adminListReferralApplications);
+  const reviewFn = useServerFn(adminReviewReferralApplication);
+  const listCodesFn = useServerFn(adminListReferralCodes);
+  const setCodeTypeFn = useServerFn(adminSetCodeType);
   const qc = useQueryClient();
+
+  const [newUserId, setNewUserId] = useState("");
+  const [newCodeType, setNewCodeType] = useState<"standard" | "ambassador" | "influencer">("ambassador");
+  const [newCustomCode, setNewCustomCode] = useState("");
 
   const { data: allSettings, isLoading } = useQuery({
     queryKey: ["admin-settings"],
@@ -844,39 +853,217 @@ function ReferralTab() {
     onError: (e: any) => toast.error(String(e)),
   });
 
+  const { data: applications = [] } = useQuery({
+    queryKey: ["admin-referral-applications"],
+    queryFn: () => listAppsFn(),
+  });
+
+  const { data: codes = [] } = useQuery({
+    queryKey: ["admin-referral-codes"],
+    queryFn: () => listCodesFn(),
+  });
+
+  const reviewMut = useMutation({
+    mutationFn: (v: { applicationId: string; action: "approve" | "reject" }) =>
+      reviewFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Application updated");
+      qc.invalidateQueries({ queryKey: ["admin-referral-applications"] });
+      qc.invalidateQueries({ queryKey: ["admin-referral-codes"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: (v: { userId: string; codeType: "standard" | "ambassador" | "influencer"; customCode?: string }) =>
+      setCodeTypeFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Code assigned");
+      qc.invalidateQueries({ queryKey: ["admin-referral-codes"] });
+      setNewUserId("");
+      setNewCustomCode("");
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
   function toggle() {
     mut.mutate([{ key: "tool:referral:enabled", value: !enabled }]);
+  }
+
+  function assignCode() {
+    if (!newUserId.trim()) return toast.error("Enter a user ID");
+    assignMut.mutate({
+      userId: newUserId.trim(),
+      codeType: newCodeType,
+      customCode: newCustomCode.trim() || undefined,
+    });
   }
 
   if (isLoading) return <Loader2 className="size-5 animate-spin text-ink/60" />;
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <Gift className="size-4 text-verde" />
-        <p className="text-ink-secondary text-sm">
-          Toggle the referral system. When disabled, users see a "Coming Soon" page.
-        </p>
+    <div className="space-y-8">
+      {/* Toggle */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Gift className="size-4 text-verde" />
+          <p className="text-ink-secondary text-sm">
+            Toggle the referral system. When disabled, users see a "Coming Soon" page.
+          </p>
+        </div>
+
+        <div className="mt-4 max-w-md p-4 border border-ink/10 rounded-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium">Referral System</span>
+              <p className="text-[10px] text-ink/40 mt-0.5">
+                {enabled ? "Users can share referral links and earn 15%/5% commission" : "Users see Coming Soon placeholder"}
+              </p>
+            </div>
+            <button
+              onClick={toggle}
+              disabled={mut.isPending}
+              className={`relative w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${enabled ? "bg-verde" : "bg-ink/20"}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white transition-transform shadow ${enabled ? "translate-x-6" : "translate-x-0"}`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-4 max-w-md p-4 border border-ink/10 rounded-sm">
-        <div className="flex items-center justify-between">
+      {/* Assign partner code directly */}
+      <div>
+        <h3 className="font-medium text-sm mb-3">Assign Partner Code (no application needed)</h3>
+        <div className="flex flex-wrap items-end gap-3 p-4 border border-ink/10 rounded-sm">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs text-ink/50 mb-1">User ID (Clerk)</label>
+            <input
+              value={newUserId}
+              onChange={(e) => setNewUserId(e.target.value)}
+              placeholder="user_2..."
+              className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm"
+            />
+          </div>
           <div>
-            <span className="text-sm font-medium">Referral System</span>
-            <p className="text-[10px] text-ink/40 mt-0.5">
-              {enabled ? "Users can share referral links and earn credits" : "Users see Coming Soon placeholder"}
-            </p>
+            <label className="block text-xs text-ink/50 mb-1">Type</label>
+            <select
+              value={newCodeType}
+              onChange={(e) => setNewCodeType(e.target.value as any)}
+              className="px-3 py-2 border border-ink/20 rounded-sm text-sm"
+            >
+              <option value="ambassador">Ambassador</option>
+              <option value="influencer">Influencer</option>
+              <option value="standard">Standard</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-xs text-ink/50 mb-1">Custom Code (optional)</label>
+            <input
+              value={newCustomCode}
+              onChange={(e) => setNewCustomCode(e.target.value)}
+              placeholder="e.g. UNILAG_MIKE"
+              className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm"
+            />
           </div>
           <button
-            onClick={toggle}
-            disabled={mut.isPending}
-            className={`relative w-12 h-6 rounded-full transition-colors disabled:opacity-50 ${enabled ? "bg-verde" : "bg-ink/20"}`}
+            onClick={assignCode}
+            disabled={assignMut.isPending}
+            className="px-4 py-2 bg-ink text-bone rounded-sm text-sm hover:bg-sage transition-colors disabled:opacity-50"
           >
-            <span
-              className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white transition-transform shadow ${enabled ? "translate-x-6" : "translate-x-0"}`}
-            />
+            {assignMut.isPending ? "Saving..." : "Assign"}
           </button>
         </div>
+      </div>
+
+      {/* Applications */}
+      <div>
+        <h3 className="font-medium text-sm mb-3">Ambassador Applications</h3>
+        {applications.length === 0 ? (
+          <p className="text-sm text-ink/50">No applications yet.</p>
+        ) : (
+          <div className="overflow-x-auto border border-ink/10 rounded-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-ink/10 text-left text-ink/50">
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">School / Dept</th>
+                  <th className="px-3 py-2 font-medium">Requested Code</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {applications.map((a: any) => (
+                  <tr key={a.id} className="border-b border-ink/5">
+                    <td className="px-3 py-2">{a.full_name}</td>
+                    <td className="px-3 py-2 text-ink/70">{a.school ?? "—"} · {a.department ?? "—"}</td>
+                    <td className="px-3 py-2">{a.requested_code ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        a.status === "approved" ? "bg-green-100 text-green-800" :
+                        a.status === "rejected" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                      }`}>{a.status}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      {a.status === "pending" && (
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => reviewMut.mutate({ applicationId: a.id, action: "approve" })}
+                            className="text-green-600 hover:underline text-xs"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => reviewMut.mutate({ applicationId: a.id, action: "reject" })}
+                            className="text-red-600 hover:underline text-xs"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Existing codes */}
+      <div>
+        <h3 className="font-medium text-sm mb-3">Referral Codes ({codes.length})</h3>
+        {codes.length === 0 ? (
+          <p className="text-sm text-ink/50">No referral codes generated yet.</p>
+        ) : (
+          <div className="overflow-x-auto border border-ink/10 rounded-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-ink/10 text-left text-ink/50">
+                  <th className="px-3 py-2 font-medium">Code</th>
+                  <th className="px-3 py-2 font-medium">Type</th>
+                  <th className="px-3 py-2 font-medium">User ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((c: any) => (
+                  <tr key={c.id} className="border-b border-ink/5">
+                    <td className="px-3 py-2 font-mono">{c.code}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        c.code_type === "ambassador" ? "bg-sage/15 text-sage" :
+                        c.code_type === "influencer" ? "bg-purple-100 text-purple-800" : "bg-ink/5 text-ink/60"
+                      }`}>{c.code_type}</span>
+                    </td>
+                    <td className="px-3 py-2 text-ink/60 font-mono text-xs">{c.user_id}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

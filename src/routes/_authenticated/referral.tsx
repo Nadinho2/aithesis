@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Copy, Check, Share2, Wallet, TrendingUp, ArrowUpRight, Loader2, Gift, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { getMyReferralCode, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks, getMyReferralCount, isToolEnabled } from "@/lib/referral.functions";
+import { getMyReferralProfile, getMyEarningsSummary, getMyWallet, getMyEarnings, getMyWithdrawals, getBanks, getMyReferralCount, isToolEnabled, submitAmbassadorApplication, getMyApplication } from "@/lib/referral.functions";
 import { getReferralLink } from "@/lib/referral";
 
 export const Route = createFileRoute("/_authenticated/referral")({
@@ -19,8 +19,18 @@ function ReferralPage() {
   const [selectedBank, setSelectedBank] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [showApply, setShowApply] = useState(false);
+  const [appFullName, setAppFullName] = useState("");
+  const [appPhone, setAppPhone] = useState("");
+  const [appSchool, setAppSchool] = useState("");
+  const [appDept, setAppDept] = useState("");
+  const [appLevel, setAppLevel] = useState("");
+  const [appSocial, setAppSocial] = useState("");
+  const [appPlan, setAppPlan] = useState("");
+  const [appCode, setAppCode] = useState("");
 
-  const fnCode = useServerFn(getMyReferralCode);
+  const fnProfile = useServerFn(getMyReferralProfile);
+  const fnEarningsSummary = useServerFn(getMyEarningsSummary);
   const fnWallet = useServerFn(getMyWallet);
   const fnEarnings = useServerFn(getMyEarnings);
   const fnWithdrawals = useServerFn(getMyWithdrawals);
@@ -36,13 +46,41 @@ function ReferralPage() {
   });
   const isReferralEnabled = toolStatus?.enabled ?? false;
 
-  // Fetch referral code
-  const { data: refCode, isLoading: codeLoading } = useQuery({
-    queryKey: ["my-referral-code"],
-    queryFn: () => fnCode(),
+  // Fetch referral code + partner type
+  const { data: profile, isLoading: codeLoading } = useQuery({
+    queryKey: ["my-referral-profile"],
+    queryFn: () => fnProfile(),
   });
 
+  const refCode = profile?.code ?? null;
+  const codeType = profile?.codeType ?? "standard";
   const refLink = refCode ? getReferralLink(refCode) : "";
+
+  // Fetch earnings summary (L1 vs L2 split)
+  const { data: earningsSummary } = useQuery({
+    queryKey: ["my-earnings-summary"],
+    queryFn: () => fnEarningsSummary(),
+  });
+  const l1Total = earningsSummary?.l1Total ?? 0;
+  const l2Total = earningsSummary?.l2Total ?? 0;
+
+  // Ambassador application
+  const fnApplication = useServerFn(getMyApplication);
+  const fnSubmitApplication = useServerFn(submitAmbassadorApplication);
+  const { data: application } = useQuery({
+    queryKey: ["my-ambassador-application"],
+    queryFn: () => fnApplication(),
+  });
+
+  const applicationMutation = useMutation({
+    mutationFn: (payload: any) => fnSubmitApplication({ data: payload }),
+    onSuccess: () => {
+      toast.success("Application submitted! We'll review it soon.");
+      setShowApply(false);
+      qc.invalidateQueries({ queryKey: ["my-ambassador-application"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
 
   // Fetch wallet
   const { data: wallet, isLoading: walletLoading } = useQuery({
@@ -161,9 +199,19 @@ function ReferralPage() {
         <h1 className="font-serif text-2xl sm:text-3xl font-semibold flex items-center gap-3">
           <Gift className="size-7 text-sage" />
           Referral Program
+          {codeType === "ambassador" && (
+            <span className="text-xs font-sans font-medium px-2.5 py-1 rounded-full bg-sage/15 text-sage border border-sage/30">
+              Verified Ambassador
+            </span>
+          )}
+          {codeType === "influencer" && (
+            <span className="text-xs font-sans font-medium px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+              Influencer Partner
+            </span>
+          )}
         </h1>
         <p className="text-ink/60 text-sm mt-1">
-          Earn 20% lifetime commission on every payment made by users you refer
+          Earn 15% on every payment by users you refer directly — plus 5% when your referrals bring in paying users.
         </p>
       </div>
 
@@ -245,6 +293,24 @@ function ReferralPage() {
               {walletLoading ? "..." : `₦${totalWithdrawn.toLocaleString()}`}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Earnings split (L1 direct vs L2 upline override) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-card border border-ink/10 rounded-sm p-5">
+          <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
+            <TrendingUp className="size-4" />
+            Direct Referral Earnings (15%)
+          </div>
+          <p className="font-serif text-2xl font-semibold">₦{l1Total.toLocaleString()}</p>
+        </div>
+        <div className="bg-card border border-ink/10 rounded-sm p-5">
+          <div className="flex items-center gap-2 text-ink/50 text-sm mb-2">
+            <Gift className="size-4" />
+            Upline Override Earnings (5%)
+          </div>
+          <p className="font-serif text-2xl font-semibold">₦{l2Total.toLocaleString()}</p>
         </div>
       </div>
 
@@ -399,6 +465,110 @@ function ReferralPage() {
           </div>
         )}
       </div>
+
+      {/* Ambassador Application */}
+      {codeType === "standard" && (
+        <div className="bg-card border border-ink/10 rounded-sm p-6">
+          <h2 className="font-serif text-lg font-medium mb-2">Become a Campus Ambassador</h2>
+          <p className="text-sm text-ink/60 mb-4">
+            Earn a 5% ongoing override on every paying user your referrals bring in. Apply for a verified ambassador code and campus recognition.
+          </p>
+
+          {application?.status === "pending" && (
+            <div className="bg-amber-50 border border-amber-200 rounded-sm p-4 text-sm text-amber-800">
+              Your application is under review. We'll notify you once approved.
+            </div>
+          )}
+          {application?.status === "approved" && (
+            <div className="bg-green-50 border border-green-200 rounded-sm p-4 text-sm text-green-800">
+              You're approved! Your ambassador code is active.
+            </div>
+          )}
+          {application?.status === "rejected" && (
+            <div className="bg-red-50 border border-red-200 rounded-sm p-4 text-sm text-red-800">
+              Your application was not approved at this time.
+            </div>
+          )}
+
+          {!application && !showApply && (
+            <button
+              onClick={() => setShowApply(true)}
+              className="px-5 py-2 bg-ink text-bone rounded-sm text-sm hover:bg-sage transition-colors"
+            >
+              Apply Now
+            </button>
+          )}
+
+          {!application && showApply && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!appFullName.trim()) return toast.error("Full name is required");
+                applicationMutation.mutate({
+                  fullName: appFullName,
+                  phone: appPhone,
+                  school: appSchool,
+                  department: appDept,
+                  level: appLevel,
+                  socialHandles: appSocial,
+                  promoPlan: appPlan,
+                  requestedCode: appCode,
+                });
+              }}
+              className="space-y-4 max-w-md"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">Full Name *</label>
+                <input value={appFullName} onChange={(e) => setAppFullName(e.target.value)} className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm focus:outline-none focus:border-sage" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">School</label>
+                  <input value={appSchool} onChange={(e) => setAppSchool(e.target.value)} placeholder="e.g. UNILAG" className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Department</label>
+                  <input value={appDept} onChange={(e) => setAppDept(e.target.value)} placeholder="e.g. Economics" className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Level</label>
+                  <input value={appLevel} onChange={(e) => setAppLevel(e.target.value)} placeholder="e.g. 300L" className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Phone / WhatsApp</label>
+                  <input value={appPhone} onChange={(e) => setAppPhone(e.target.value)} placeholder="080..." className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Social Handles</label>
+                <input value={appSocial} onChange={(e) => setAppSocial(e.target.value)} placeholder="@handle on TikTok / IG / X" className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">How will you promote MyBrainPadi?</label>
+                <textarea value={appPlan} onChange={(e) => setAppPlan(e.target.value)} rows={3} className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Preferred Code (optional)</label>
+                <input value={appCode} onChange={(e) => setAppCode(e.target.value)} placeholder="e.g. UNILAG_MIKE" className="w-full px-3 py-2 border border-ink/20 rounded-sm text-sm" />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={applicationMutation.isPending}
+                  className="px-5 py-2 bg-ink text-bone rounded-sm text-sm hover:bg-sage transition-colors disabled:opacity-50"
+                >
+                  {applicationMutation.isPending ? "Submitting..." : "Submit Application"}
+                </button>
+                <button type="button" onClick={() => setShowApply(false)} className="px-4 py-2 border border-ink/20 rounded-sm text-sm">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
     </div>
   )}
   </>

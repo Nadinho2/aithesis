@@ -38,14 +38,17 @@ export const Route = createFileRoute("/api/clerk-webhook")({
 
               const eventType = payload.type;
 
-              // user.created — send verification email with custom link
+              // user.created — track referral attribution (catches every signup:
+              // password, OAuth, magic link). The ref code is passed via
+              // unsafeMetadata during signup on the client.
               if (eventType === "user.created") {
-                const { id, email_addresses, first_name } = payload.data ?? {};
+                const { id, email_addresses, unsafe_metadata } = payload.data ?? {};
                 const email = email_addresses?.[0]?.email_address;
-                if (id && email) {
-                  const name = first_name ?? email.split("@")[0];
-                  // Clerk sends its own verification email — we send a welcome in case they verified elsewhere
-                  // For custom verification, we'd send sendVerificationEmail here
+                const refCode = unsafe_metadata?.ref_code;
+                if (id && refCode) {
+                  import("../../lib/referral").then(({ trackReferral }) =>
+                    trackReferral(id, String(refCode)).catch(() => {}),
+                  );
                 }
               }
 

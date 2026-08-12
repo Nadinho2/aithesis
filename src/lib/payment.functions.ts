@@ -143,6 +143,18 @@ export const verifyPayment = createServerFn({ method: "POST" })
         .upsert({ user_id: userId, chat_available: current + 50, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
     }
 
+    // Credit referral commission (fire-and-forget — never block payment flow).
+    // This runs independently of the email below so commission is never skipped
+    // when email lookup or tool-name mapping fails.
+    import("./referral").then(({ creditReferralCommission }) =>
+      creditReferralCommission({
+        paymentId: data.reference,
+        referredUserId: userId,
+        paymentAmount: amount,
+        tool: metadata.product ?? "unknown",
+      }).catch(() => {}),
+    ).catch(() => {});
+
     // Send payment confirmed email (fire-and-forget)
     const userEmail = await getUserEmail(userId);
     const toolName = productToTool(metadata.product) as BrainPadiTool | null;
@@ -154,16 +166,6 @@ export const verifyPayment = createServerFn({ method: "POST" })
         tool: toolName,
         amount: amount.toLocaleString(),
       });
-
-      // Credit referral commission (fire-and-forget — never block payment flow)
-      import("./referral").then(({ creditReferralCommission }) =>
-        creditReferralCommission({
-          paymentId: data.reference,
-          referredUserId: userId,
-          paymentAmount: amount,
-          tool: metadata.product ?? toolName,
-        }).catch(() => {}),
-      ).catch(() => {});
     }
 
     return { success: true, product: metadata.product, level: metadata.level };

@@ -151,7 +151,18 @@ function AuthForms() {
     }
     setBusy(true);
     try {
-      const result = await signUp.create({ emailAddress: email, password, username: username.trim() });
+      // Pass the referral code as unsafeMetadata so the Clerk webhook can
+      // reliably attribute this signup (catches OAuth & password flows alike).
+      const refCode =
+        new URLSearchParams(window.location.search).get("ref") ||
+        sessionStorage.getItem("ref_code") ||
+        localStorage.getItem("ref_code");
+      const result = await signUp.create({
+        emailAddress: email,
+        password,
+        username: username.trim(),
+        unsafeMetadata: refCode ? { ref_code: refCode } : undefined,
+      });
       if (result.status === "complete") {
         await setSignUpActive({ session: result.createdSessionId });
         const userId = result.createdUserId;
