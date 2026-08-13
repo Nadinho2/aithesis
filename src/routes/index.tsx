@@ -377,7 +377,9 @@ function LandingNav({ refSearch }: { refSearch?: { ref: string } }) {
       >
         {/* Logo */}
         <Link to="/" className="flex items-center shrink-0">
-          <img src="/logo.png" alt="Mybrainpadi" className="h-9 w-auto" />
+          <span className="bg-white rounded-lg p-1.5 shadow-sm inline-flex">
+            <img src="/logo.png" alt="Mybrainpadi" className="h-7 w-auto" />
+          </span>
         </Link>
 
         {/* Desktop nav links */}
@@ -635,7 +637,9 @@ function LandingPage() {
       <footer className="bg-ink text-paper py-20 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-12">
           <div className="max-w-sm">
-            <img src="/logo.png" alt="Mybrainpadi" className="h-10 w-auto mb-6" />
+            <span className="bg-white rounded-lg p-1.5 shadow-sm inline-flex mb-6">
+              <img src="/logo.png" alt="Mybrainpadi" className="h-8 w-auto" />
+            </span>
             <p className="text-paper/50 text-sm leading-relaxed">
               An all-in-one education ecosystem for the next generation of scholars. Research tools,
               study aids, and career resources — all backed by verified citations.

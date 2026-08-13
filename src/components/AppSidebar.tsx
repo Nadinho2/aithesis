@@ -85,7 +85,9 @@ export function AppSidebar() {
   const sidebarBody = (
     <>
       <Link to="/dashboard" className="flex items-center px-6 py-6 border-b border-ink/5">
-        <img src="/logo.png" alt="Mybrainpadi" className="h-9 w-auto" />
+        <span className="bg-white rounded-lg p-1.5 shadow-sm inline-flex">
+          <img src="/logo.png" alt="Mybrainpadi" className="h-7 w-auto" />
+        </span>
       </Link>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -158,7 +160,9 @@ export function AppSidebar() {
     <>
       <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-bone border-b border-ink/10">
         <Link to="/dashboard" className="flex items-center">
-          <img src="/logo.png" alt="Mybrainpadi" className="h-8 w-auto" />
+          <span className="bg-white rounded-lg p-1 shadow-sm inline-flex">
+            <img src="/logo.png" alt="Mybrainpadi" className="h-6 w-auto" />
+          </span>
         </Link>
         <button
           onClick={() => setOpen(true)}

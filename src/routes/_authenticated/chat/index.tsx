@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listChats, getChatMessages } from "@/lib/chat.functions";
 import { useClerk } from "@clerk/clerk-react";
-import { ArrowUp, Sparkles, Plus, Clock, X } from "lucide-react";
+import { ArrowUp, Sparkles, Plus, Clock, X, ArrowLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatMessage {
@@ -228,7 +228,19 @@ export function ChatPage() {
     <div className="flex flex-col h-full">
       {/* Chat header */}
       <div className="px-4 sm:px-6 py-4 border-b border-ink/10 bg-white flex-shrink-0 flex items-center justify-between gap-3">
-        <h2 className="font-serif text-lg font-semibold text-ink truncate">{chatTitle}</h2>
+        <div className="flex items-center gap-2 min-w-0">
+          {isMobile && activeChatId && (
+            <button
+              onClick={startNewChat}
+              aria-label="Back"
+              className="size-9 rounded-lg flex items-center justify-center hover:bg-ink/5 transition-colors flex-shrink-0"
+              style={{ color: "#5F5E5A" }}
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+          )}
+          <h2 className="font-serif text-lg font-semibold text-ink truncate">{chatTitle}</h2>
+        </div>
         {isMobile && (
           <div className="flex items-center gap-1 flex-shrink-0">
             <button

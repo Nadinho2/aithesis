@@ -80,7 +80,9 @@ function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <Link to="/" className="block">
-            <img src="/logo.png" alt="Mybrainpadi" className="h-12 w-auto mx-auto" />
+            <span className="bg-white rounded-lg p-2 shadow-sm inline-flex">
+              <img src="/logo.png" alt="Mybrainpadi" className="h-10 w-auto" />
+            </span>
           </Link>
           <p className="mt-2 text-sm text-ink-secondary">Reset your password</p>
         </div>

@@ -55,7 +55,9 @@ export function IconRail() {
       style={{ backgroundColor: "#0B3527" }}>
       {/* Logo */}
       <Link to="/dashboard" className="mb-4 flex items-center justify-center">
-        <img src="/logo.png" alt="Mybrainpadi" className="h-9 w-auto" />
+        <span className="bg-white rounded-lg p-1.5 shadow-sm inline-flex">
+          <img src="/logo.png" alt="Mybrainpadi" className="h-7 w-auto" />
+        </span>
       </Link>
 
       {/* Nav items */}
