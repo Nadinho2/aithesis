@@ -9,6 +9,23 @@ function runtimeEnv(key: string): string | undefined {
   }
 }
 
+async function getUserIdFromRequest(request: Request): Promise<string | null> {
+  const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+  if (!clerkSecretKey) return null;
+
+  let sessionToken = request.headers.get("authorization");
+  if (sessionToken?.startsWith("Bearer ")) sessionToken = sessionToken.slice(7);
+  if (!sessionToken) return null;
+
+  const { verifyToken } = await import("@clerk/backend");
+  try {
+    const payload = await verifyToken(sessionToken, { secretKey: clerkSecretKey });
+    return payload.sub ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createFileRoute("/api/submit-university")({
   server: {
     handlers: {
@@ -25,21 +42,13 @@ export const Route = createFileRoute("/api/submit-university")({
             );
           }
 
-          // Get authenticated user from Clerk session via Authorization header
-          const authHeader = request.headers.get("Authorization");
-          let userId: string | null = null;
-
-          if (authHeader?.startsWith("Bearer ")) {
-            // Clerk session token — validate with Supabase
-            const supabaseUrl = runtimeEnv("SUPABASE_URL");
-            const supabaseKey = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
-            if (supabaseUrl && supabaseKey) {
-              const supabase = createClient(supabaseUrl, supabaseKey, {
-                auth: { persistSession: false, autoRefreshToken: false },
-              });
-              const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
-              userId = user?.id ?? null;
-            }
+          // Require an authenticated user (Clerk session token).
+          const userId = await getUserIdFromRequest(request);
+          if (!userId) {
+            return new Response(
+              JSON.stringify({ success: false, error: "Unauthorized" }),
+              { status: 401, headers: { "Content-Type": "application/json" } },
+            );
           }
 
           const supabaseUrl = runtimeEnv("SUPABASE_URL");

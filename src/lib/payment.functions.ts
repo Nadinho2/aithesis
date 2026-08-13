@@ -112,6 +112,12 @@ export const verifyPayment = createServerFn({ method: "POST" })
     const { metadata } = json.data;
     const amount = json.data.amount / 100; // Convert back from kobo
 
+    // Ensure the payment actually belongs to the authenticated user so a
+    // leaked/guessed reference can't be replayed to credit another account.
+    if (!metadata || metadata.userId !== userId) {
+      throw new Error("Payment does not belong to this user");
+    }
+
     // Upsert transaction (pending record was already saved in initPayment)
     // Note: used column may not exist yet. Omit it — DEFAULT false handles it.
     const { error: txError } = await (supabase as any)
@@ -248,11 +254,13 @@ async function consumeTransaction(supabase: any, userId: string, product: string
     const { data: tx } = await selectQ.maybeSingle();
     if (!tx) return false;
 
-    const { error } = await (supabase as any)
+    const { data: updated, error } = await (supabase as any)
       .from("transactions")
       .update({ used: true })
-      .eq("id", tx.id);
-    return !error;
+      .eq("id", tx.id)
+      .eq("used", false)
+      .select("id");
+    return !error && Array.isArray(updated) && updated.length > 0;
   } catch {
     return false;
   }

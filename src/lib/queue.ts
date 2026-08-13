@@ -53,12 +53,28 @@ export async function enqueueJob(
  * Claim the next pending job (atomically — uses row-level locking via Supabase).
  * Called by the worker. Returns null if no pending jobs.
  */
+// Jobs stuck in "processing" (worker crashed mid-run) are recovered after this
+// window. Aligned with the GitHub Actions worker's 60-minute timeout.
+const STALE_JOB_TIMEOUT_MS = 60 * 60 * 1000;
+
 export async function claimNextJob(): Promise<{
   id: string;
   job_type: "thesis" | "proposal" | "assignment" | "seminar";
   payload: Record<string, unknown>;
 } | null> {
   const supabase = await getQueueClient();
+
+  // Recover orphaned "processing" jobs before picking new work.
+  const staleCutoff = new Date(Date.now() - STALE_JOB_TIMEOUT_MS).toISOString();
+  await (supabase as any)
+    .from("generation_queue")
+    .update({
+      status: "pending",
+      locked_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("status", "processing")
+    .lt("locked_at", staleCutoff);
 
   // Find the oldest pending job
   const { data: pending } = await (supabase as any)
@@ -77,7 +93,6 @@ export async function claimNextJob(): Promise<{
     .update({
       status: "processing",
       locked_at: new Date().toISOString(),
-      attempts: 0,
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId)

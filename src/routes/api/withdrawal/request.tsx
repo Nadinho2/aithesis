@@ -97,22 +97,7 @@ export const Route = createFileRoute("/api/withdrawal/request")({
             );
           }
 
-          // Check wallet balance
-          const { data: wallet } = await supabase
-            .from("wallets")
-            .select("balance, total_withdrawn")
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          const balance = wallet ? (wallet as any).balance : 0;
-          if (balance < amount) {
-            return new Response(
-              JSON.stringify({ success: false, error: "Insufficient wallet balance" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-
-          // Create Paystack Transfer Recipient
+          // Create Paystack Transfer Recipient (external API, no DB side effects)
           const recipientRes = await fetch("https://api.paystack.co/transferrecipient", {
             method: "POST",
             headers: {
@@ -138,6 +123,18 @@ export const Route = createFileRoute("/api/withdrawal/request")({
 
           const recipientCode = recipientData.data.recipient_code;
 
+          // Atomically deduct the wallet balance. Returns NULL on insufficient
+          // funds, preventing concurrent requests from overdrawing the wallet.
+          const { data: newBalance, error: deductError } = await supabase
+            .rpc("deduct_wallet", { p_user_id: userId, p_amount: amount });
+
+          if (deductError || newBalance === null) {
+            return new Response(
+              JSON.stringify({ success: false, error: "Insufficient wallet balance" }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
           // Insert withdrawal request
           const { data: withdrawal, error: insertError } = await supabase
             .from("withdrawal_requests")
@@ -154,6 +151,8 @@ export const Route = createFileRoute("/api/withdrawal/request")({
             .single();
 
           if (insertError || !withdrawal) {
+            // Roll back the deduction we just made.
+            await supabase.rpc("refund_wallet", { p_user_id: userId, p_amount: amount });
             return new Response(
               JSON.stringify({ success: false, error: "Failed to create withdrawal record" }),
               { status: 500, headers: { "Content-Type": "application/json" } },
@@ -161,16 +160,6 @@ export const Route = createFileRoute("/api/withdrawal/request")({
           }
 
           const withdrawalId = (withdrawal as any).id;
-
-          // Deduct from wallet (optimistic)
-          await supabase
-            .from("wallets")
-            .update({
-              balance: balance - amount,
-              total_withdrawn: ((wallet as any)?.total_withdrawn ?? 0) + amount,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", userId);
 
           // Initiate Paystack Transfer
           const transferRes = await fetch("https://api.paystack.co/transfer", {
@@ -190,15 +179,8 @@ export const Route = createFileRoute("/api/withdrawal/request")({
 
           const transferData = await transferRes.json();
           if (!transferData.status) {
-            // Reverse the wallet deduction
-            await supabase
-              .from("wallets")
-              .update({
-                balance,
-                total_withdrawn: (wallet as any)?.total_withdrawn ?? 0,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("user_id", userId);
+            // Reverse the wallet deduction and mark the withdrawal failed.
+            await supabase.rpc("refund_wallet", { p_user_id: userId, p_amount: amount });
 
             await supabase
               .from("withdrawal_requests")
