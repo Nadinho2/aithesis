@@ -80,12 +80,13 @@ function ToolHistoryPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-      <Link
-        to="/tools/dashboard"
+      <button
+        type="button"
+        onClick={() => window.history.back()}
         className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
       >
-        <ArrowLeft className="size-4" /> Back to tools
-      </Link>
+        <ArrowLeft className="size-4" /> Back
+      </button>
       <div className="mb-6">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-2">
           Student Tools

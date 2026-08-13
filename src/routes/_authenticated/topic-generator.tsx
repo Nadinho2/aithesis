@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -45,12 +45,13 @@ function TopicGeneratorPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
-      <Link
-        to="/dashboard"
+      <button
+        type="button"
+        onClick={() => window.history.back()}
         className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
       >
-        <ArrowLeft className="size-4" /> Back to dashboard
-      </Link>
+        <ArrowLeft className="size-4" /> Back
+      </button>
       <div className="mb-8 md:mb-10">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
           Research Studio
