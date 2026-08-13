@@ -7,7 +7,7 @@ import {
   Loader2, Sparkles, ChevronLeft, ChevronRight, Zap, Briefcase,
   Target, Clock, Heart, Star, TrendingUp, Rocket, ExternalLink,
   CheckCircle2, Circle, Trophy, DollarSign, Flag,
-  MessageCircle, Send,
+  MessageCircle, Send, ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -593,6 +593,12 @@ function SideHustlePage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 md:py-12">
+      <Link
+        to="/tools/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to tools
+      </Link>
       <div className="mb-10 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 text-xs font-semibold mb-4">
           <Zap className="size-4" />

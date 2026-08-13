@@ -14,6 +14,7 @@ import {
 import {
   FileText, GraduationCap, Presentation, UserSquare2, Zap,
   BookOpen, Loader2, Trash2, Calendar, ChevronRight, BarChart3,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seminarTypeLabel } from "@/lib/pricing";
@@ -79,6 +80,12 @@ function ToolHistoryPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <Link
+        to="/tools/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to tools
+      </Link>
       <div className="mb-6">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-2">
           Student Tools

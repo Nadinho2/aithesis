@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, Outlet } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -6,7 +6,7 @@ import { generateAssignment } from "@/lib/assignments.functions";
 import { checkAccess, markTransactionUsed } from "@/lib/payment.functions";
 import { saveFormBeforePay } from "@/lib/usePaymentCallback";
 import {
-  Loader2, Upload, FileText, Info, Send, FilePen, Calculator,
+  ArrowLeft, Loader2, Upload, FileText, Info, Send, FilePen, Calculator,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -93,6 +93,12 @@ function AssignmentPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <Link
+        to="/tools/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to tools
+      </Link>
       <div className="mb-6">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-2">Student Tools · ₦1,000</div>
         <h1 className="font-serif text-3xl">Assignment Assistant</h1>

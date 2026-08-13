@@ -6,7 +6,7 @@ import { listTopics, deleteTopics, exportTopicsDocx } from "@/lib/topics.functio
 import { generateProposal } from "@/lib/proposals.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { saveFormBeforePay } from "@/lib/usePaymentCallback";
-import { Loader2, Trash2, Sparkles, FileText, ChevronRight, Download } from "lucide-react";
+import { Loader2, Trash2, Sparkles, FileText, ChevronRight, Download, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 function downloadFromBase64(base64: string, filename: string, mime: string) {
@@ -157,6 +157,12 @@ function MyTopicsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to dashboard
+      </Link>
       <div className="mb-6 md:mb-10 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">

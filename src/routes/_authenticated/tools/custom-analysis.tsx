@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2, Plus, X, Sparkles, RefreshCw, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, X, Sparkles, RefreshCw, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/custom-analysis")({
@@ -175,6 +175,12 @@ function CustomAnalysisPage() {
   // ── Input form ──
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      <Link
+        to="/tools/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to tools
+      </Link>
       <div className="mb-6">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-2">
           Student Tools · Free

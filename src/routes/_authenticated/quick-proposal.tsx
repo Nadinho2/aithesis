@@ -1,11 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { generateProposal } from "@/lib/proposals.functions";
 import { checkAccess } from "@/lib/payment.functions";
 import { saveFormBeforePay, restoreFormAfterPay } from "@/lib/usePaymentCallback";
-import { FileText, Loader2, Plus, X } from "lucide-react";
+import { FileText, Loader2, Plus, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
 
@@ -123,6 +123,12 @@ function QuickProposalPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-10 py-8 md:py-12">
+      <Link
+        to="/dashboard"
+        className="inline-flex items-center gap-1.5 text-sm text-ink/60 hover:text-ink transition-colors mb-6"
+      >
+        <ArrowLeft className="size-4" /> Back to dashboard
+      </Link>
       <div className="mb-8 max-w-full overflow-hidden">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-sage mb-3">
           Direct Proposal
