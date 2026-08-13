@@ -376,16 +376,8 @@ function LandingNav({ refSearch }: { refSearch?: { ref: string } }) {
         style={{ backgroundColor: "#0B3527", height: isMobile ? 56 : 64 }}
       >
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <span className="size-8 bg-white/15 rounded-md flex items-center justify-center">
-            <span className="w-3.5 h-0.5 bg-white" />
-          </span>
-          <span
-            className="font-serif italic text-lg md:text-xl font-bold tracking-tight"
-            style={{ color: "#ffffff" }}
-          >
-            Mybrainpadi
-          </span>
+        <Link to="/" className="flex items-center shrink-0">
+          <img src="/logo.png" alt="Mybrainpadi" className="h-9 w-auto" />
         </Link>
 
         {/* Desktop nav links */}
@@ -643,7 +635,7 @@ function LandingPage() {
       <footer className="bg-ink text-paper py-20 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-12">
           <div className="max-w-sm">
-            <div className="font-serif italic text-2xl font-bold text-paper mb-6">Mybrainpadi</div>
+            <img src="/logo.png" alt="Mybrainpadi" className="h-10 w-auto mb-6" />
             <p className="text-paper/50 text-sm leading-relaxed">
               An all-in-one education ecosystem for the next generation of scholars. Research tools,
               study aids, and career resources — all backed by verified citations.
