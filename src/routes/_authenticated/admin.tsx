@@ -6,7 +6,7 @@ import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions"
 import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification, adminListRoles, adminSetRole } from "@/lib/admin.functions";
 import { adminListReferralApplications, adminReviewReferralApplication, adminListReferralCodes, adminSetCodeType } from "@/lib/referral.functions";
 import { adminImportPastQuestions, adminImportPastQuestionsCsv } from "@/lib/past-questions.functions";
-import { listUniversities, adminAddUniversity, adminDeleteUniversity, adminAddDepartment, adminDeleteDepartment, adminImportUniversitiesCsv } from "@/lib/universities.functions";
+import { listUniversities, adminAddUniversity, adminDeleteUniversity, adminAddFaculty, adminDeleteFaculty, adminAddDepartment, adminDeleteDepartment, adminImportUniversitiesCsv } from "@/lib/universities.functions";
 import {
   adminListMentorApplications,
   adminReviewMentor,
@@ -1264,6 +1264,8 @@ function UniversitiesAdmin() {
   const delUniFn = useServerFn(adminDeleteUniversity);
   const addDeptFn = useServerFn(adminAddDepartment);
   const delDeptFn = useServerFn(adminDeleteDepartment);
+  const addFacFn = useServerFn(adminAddFaculty);
+  const delFacFn = useServerFn(adminDeleteFaculty);
   const importFn = useServerFn(adminImportUniversitiesCsv);
 
   const { data: universities = [], isLoading } = useQuery({
@@ -1275,6 +1277,7 @@ function UniversitiesAdmin() {
   const [country, setCountry] = useState("");
   const [csvText, setCsvText] = useState("");
   const [deptDrafts, setDeptDrafts] = useState<Record<string, string>>({});
+  const [facultyDrafts, setFacultyDrafts] = useState<Record<string, string>>({});
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["universities"] });
 
@@ -1299,10 +1302,30 @@ function UniversitiesAdmin() {
   });
 
   const addDeptMut = useMutation({
-    mutationFn: (v: { university_id: string; name: string }) => addDeptFn({ data: v }),
+    mutationFn: (v: { university_id: string; name: string; faculty_id?: string; key: string }) =>
+      addDeptFn({ data: { university_id: v.university_id, name: v.name, faculty_id: v.faculty_id } }),
     onSuccess: (_res, v) => {
       toast.success("Department added.");
-      setDeptDrafts((prev) => ({ ...prev, [v.university_id]: "" }));
+      setDeptDrafts((prev) => ({ ...prev, [v.key]: "" }));
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const addFacMut = useMutation({
+    mutationFn: (v: { university_id: string; name: string }) => addFacFn({ data: v }),
+    onSuccess: (_res, v) => {
+      toast.success("Faculty added.");
+      setFacultyDrafts((prev) => ({ ...prev, [v.university_id]: "" }));
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const delFacMut = useMutation({
+    mutationFn: (id: string) => delFacFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Faculty removed.");
       invalidate();
     },
     onError: (e: any) => toast.error(String(e)),
@@ -1320,7 +1343,7 @@ function UniversitiesAdmin() {
   const importMut = useMutation({
     mutationFn: () => importFn({ data: { csv: csvText } }),
     onSuccess: (res: any) => {
-      toast.success(`Imported ${res.universities} university/ies and ${res.departments} department(s).`);
+      toast.success(`Imported ${res.universities} university/ies, ${res.faculties} faculties and ${res.departments} department(s).`);
       setCsvText("");
       invalidate();
     },
@@ -1332,7 +1355,7 @@ function UniversitiesAdmin() {
       <div className="flex items-center gap-2">
         <University className="size-4 text-verde" />
         <p className="text-ink-secondary text-sm">
-          Seed the university &amp; department directory used by onboarding, settings, and past questions.
+          Seed the university, faculty &amp; department directory used by onboarding, settings, and past questions.
         </p>
       </div>
 
@@ -1365,13 +1388,13 @@ function UniversitiesAdmin() {
       <div className="border border-ink/10 rounded-sm p-4 space-y-3">
         <h3 className="text-sm font-medium">Bulk import (CSV)</h3>
         <p className="text-xs text-ink/50">
-          One row per line: <code className="bg-ink/5 px-1 rounded">University,Department</code>. Repeated universities are merged automatically.
+          One row per line: <code className="bg-ink/5 px-1 rounded">University,Faculty,Department</code>. Repeated universities and faculties are merged automatically.
         </p>
         <textarea
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
           rows={6}
-          placeholder={"University of Lagos,Computer Science\nUniversity of Lagos,Economics\nUniversity of Ibadan,Law"}
+          placeholder={"University of Lagos,Faculty of Science,Computer Science\nUniversity of Lagos,Faculty of Science,Economics\nUniversity of Lagos,Faculty of Arts,Law\nUniversity of Ibadan,Faculty of Law,Law"}
           className="mt-1 w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white font-mono focus:outline-none focus:border-verde/50"
         />
         <div className="flex flex-wrap items-center gap-3">
@@ -1432,41 +1455,93 @@ function UniversitiesAdmin() {
               </button>
             </div>
 
-            <div className="pl-3 border-l border-ink/10 space-y-1.5">
-              {u.departments.length === 0 && (
-                <p className="text-xs text-ink/40">No departments yet.</p>
-              )}
-              {u.departments.map((d) => (
-                <div key={d.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span>{d.name}</span>
-                  <button
-                    onClick={() => delDeptMut.mutate(d.id)}
-                    className="text-red-500 hover:text-red-700 shrink-0"
-                    title="Delete department"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              ))}
-              <div className="flex gap-2 items-center pt-1">
+            <div className="pl-3 border-l border-ink/10 space-y-3">
+              {/* Add faculty */}
+              <div className="flex gap-2 items-center">
                 <input
-                  value={deptDrafts[u.id] ?? ""}
-                  onChange={(e) => setDeptDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
-                  placeholder="Add department (e.g. Computer Science)"
+                  value={facultyDrafts[u.id] ?? ""}
+                  onChange={(e) => setFacultyDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                  placeholder="Add faculty (e.g. Faculty of Science)"
                   className={inputCls}
                 />
                 <button
                   onClick={() => {
-                    const deptName = (deptDrafts[u.id] ?? "").trim();
-                    if (!deptName) return toast.error("Department name is required.");
-                    addDeptMut.mutate({ university_id: u.id, name: deptName });
+                    const facName = (facultyDrafts[u.id] ?? "").trim();
+                    if (!facName) return toast.error("Faculty name is required.");
+                    addFacMut.mutate({ university_id: u.id, name: facName });
                   }}
-                  disabled={addDeptMut.isPending}
-                  className="px-3 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 shrink-0"
+                  disabled={addFacMut.isPending}
+                  className="px-3 py-2 text-sm font-medium bg-ink text-bone rounded-sm hover:bg-sage transition-colors disabled:opacity-50 shrink-0"
                 >
                   Add
                 </button>
               </div>
+
+              {u.faculties.length === 0 && (
+                <p className="text-xs text-ink/40">No faculties yet.</p>
+              )}
+
+              {u.faculties.map((f) => {
+                const isOther = f.id === "";
+                const draftKey = `${u.id}:${f.id || "other"}`;
+                return (
+                  <div key={draftKey} className="pl-3 border-l border-ink/10 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink/70">{f.name}</span>
+                      {!isOther && (
+                        <button
+                          onClick={() => delFacMut.mutate(f.id)}
+                          className="text-red-500 hover:text-red-700 shrink-0"
+                          title="Delete faculty"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {f.departments.length === 0 && (
+                      <p className="text-xs text-ink/40 pl-3">No departments yet.</p>
+                    )}
+                    {f.departments.map((d) => (
+                      <div key={d.id} className="flex items-center justify-between gap-3 text-sm pl-3">
+                        <span>{d.name}</span>
+                        <button
+                          onClick={() => delDeptMut.mutate(d.id)}
+                          className="text-red-500 hover:text-red-700 shrink-0"
+                          title="Delete department"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <div className="flex gap-2 items-center pt-1 pl-3">
+                      <input
+                        value={deptDrafts[draftKey] ?? ""}
+                        onChange={(e) => setDeptDrafts((prev) => ({ ...prev, [draftKey]: e.target.value }))}
+                        placeholder="Add department (e.g. Computer Science)"
+                        className={inputCls}
+                      />
+                      <button
+                        onClick={() => {
+                          const deptName = (deptDrafts[draftKey] ?? "").trim();
+                          if (!deptName) return toast.error("Department name is required.");
+                          addDeptMut.mutate({
+                            university_id: u.id,
+                            name: deptName,
+                            faculty_id: isOther ? undefined : f.id,
+                            key: draftKey,
+                          });
+                        }}
+                        disabled={addDeptMut.isPending}
+                        className="px-3 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 shrink-0"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}

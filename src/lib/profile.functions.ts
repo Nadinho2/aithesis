@@ -9,6 +9,7 @@ export interface Profile {
   id: string;
   learner_type: LearnerType | null;
   university: string | null;
+  faculty: string | null;
   department: string | null;
   level: string | null;
   exam_tracks: ExamTrack[];
@@ -31,7 +32,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { userId, supabase } = context as any;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, learner_type, university, department, level, exam_tracks, class_level, country, full_name")
+      .select("id, learner_type, university, faculty, department, level, exam_tracks, class_level, country, full_name")
       .eq("id", userId)
       .maybeSingle();
 
@@ -42,6 +43,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       id: data.id,
       learner_type: data.learner_type ?? null,
       university: data.university ?? null,
+      faculty: data.faculty ?? null,
       department: data.department ?? null,
       level: data.level ?? null,
       exam_tracks: Array.isArray(data.exam_tracks) ? data.exam_tracks : [],
@@ -54,6 +56,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
 const SaveProfileInput = z.object({
   learner_type: z.enum(["university", "pre_university", "professional"]),
   university: z.string().max(200).optional(),
+  faculty: z.string().max(200).optional(),
   department: z.string().max(200).optional(),
   level: z.string().max(50).optional(),
   exam_tracks: z.array(z.enum(["waec", "neco", "jamb"])).default([]),
@@ -80,6 +83,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
       id: userId,
       learner_type: data.learner_type,
       university: isUniversity ? (data.university?.trim() || null) : null,
+      faculty: isUniversity ? (data.faculty?.trim() || null) : null,
       department: isUniversity ? (data.department?.trim() || null) : null,
       level: isUniversity ? (data.level?.trim() || null) : null,
       exam_tracks: isPreUni ? data.exam_tracks : [],
@@ -104,6 +108,7 @@ export const saveMyProfile = createServerFn({ method: "POST" })
             ...meta,
             learnerType: data.learner_type,
             university: isUniversity ? (row.university ?? "") : "",
+            faculty: isUniversity ? (row.faculty ?? "") : "",
             department: isUniversity ? (row.department ?? "") : "",
             level: isUniversity ? (row.level ?? "") : "",
             examTracks: row.exam_tracks,

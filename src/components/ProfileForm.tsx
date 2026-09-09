@@ -49,12 +49,14 @@ export function ProfileForm({
     initialProfile?.learner_type ?? "university",
   );
   const [university, setUniversity] = useState(initialProfile?.university ?? "");
+  const [faculty, setFaculty] = useState(initialProfile?.faculty ?? "");
   const [department, setDepartment] = useState(initialProfile?.department ?? "");
   const [level, setLevel] = useState(initialProfile?.level ?? "");
   const [examTracks, setExamTracks] = useState<ExamTrack[]>(initialProfile?.exam_tracks ?? []);
   const [classLevel, setClassLevel] = useState(initialProfile?.class_level ?? "");
 
   const selectedUni = universities.find((u) => u.name === university);
+  const selectedFaculty = selectedUni?.faculties.find((f) => f.name === faculty);
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -62,6 +64,7 @@ export function ProfileForm({
         data: {
           learner_type: learnerType,
           university,
+          faculty,
           department,
           level,
           exam_tracks: examTracks,
@@ -135,6 +138,7 @@ export function ProfileForm({
               value={university}
               onChange={(e) => {
                 setUniversity(e.target.value);
+                setFaculty("");
                 setDepartment("");
               }}
               className={inputCls}
@@ -149,16 +153,37 @@ export function ProfileForm({
           </div>
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
-              Department / Faculty
+              Faculty
+            </label>
+            <select
+              value={faculty}
+              onChange={(e) => {
+                setFaculty(e.target.value);
+                setDepartment("");
+              }}
+              className={inputCls}
+              disabled={!university}
+            >
+              <option value="">Select faculty</option>
+              {(selectedUni?.faculties ?? []).map((f) => (
+                <option key={f.id || f.name} value={f.name}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
+              Department
             </label>
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               className={inputCls}
-              disabled={!university}
+              disabled={!faculty}
             >
               <option value="">Select department</option>
-              {(selectedUni?.departments ?? []).map((d) => (
+              {(selectedFaculty?.departments ?? []).map((d) => (
                 <option key={d.id} value={d.name}>
                   {d.name}
                 </option>
