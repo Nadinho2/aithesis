@@ -6,11 +6,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import {
   listCommunityPosts,
   createCommunityPost,
+  updateCommunityPost,
+  deleteCommunityPost,
   togglePostLike,
   listComments,
   addComment,
+  updateCommunityComment,
+  deleteCommunityComment,
   type CommunityPost,
   type CommunityComment,
+  type PostVisibility,
 } from "@/lib/community.functions";
 import { getMyProfile } from "@/lib/profile.functions";
 import {
@@ -25,6 +30,8 @@ import {
   Sparkles,
   Building2,
   BookOpen,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +53,36 @@ function timeAgo(iso: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+const EDIT_WINDOW_MS = 6 * 60 * 60 * 1000;
+
+function canEditNow(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < EDIT_WINDOW_MS;
+}
+
+function displayName(name: string | null, username: string | null): string {
+  if (username) return `@${username}`;
+  return name ?? "Student";
+}
+
+function avatarInitial(name: string | null, username: string | null): string {
+  return (username ?? name ?? "U").charAt(0).toUpperCase();
+}
+
+function AudienceBadge({ visibility }: { visibility: PostVisibility }) {
+  const meta: Record<PostVisibility, { label: string; Icon: typeof Globe }> = {
+    all: { label: "Public", Icon: Globe },
+    university: { label: "University", Icon: GraduationCap },
+    department: { label: "Department", Icon: Building2 },
+    course: { label: "Course", Icon: BookOpen },
+  };
+  const { label, Icon } = meta[visibility] ?? meta.all;
+  return (
+    <span className="inline-flex items-center gap-1 ml-2 text-ink/50">
+      <Icon className="size-3" /> {label}
+    </span>
+  );
+}
+
 function PostCard({
   post,
   expanded,
@@ -57,6 +94,10 @@ function PostCard({
   onCommentDraft,
   onComment,
   commentPending,
+  onEditPost,
+  onDeletePost,
+  onEditComment,
+  onDeleteComment,
   showUniversity,
   showReasons,
 }: {
@@ -70,19 +111,40 @@ function PostCard({
   onCommentDraft: (v: string) => void;
   onComment: () => void;
   commentPending: boolean;
+  onEditPost: (postId: string, body: string) => void;
+  onDeletePost: (postId: string) => void;
+  onEditComment: (commentId: string, body: string) => void;
+  onDeleteComment: (commentId: string) => void;
   showUniversity: boolean;
   showReasons: boolean;
 }) {
+  const [editingPost, setEditingPost] = useState(false);
+  const [postDraft, setPostDraft] = useState(post.body);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [commentEditDraft, setCommentEditDraft] = useState("");
+
+  const editable = post.is_mine && canEditNow(post.created_at);
+
+  function startEditPost() {
+    setPostDraft(post.body);
+    setEditingPost(true);
+  }
+
+  function startEditComment(c: CommunityComment) {
+    setEditingCommentId(c.id);
+    setCommentEditDraft(c.body);
+  }
+
   return (
     <div className="bg-card border border-ink/10 rounded-sm p-4">
       <div className="flex items-start gap-3">
         <div className="size-10 rounded-full bg-verde/10 text-verde-dark flex items-center justify-center font-semibold text-sm flex-shrink-0">
-          {(post.author_name ?? "U").charAt(0).toUpperCase()}
+          {avatarInitial(post.author_name, post.author_username)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm text-ink">
-              {post.author_name ?? "Student"}
+              {displayName(post.author_name, post.author_username)}
             </span>
             {post.author_department && (
               <span className="text-xs text-ink/40">· {post.author_department}</span>
@@ -95,8 +157,30 @@ function PostCard({
                 <GraduationCap className="size-3" /> {post.university}
               </span>
             )}
+            {!showUniversity && <AudienceBadge visibility={post.visibility} />}
           </div>
         </div>
+
+        {post.is_mine && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {editable && (
+              <button
+                onClick={startEditPost}
+                aria-label="Edit post"
+                className="size-7 rounded-sm flex items-center justify-center text-ink/40 hover:text-ink hover:bg-ink/5 transition-colors"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => onDeletePost(post.id)}
+              aria-label="Delete post"
+              className="size-7 rounded-sm flex items-center justify-center text-ink/40 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {showReasons && post.reasons.length > 0 && (
@@ -112,9 +196,38 @@ function PostCard({
         </div>
       )}
 
-      <p className="text-sm text-ink leading-relaxed mt-3 whitespace-pre-wrap break-words">
-        {post.body}
-      </p>
+      {editingPost ? (
+        <div className="mt-3">
+          <textarea
+            value={postDraft}
+            onChange={(e) => setPostDraft(e.target.value)}
+            rows={3}
+            className="w-full bg-paper border border-ink/15 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-sage resize-y"
+          />
+          <div className="flex items-center justify-end gap-2 mt-2">
+            <button
+              onClick={() => setEditingPost(false)}
+              className="px-3 py-1.5 text-sm text-ink/60 hover:text-ink transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                onEditPost(post.id, postDraft);
+                setEditingPost(false);
+              }}
+              disabled={!postDraft.trim()}
+              className="px-3 py-1.5 bg-ink text-bone rounded-sm text-sm disabled:opacity-50 hover:bg-sage transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-ink leading-relaxed mt-3 whitespace-pre-wrap break-words">
+          {post.body}
+        </p>
+      )}
 
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-ink/5">
         <button
@@ -145,13 +258,63 @@ function PostCard({
               comments.map((c) => (
                 <div key={c.id} className="flex items-start gap-2">
                   <div className="size-7 rounded-full bg-ink/5 text-ink/60 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                    {(c.author_name ?? "U").charAt(0).toUpperCase()}
+                    {avatarInitial(c.author_name, c.author_username)}
                   </div>
                   <div className="min-w-0 flex-1 bg-paper border border-ink/5 rounded-sm px-3 py-2">
-                    <div className="text-xs text-ink/50 mb-0.5">
-                      {c.author_name ?? "Student"} · {timeAgo(c.created_at)}
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-ink/50 mb-0.5 flex-1">
+                        {displayName(c.author_name, c.author_username)} · {timeAgo(c.created_at)}
+                      </div>
+                      {c.is_mine && (
+                        <div className="flex items-center gap-1">
+                          {canEditNow(c.created_at) && (
+                            <button
+                              onClick={() => startEditComment(c)}
+                              aria-label="Edit comment"
+                              className="size-6 rounded-sm flex items-center justify-center text-ink/40 hover:text-ink hover:bg-ink/5 transition-colors"
+                            >
+                              <Pencil className="size-3" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onDeleteComment(c.id)}
+                            aria-label="Delete comment"
+                            className="size-6 rounded-sm flex items-center justify-center text-ink/40 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="size-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-ink break-words">{c.body}</p>
+                    {editingCommentId === c.id ? (
+                      <div className="mt-1">
+                        <input
+                          value={commentEditDraft}
+                          onChange={(e) => setCommentEditDraft(e.target.value)}
+                          className="w-full bg-paper border border-ink/15 rounded-sm px-2 py-1.5 text-sm focus:outline-none focus:border-sage"
+                        />
+                        <div className="flex items-center justify-end gap-2 mt-1.5">
+                          <button
+                            onClick={() => setEditingCommentId(null)}
+                            className="text-xs text-ink/60 hover:text-ink transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              onEditComment(c.id, commentEditDraft);
+                              setEditingCommentId(null);
+                            }}
+                            disabled={!commentEditDraft.trim()}
+                            className="px-2.5 py-1 bg-ink text-bone rounded-sm text-xs disabled:opacity-50 hover:bg-sage transition-colors"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-ink break-words">{c.body}</p>
+                    )}
                   </div>
                 </div>
               ))
@@ -195,15 +358,20 @@ function UniversityFeedPage() {
 
   const listFn = useServerFn(listCommunityPosts);
   const createFn = useServerFn(createCommunityPost);
+  const updatePostFn = useServerFn(updateCommunityPost);
+  const deletePostFn = useServerFn(deleteCommunityPost);
   const likeFn = useServerFn(togglePostLike);
   const commentsFn = useServerFn(listComments);
   const addCommentFn = useServerFn(addComment);
+  const updateCommentFn = useServerFn(updateCommunityComment);
+  const deleteCommentFn = useServerFn(deleteCommunityComment);
   const getProfileFn = useServerFn(getMyProfile);
 
   const [scope, setScope] = useState<"for_you" | "university" | "department" | "course" | "all">(
     "for_you",
   );
   const [draft, setDraft] = useState("");
+  const [visibility, setVisibility] = useState<PostVisibility>("all");
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
 
@@ -235,9 +403,26 @@ function UniversityFeedPage() {
   });
 
   const createMut = useMutation({
-    mutationFn: () => createFn({ data: { body: draft } }),
+    mutationFn: () => createFn({ data: { body: draft, visibility } }),
     onSuccess: () => {
       setDraft("");
+      setVisibility("all");
+      qc.invalidateQueries({ queryKey: ["community-posts"] });
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
+  const editPostMut = useMutation({
+    mutationFn: ({ postId, body }: { postId: string; body: string }) =>
+      updatePostFn({ data: { post_id: postId, body } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["community-posts"] }),
+    onError: (e) => toast.error(String(e)),
+  });
+
+  const deletePostMut = useMutation({
+    mutationFn: (postId: string) => deletePostFn({ data: { post_id: postId } }),
+    onSuccess: () => {
+      setExpandedPostId(null);
       qc.invalidateQueries({ queryKey: ["community-posts"] });
     },
     onError: (e) => toast.error(String(e)),
@@ -254,6 +439,22 @@ function UniversityFeedPage() {
       addCommentFn({ data: { post_id: postId, body } }),
     onSuccess: () => {
       setCommentDraft("");
+      qc.invalidateQueries({ queryKey: ["community-comments"] });
+      qc.invalidateQueries({ queryKey: ["community-posts"] });
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
+  const editCommentMut = useMutation({
+    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
+      updateCommentFn({ data: { comment_id: commentId, body } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["community-comments"] }),
+    onError: (e) => toast.error(String(e)),
+  });
+
+  const deleteCommentMut = useMutation({
+    mutationFn: (commentId: string) => deleteCommentFn({ data: { comment_id: commentId } }),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["community-comments"] });
       qc.invalidateQueries({ queryKey: ["community-posts"] });
     },
@@ -303,7 +504,17 @@ function UniversityFeedPage() {
               rows={3}
               className="w-full bg-paper border border-ink/15 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-sage resize-y"
             />
-            <div className="flex items-center justify-end mt-3">
+            <div className="flex items-center justify-between mt-3 gap-3">
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as PostVisibility)}
+                className="bg-paper border border-ink/15 rounded-sm px-2 py-2 text-sm focus:outline-none focus:border-sage"
+              >
+                <option value="all">Everyone</option>
+                {hasUniversity && <option value="university">My university</option>}
+                {hasDepartment && <option value="department">My department</option>}
+                {hasLevel && <option value="course">My course</option>}
+              </select>
               <button
                 onClick={() => createMut.mutate()}
                 disabled={createMut.isPending || !draft.trim()}
@@ -405,6 +616,12 @@ function UniversityFeedPage() {
                   onCommentDraft={setCommentDraft}
                   onComment={() => commentMut.mutate({ postId: p.id, body: commentDraft })}
                   commentPending={commentMut.isPending}
+                  onEditPost={(postId, body) => editPostMut.mutate({ postId, body })}
+                  onDeletePost={(postId) => deletePostMut.mutate(postId)}
+                  onEditComment={(commentId, body) =>
+                    editCommentMut.mutate({ commentId, body })
+                  }
+                  onDeleteComment={(commentId) => deleteCommentMut.mutate(commentId)}
                   showUniversity={effectiveScope === "all"}
                   showReasons={effectiveScope === "for_you"}
                 />
