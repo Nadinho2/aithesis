@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Wrench, GraduationCap, Users, MessageCircle } from "lucide-react";
+import { Home, Wrench, GraduationCap, Users, Handshake, MessageCircle } from "lucide-react";
 import { getSectionFromPath } from "@/components/IconRail";
 
 const items = [
@@ -7,6 +7,7 @@ const items = [
   { id: "tools" as const, label: "Tools", icon: Wrench, route: "/tools/dashboard" },
   { id: "learn" as const, label: "Learn", icon: GraduationCap, route: "/learn" },
   { id: "community" as const, label: "Community", icon: Users, route: "/community" },
+  { id: "mentor" as const, label: "Mentor", icon: Handshake, route: "/mentor/find" },
   { id: "chat" as const, label: "AI Chat", icon: MessageCircle, route: "/chat" },
 ];
 

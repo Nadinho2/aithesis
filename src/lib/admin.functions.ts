@@ -10,7 +10,7 @@ function assertAdmin(isAdmin: boolean) {
 export const adminCheck = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    return { isAdmin: context.isAdmin };
+    return { isAdmin: context.isAdmin, isCommunityManager: context.isCommunityManager };
   });
 
 export const adminStats = createServerFn({ method: "GET" })
@@ -61,52 +61,6 @@ async function loadAuthUsers(): Promise<Map<string, { email: string | null; bann
   }
   return map;
 }
-
-export const adminListUsers = createServerFn({ method: "GET" })
-  .middleware([requireClerkAuth])
-  .handler(async ({ context }) => {
-    assertAdmin(context.isAdmin);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const auth = await loadAuthUsers();
-    const ids = Array.from(auth.keys());
-    const [{ data: profiles }, { data: roles }, { data: topicCounts }, { data: propCounts }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, full_name, country, university").in("id", ids),
-      supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
-      supabaseAdmin.from("topics").select("user_id").in("user_id", ids),
-      supabaseAdmin.from("proposals").select("user_id").in("user_id", ids),
-    ]);
-
-    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
-    const roleMap = new Map<string, string[]>();
-    (roles ?? []).forEach((r) => {
-      const arr = roleMap.get(r.user_id) ?? [];
-      arr.push(r.role);
-      roleMap.set(r.user_id, arr);
-    });
-    const topicCount = new Map<string, number>();
-    (topicCounts ?? []).forEach((t) => topicCount.set(t.user_id, (topicCount.get(t.user_id) ?? 0) + 1));
-    const propCount = new Map<string, number>();
-    (propCounts ?? []).forEach((t) => propCount.set(t.user_id, (propCount.get(t.user_id) ?? 0) + 1));
-
-    return ids.map((id) => {
-      const a = auth.get(id)!;
-      const banned = !!a.banned_until && new Date(a.banned_until) > new Date();
-      return {
-        id,
-        email: a.email,
-        created_at: a.created_at,
-        last_sign_in_at: a.last_sign_in_at,
-        full_name: profileMap.get(id)?.full_name ?? null,
-        country: profileMap.get(id)?.country ?? null,
-        university: profileMap.get(id)?.university ?? null,
-        roles: roleMap.get(id) ?? [],
-        topic_count: topicCount.get(id) ?? 0,
-        proposal_count: propCount.get(id) ?? 0,
-        banned,
-      };
-    });
-  });
 
 export const adminListGenerations = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
@@ -236,43 +190,6 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
-    return { ok: true };
-  });
-
-export const adminSetRole = createServerFn({ method: "POST" })
-  .middleware([requireClerkAuth])
-  .inputValidator((i: unknown) =>
-    z
-      .object({
-        user_id: z.string().min(1),
-        role: z.enum(["admin", "user"]),
-        grant: z.boolean(),
-      })
-      .parse(i),
-  )
-  .handler(async ({ data, context }) => {
-    const { userId } = context;
-    assertAdmin(context.isAdmin);
-    if (data.user_id === userId && data.role === "admin" && !data.grant) {
-      throw new Error("You cannot remove your own admin role.");
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.grant) {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .insert({ user_id: data.user_id, role: data.role });
-      // Ignore unique-violation duplicates.
-      if (error && !String(error.message).toLowerCase().includes("duplicate")) {
-        throw new Error(error.message);
-      }
-    } else {
-      const { error } = await supabaseAdmin
-        .from("user_roles")
-        .delete()
-        .eq("user_id", data.user_id)
-        .eq("role", data.role);
-      if (error) throw new Error(error.message);
-    }
     return { ok: true };
   });
 
@@ -548,4 +465,83 @@ export const adminDeleteNotification = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ═══════════════════════════════════════════════════════════
+// Role Management — global roles live in Clerk publicMetadata.role
+// ═══════════════════════════════════════════════════════════
+
+export type GlobalRole = "admin" | "community_manager" | null;
+
+export interface RoleUser {
+  id: string;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  role: GlobalRole;
+}
+
+export const adminListRoles = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    assertAdmin(context.isAdmin);
+
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+    if (!clerkSecretKey) throw new Error("Missing CLERK_SECRET_KEY environment variable");
+    const clerk = createClerkClient({ secretKey: clerkSecretKey });
+
+    const users: RoleUser[] = [];
+    const limit = 200;
+    let offset = 0;
+    for (;;) {
+      const res = await clerk.users.getUserList({ limit, offset });
+      for (const u of res.data) {
+        const role = (u.publicMetadata?.role as string) ?? null;
+        users.push({
+          id: u.id,
+          email: u.emailAddresses?.[0]?.emailAddress ?? null,
+          first_name: u.firstName ?? null,
+          last_name: u.lastName ?? null,
+          role: role === "admin" || role === "community_manager" ? role : null,
+        });
+      }
+      if (res.data.length < limit) break;
+      offset += limit;
+      if (offset >= 5000) break;
+    }
+
+    return users.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""));
+  });
+
+const SetRoleInput = z.object({
+  user_id: z.string().min(1),
+  role: z.enum(["admin", "community_manager", "none"]),
+});
+
+export const adminSetRole = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => SetRoleInput.parse(i))
+  .handler(async ({ data, context }) => {
+    if (data.user_id === context.userId) throw new Error("You cannot change your own role.");
+    assertAdmin(context.isAdmin);
+
+    const { createClerkClient } = await import("@clerk/backend");
+    const clerkSecretKey = runtimeEnv("CLERK_SECRET_KEY");
+    if (!clerkSecretKey) throw new Error("Missing CLERK_SECRET_KEY environment variable");
+    const clerk = createClerkClient({ secretKey: clerkSecretKey });
+
+    const user = await clerk.users.getUser(data.user_id);
+    const meta = (user.publicMetadata ?? {}) as Record<string, unknown>;
+    const nextMeta: Record<string, unknown> = { ...meta };
+
+    if (data.role === "none") {
+      delete nextMeta.role;
+    } else {
+      nextMeta.role = data.role;
+    }
+
+    await clerk.users.updateUser(data.user_id, { publicMetadata: nextMeta });
+
+    return { ok: true, role: data.role === "none" ? null : data.role };
   });

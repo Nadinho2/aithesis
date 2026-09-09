@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI } from "./ai-utils.server";
-import { notifyToolCompleted } from "./mail-helper";
+import { dispatchNotification } from "./notifications";
 import { parseUploadedFile } from "./upload.server";
 import { buildPresentationDocx, toBase64 } from "./docx.server";
 import { checkGenerateLimit } from "./admin-limits.functions";
@@ -128,7 +128,9 @@ Return ONLY valid JSON (no markdown, no code fences):
     }
 
     // Fire-and-forget email notification
-    notifyToolCompleted(userId, "presentation", {
+    dispatchNotification(userId, {
+      kind: "tool_completed",
+      tool: "presentation",
       title: topic,
       downloadUrl: `https://www.mybrainpadi.com/tools/history`,
     });

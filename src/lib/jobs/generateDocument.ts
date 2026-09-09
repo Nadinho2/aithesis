@@ -10,6 +10,7 @@ import type { GeneratedChapter, PipelinePayload } from "./pipeline";
 import { generateChapters } from "./pipeline";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import type { BrainPadiTool } from "@/lib/mail";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -130,7 +131,7 @@ export async function generateDocumentWithRetry(
   userId: string,
   taskId: string | undefined,
   documentTable: string,
-  toolName: string,
+  toolName: BrainPadiTool,
   expectedWordCount: number
 ): Promise<GenerationResult> {
   // ── First attempt ──
@@ -222,8 +223,8 @@ export async function generateDocumentWithRetry(
 
       // Send failure email
       try {
-        const { notifyToolFailed } = await import("@/lib/mail-helper");
-        await notifyToolFailed(userId, toolName);
+        const { dispatchNotification } = await import("@/lib/notifications");
+        await dispatchNotification(userId, { kind: "tool_failed", tool: toolName });
       } catch (e: any) {
         console.error(
           `[generateDocument] Failed to send failure email: ${e?.message}`

@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useClerk } from "@clerk/clerk-react";
-import { User, Mail, Calendar, Shield, CreditCard, Gift } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { User, Mail, Calendar, Shield, CreditCard, Gift, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getMyProfile } from "@/lib/profile.functions";
+import { ProfileForm } from "@/components/ProfileForm";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Settings — Mybrainpadi" }] }),
@@ -11,6 +15,12 @@ export const Route = createFileRoute("/_authenticated/settings")({
 function SettingsPage() {
   const { user } = useClerk();
   const isMobile = useIsMobile();
+  const getProfileFn = useServerFn(getMyProfile);
+
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ["my-profile"],
+    queryFn: () => getProfileFn(),
+  });
 
   const displayName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
@@ -77,6 +87,20 @@ function SettingsPage() {
             <span className="font-mono text-xs text-ink/40 truncate max-w-[200px]">{user?.id ?? "—"}</span>
           </div>
         </div>
+      </div>
+
+      {/* Learner profile */}
+      <div className="border border-ink/10 rounded-lg bg-card p-6 mb-5">
+        <h2 className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40 mb-4">
+          Learner Profile
+        </h2>
+        {profileLoading ? (
+          <div className="flex items-center gap-2 text-sm text-ink/50">
+            <Loader2 className="size-4 animate-spin" /> Loading…
+          </div>
+        ) : (
+          <ProfileForm initialProfile={profile ?? null} onSaved={() => {}} />
+        )}
       </div>
 
       {/* Quick Links */}

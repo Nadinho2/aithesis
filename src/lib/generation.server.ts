@@ -267,8 +267,8 @@ CRITICAL RULES FOR THESIS:
   // HARD ENFORCEMENT — never save below target
   if (total < target) {
     // Send failure email
-    const { notifyToolFailed } = await import("@/lib/mail-helper");
-    await notifyToolFailed(userId, "Thesis");
+    const { dispatchNotification } = await import("@/lib/notifications");
+    await dispatchNotification(userId, { kind: "tool_failed", tool: "Thesis" });
 
     return { success: false, error: `Only reached ${total} words (target: ${target}). Please try again.` };
   }
@@ -370,8 +370,10 @@ CRITICAL RULES FOR THESIS:
   if (error) throw new Error(error.message);
 
   // Send email
-  const { notifyToolCompleted } = await import("@/lib/mail-helper");
-  await notifyToolCompleted(userId, "thesis", {
+  const { dispatchNotification } = await import("@/lib/notifications");
+  await dispatchNotification(userId, {
+    kind: "tool_completed",
+    tool: "thesis",
     title: topicCtx.title,
     downloadUrl: `${SITE}/thesis/...`,
     aiScore: 85,
@@ -644,9 +646,11 @@ export async function generateSeminarContent(payload: {
   }
 
   // Email notification
-  const { notifyToolCompleted } = await import("@/lib/mail-helper");
+  const { dispatchNotification } = await import("@/lib/notifications");
   const { seminarTypeLabel } = await import("@/lib/pricing");
-  await notifyToolCompleted(userId, "seminar", {
+  await dispatchNotification(userId, {
+    kind: "tool_completed",
+    tool: "seminar",
     title: data.title,
     downloadUrl: `${SITE}/tools/history`,
     seminarType: seminarTypeLabel(seminarType),
@@ -836,7 +840,7 @@ export async function generateAssignmentContent(payload: {
 
   const { callAIText } = await import("@/lib/ai-utils.server");
   const { fetchScholarlyRefs, formatByStyle, sortReferences } = await import("@/lib/scholarly.server");
-  const { notifyToolCompleted } = await import("@/lib/mail-helper");
+  const { dispatchNotification } = await import("@/lib/notifications");
 
   const apiKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
   const fullQuestion = [data.question, data.file_text].filter(Boolean).join("\n\n");
@@ -949,7 +953,9 @@ ${prevCtx ? `\nCONTEXT FROM PREVIOUSLY WRITTEN SECTIONS (must remain 100% consis
   }
 
   // Email notification
-  await notifyToolCompleted(userId, "assignment", {
+  await dispatchNotification(userId, {
+    kind: "tool_completed",
+    tool: "assignment",
     title: fullQuestion.slice(0, 80),
     downloadUrl: `${SITE}/tools/history`,
     aiScore: data.grading_target === "A" ? 90 : data.grading_target === "B" ? 80 : 65,
@@ -1146,8 +1152,8 @@ Write only the paragraph text — no headings, no JSON.`;
 
   // HARD ENFORCEMENT — never save below target
   if (totalWords2 < target) {
-    const { notifyToolFailed } = await import("@/lib/mail-helper");
-    await notifyToolFailed(userId, "Proposal");
+    const { dispatchNotification } = await import("@/lib/notifications");
+    await dispatchNotification(userId, { kind: "tool_failed", tool: "Proposal" });
 
     return { success: false, error: `Only reached ${totalWords2} words (target: ${target}). Please try again.` };
   }
@@ -1180,8 +1186,10 @@ Write only the paragraph text — no headings, no JSON.`;
   if (error) throw new Error(error.message);
 
   // Send email
-  const { notifyToolCompleted } = await import("@/lib/mail-helper");
-  await notifyToolCompleted(userId, "proposal", {
+  const { dispatchNotification } = await import("@/lib/notifications");
+  await dispatchNotification(userId, {
+    kind: "tool_completed",
+    tool: "proposal",
     title: topicCtx.title,
     downloadUrl: `${SITE}/proposals`,
     aiScore: 85,

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcademicIntegrityRouteImport } from './routes/academic-integrity'
@@ -33,6 +34,7 @@ import { Route as AuthenticatedMyTopicsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedMentorIndexRouteImport } from './routes/_authenticated/mentor/index'
 import { Route as AuthenticatedLearnIndexRouteImport } from './routes/_authenticated/learn/index'
 import { Route as AuthenticatedCommunityIndexRouteImport } from './routes/_authenticated/community/index'
 import { Route as AuthenticatedChatIndexRouteImport } from './routes/_authenticated/chat/index'
@@ -48,9 +50,15 @@ import { Route as AuthenticatedToolsCustomAnalysisRouteImport } from './routes/_
 import { Route as AuthenticatedToolsAssignmentRouteImport } from './routes/_authenticated/tools/assignment'
 import { Route as AuthenticatedThesisIdRouteImport } from './routes/_authenticated/thesis/$id'
 import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authenticated/proposal/$id'
+import { Route as AuthenticatedMentorMyMentorshipRouteImport } from './routes/_authenticated/mentor/my-mentorship'
+import { Route as AuthenticatedMentorFindRouteImport } from './routes/_authenticated/mentor/find'
+import { Route as AuthenticatedMentorBecomeAMentorRouteImport } from './routes/_authenticated/mentor/become-a-mentor'
+import { Route as AuthenticatedLearnPastQuestionsRouteImport } from './routes/_authenticated/learn/past-questions'
 import { Route as AuthenticatedLearnSplatRouteImport } from './routes/_authenticated/learn/$'
+import { Route as AuthenticatedCommunityUniversityFeedRouteImport } from './routes/_authenticated/community/university-feed'
 import { Route as AuthenticatedCommunitySplatRouteImport } from './routes/_authenticated/community/$'
 import { Route as AuthenticatedChatSplatRouteImport } from './routes/_authenticated/chat/$'
+import { Route as AuthenticatedCommunityStudyGroupsIndexRouteImport } from './routes/_authenticated/community/study-groups/index'
 import { Route as AuthenticatedToolsSideHustlePlansRouteImport } from './routes/_authenticated/tools/side-hustle/plans'
 import { Route as AuthenticatedToolsSideHustleJourneyRouteImport } from './routes/_authenticated/tools/side-hustle/journey'
 import { Route as AuthenticatedToolsSideHustleIdRouteImport } from './routes/_authenticated/tools/side-hustle.$id'
@@ -59,6 +67,7 @@ import { Route as AuthenticatedToolsPresentationIdRouteImport } from './routes/_
 import { Route as AuthenticatedToolsExamIdRouteImport } from './routes/_authenticated/tools/exam.$id'
 import { Route as AuthenticatedToolsCvIdRouteImport } from './routes/_authenticated/tools/cv.$id'
 import { Route as AuthenticatedToolsAssignmentIdRouteImport } from './routes/_authenticated/tools/assignment.$id'
+import { Route as AuthenticatedCommunityStudyGroupsIdRouteImport } from './routes/_authenticated/community/study-groups/$id'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -73,6 +82,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -181,6 +195,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMentorIndexRoute =
+  AuthenticatedMentorIndexRouteImport.update({
+    id: '/mentor/',
+    path: '/mentor/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLearnIndexRoute = AuthenticatedLearnIndexRouteImport.update({
   id: '/learn/',
   path: '/learn/',
@@ -264,11 +284,40 @@ const AuthenticatedProposalIdRoute = AuthenticatedProposalIdRouteImport.update({
   path: '/proposal/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMentorMyMentorshipRoute =
+  AuthenticatedMentorMyMentorshipRouteImport.update({
+    id: '/mentor/my-mentorship',
+    path: '/mentor/my-mentorship',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMentorFindRoute = AuthenticatedMentorFindRouteImport.update({
+  id: '/mentor/find',
+  path: '/mentor/find',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMentorBecomeAMentorRoute =
+  AuthenticatedMentorBecomeAMentorRouteImport.update({
+    id: '/mentor/become-a-mentor',
+    path: '/mentor/become-a-mentor',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnPastQuestionsRoute =
+  AuthenticatedLearnPastQuestionsRouteImport.update({
+    id: '/learn/past-questions',
+    path: '/learn/past-questions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLearnSplatRoute = AuthenticatedLearnSplatRouteImport.update({
   id: '/learn/$',
   path: '/learn/$',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommunityUniversityFeedRoute =
+  AuthenticatedCommunityUniversityFeedRouteImport.update({
+    id: '/community/university-feed',
+    path: '/community/university-feed',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCommunitySplatRoute =
   AuthenticatedCommunitySplatRouteImport.update({
     id: '/community/$',
@@ -280,6 +329,12 @@ const AuthenticatedChatSplatRoute = AuthenticatedChatSplatRouteImport.update({
   path: '/chat/$',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCommunityStudyGroupsIndexRoute =
+  AuthenticatedCommunityStudyGroupsIndexRouteImport.update({
+    id: '/community/study-groups/',
+    path: '/community/study-groups/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedToolsSideHustlePlansRoute =
   AuthenticatedToolsSideHustlePlansRouteImport.update({
     id: '/plans',
@@ -327,12 +382,19 @@ const AuthenticatedToolsAssignmentIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedToolsAssignmentRoute,
   } as any)
+const AuthenticatedCommunityStudyGroupsIdRoute =
+  AuthenticatedCommunityStudyGroupsIdRouteImport.update({
+    id: '/community/study-groups/$id',
+    path: '/community/study-groups/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/academic-integrity': typeof AcademicIntegrityRoute
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -354,7 +416,12 @@ export interface FileRoutesByFullPath {
   '/api/track-referral': typeof ApiTrackReferralRoute
   '/chat/$': typeof AuthenticatedChatSplatRoute
   '/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
+  '/mentor/find': typeof AuthenticatedMentorFindRoute
+  '/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -370,6 +437,8 @@ export interface FileRoutesByFullPath {
   '/chat/': typeof AuthenticatedChatIndexRoute
   '/community/': typeof AuthenticatedCommunityIndexRoute
   '/learn/': typeof AuthenticatedLearnIndexRoute
+  '/mentor/': typeof AuthenticatedMentorIndexRoute
+  '/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -378,12 +447,14 @@ export interface FileRoutesByFullPath {
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
+  '/community/study-groups/': typeof AuthenticatedCommunityStudyGroupsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/academic-integrity': typeof AcademicIntegrityRoute
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -405,7 +476,12 @@ export interface FileRoutesByTo {
   '/api/track-referral': typeof ApiTrackReferralRoute
   '/chat/$': typeof AuthenticatedChatSplatRoute
   '/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
+  '/mentor/find': typeof AuthenticatedMentorFindRoute
+  '/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
   '/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -421,6 +497,8 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatIndexRoute
   '/community': typeof AuthenticatedCommunityIndexRoute
   '/learn': typeof AuthenticatedLearnIndexRoute
+  '/mentor': typeof AuthenticatedMentorIndexRoute
+  '/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -429,6 +507,7 @@ export interface FileRoutesByTo {
   '/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
+  '/community/study-groups': typeof AuthenticatedCommunityStudyGroupsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -437,6 +516,7 @@ export interface FileRoutesById {
   '/academic-integrity': typeof AcademicIntegrityRoute
   '/auth': typeof AuthRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -458,7 +538,12 @@ export interface FileRoutesById {
   '/api/track-referral': typeof ApiTrackReferralRoute
   '/_authenticated/chat/$': typeof AuthenticatedChatSplatRoute
   '/_authenticated/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/_authenticated/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/_authenticated/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/_authenticated/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/_authenticated/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
+  '/_authenticated/mentor/find': typeof AuthenticatedMentorFindRoute
+  '/_authenticated/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
   '/_authenticated/proposal/$id': typeof AuthenticatedProposalIdRoute
   '/_authenticated/thesis/$id': typeof AuthenticatedThesisIdRoute
   '/_authenticated/tools/assignment': typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -474,6 +559,8 @@ export interface FileRoutesById {
   '/_authenticated/chat/': typeof AuthenticatedChatIndexRoute
   '/_authenticated/community/': typeof AuthenticatedCommunityIndexRoute
   '/_authenticated/learn/': typeof AuthenticatedLearnIndexRoute
+  '/_authenticated/mentor/': typeof AuthenticatedMentorIndexRoute
+  '/_authenticated/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
   '/_authenticated/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/_authenticated/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/_authenticated/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -482,6 +569,7 @@ export interface FileRoutesById {
   '/_authenticated/tools/side-hustle/$id': typeof AuthenticatedToolsSideHustleIdRoute
   '/_authenticated/tools/side-hustle/journey': typeof AuthenticatedToolsSideHustleJourneyRoute
   '/_authenticated/tools/side-hustle/plans': typeof AuthenticatedToolsSideHustlePlansRoute
+  '/_authenticated/community/study-groups/': typeof AuthenticatedCommunityStudyGroupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -490,6 +578,7 @@ export interface FileRouteTypes {
     | '/academic-integrity'
     | '/auth'
     | '/forgot-password'
+    | '/onboarding'
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
@@ -511,7 +600,12 @@ export interface FileRouteTypes {
     | '/api/track-referral'
     | '/chat/$'
     | '/community/$'
+    | '/community/university-feed'
     | '/learn/$'
+    | '/learn/past-questions'
+    | '/mentor/become-a-mentor'
+    | '/mentor/find'
+    | '/mentor/my-mentorship'
     | '/proposal/$id'
     | '/thesis/$id'
     | '/tools/assignment'
@@ -527,6 +621,8 @@ export interface FileRouteTypes {
     | '/chat/'
     | '/community/'
     | '/learn/'
+    | '/mentor/'
+    | '/community/study-groups/$id'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
@@ -535,12 +631,14 @@ export interface FileRouteTypes {
     | '/tools/side-hustle/$id'
     | '/tools/side-hustle/journey'
     | '/tools/side-hustle/plans'
+    | '/community/study-groups/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/academic-integrity'
     | '/auth'
     | '/forgot-password'
+    | '/onboarding'
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
@@ -562,7 +660,12 @@ export interface FileRouteTypes {
     | '/api/track-referral'
     | '/chat/$'
     | '/community/$'
+    | '/community/university-feed'
     | '/learn/$'
+    | '/learn/past-questions'
+    | '/mentor/become-a-mentor'
+    | '/mentor/find'
+    | '/mentor/my-mentorship'
     | '/proposal/$id'
     | '/thesis/$id'
     | '/tools/assignment'
@@ -578,6 +681,8 @@ export interface FileRouteTypes {
     | '/chat'
     | '/community'
     | '/learn'
+    | '/mentor'
+    | '/community/study-groups/$id'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
@@ -586,6 +691,7 @@ export interface FileRouteTypes {
     | '/tools/side-hustle/$id'
     | '/tools/side-hustle/journey'
     | '/tools/side-hustle/plans'
+    | '/community/study-groups'
   id:
     | '__root__'
     | '/'
@@ -593,6 +699,7 @@ export interface FileRouteTypes {
     | '/academic-integrity'
     | '/auth'
     | '/forgot-password'
+    | '/onboarding'
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
@@ -614,7 +721,12 @@ export interface FileRouteTypes {
     | '/api/track-referral'
     | '/_authenticated/chat/$'
     | '/_authenticated/community/$'
+    | '/_authenticated/community/university-feed'
     | '/_authenticated/learn/$'
+    | '/_authenticated/learn/past-questions'
+    | '/_authenticated/mentor/become-a-mentor'
+    | '/_authenticated/mentor/find'
+    | '/_authenticated/mentor/my-mentorship'
     | '/_authenticated/proposal/$id'
     | '/_authenticated/thesis/$id'
     | '/_authenticated/tools/assignment'
@@ -630,6 +742,8 @@ export interface FileRouteTypes {
     | '/_authenticated/chat/'
     | '/_authenticated/community/'
     | '/_authenticated/learn/'
+    | '/_authenticated/mentor/'
+    | '/_authenticated/community/study-groups/$id'
     | '/_authenticated/tools/assignment/$id'
     | '/_authenticated/tools/cv/$id'
     | '/_authenticated/tools/exam/$id'
@@ -638,6 +752,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tools/side-hustle/$id'
     | '/_authenticated/tools/side-hustle/journey'
     | '/_authenticated/tools/side-hustle/plans'
+    | '/_authenticated/community/study-groups/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -646,6 +761,7 @@ export interface RootRouteChildren {
   AcademicIntegrityRoute: typeof AcademicIntegrityRoute
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -678,6 +794,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -827,6 +950,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mentor/': {
+      id: '/_authenticated/mentor/'
+      path: '/mentor'
+      fullPath: '/mentor/'
+      preLoaderRoute: typeof AuthenticatedMentorIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/learn/': {
       id: '/_authenticated/learn/'
       path: '/learn'
@@ -932,11 +1062,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProposalIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mentor/my-mentorship': {
+      id: '/_authenticated/mentor/my-mentorship'
+      path: '/mentor/my-mentorship'
+      fullPath: '/mentor/my-mentorship'
+      preLoaderRoute: typeof AuthenticatedMentorMyMentorshipRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mentor/find': {
+      id: '/_authenticated/mentor/find'
+      path: '/mentor/find'
+      fullPath: '/mentor/find'
+      preLoaderRoute: typeof AuthenticatedMentorFindRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mentor/become-a-mentor': {
+      id: '/_authenticated/mentor/become-a-mentor'
+      path: '/mentor/become-a-mentor'
+      fullPath: '/mentor/become-a-mentor'
+      preLoaderRoute: typeof AuthenticatedMentorBecomeAMentorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/past-questions': {
+      id: '/_authenticated/learn/past-questions'
+      path: '/learn/past-questions'
+      fullPath: '/learn/past-questions'
+      preLoaderRoute: typeof AuthenticatedLearnPastQuestionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/learn/$': {
       id: '/_authenticated/learn/$'
       path: '/learn/$'
       fullPath: '/learn/$'
       preLoaderRoute: typeof AuthenticatedLearnSplatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/community/university-feed': {
+      id: '/_authenticated/community/university-feed'
+      path: '/community/university-feed'
+      fullPath: '/community/university-feed'
+      preLoaderRoute: typeof AuthenticatedCommunityUniversityFeedRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/community/$': {
@@ -951,6 +1116,13 @@ declare module '@tanstack/react-router' {
       path: '/chat/$'
       fullPath: '/chat/$'
       preLoaderRoute: typeof AuthenticatedChatSplatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/community/study-groups/': {
+      id: '/_authenticated/community/study-groups/'
+      path: '/community/study-groups'
+      fullPath: '/community/study-groups/'
+      preLoaderRoute: typeof AuthenticatedCommunityStudyGroupsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/tools/side-hustle/plans': {
@@ -1008,6 +1180,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tools/assignment/$id'
       preLoaderRoute: typeof AuthenticatedToolsAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedToolsAssignmentRoute
+    }
+    '/_authenticated/community/study-groups/$id': {
+      id: '/_authenticated/community/study-groups/$id'
+      path: '/community/study-groups/$id'
+      fullPath: '/community/study-groups/$id'
+      preLoaderRoute: typeof AuthenticatedCommunityStudyGroupsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -1114,7 +1293,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedChatSplatRoute: typeof AuthenticatedChatSplatRoute
   AuthenticatedCommunitySplatRoute: typeof AuthenticatedCommunitySplatRoute
+  AuthenticatedCommunityUniversityFeedRoute: typeof AuthenticatedCommunityUniversityFeedRoute
   AuthenticatedLearnSplatRoute: typeof AuthenticatedLearnSplatRoute
+  AuthenticatedLearnPastQuestionsRoute: typeof AuthenticatedLearnPastQuestionsRoute
+  AuthenticatedMentorBecomeAMentorRoute: typeof AuthenticatedMentorBecomeAMentorRoute
+  AuthenticatedMentorFindRoute: typeof AuthenticatedMentorFindRoute
+  AuthenticatedMentorMyMentorshipRoute: typeof AuthenticatedMentorMyMentorshipRoute
   AuthenticatedProposalIdRoute: typeof AuthenticatedProposalIdRoute
   AuthenticatedThesisIdRoute: typeof AuthenticatedThesisIdRoute
   AuthenticatedToolsAssignmentRoute: typeof AuthenticatedToolsAssignmentRouteWithChildren
@@ -1129,6 +1313,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedChatIndexRoute: typeof AuthenticatedChatIndexRoute
   AuthenticatedCommunityIndexRoute: typeof AuthenticatedCommunityIndexRoute
   AuthenticatedLearnIndexRoute: typeof AuthenticatedLearnIndexRoute
+  AuthenticatedMentorIndexRoute: typeof AuthenticatedMentorIndexRoute
+  AuthenticatedCommunityStudyGroupsIdRoute: typeof AuthenticatedCommunityStudyGroupsIdRoute
+  AuthenticatedCommunityStudyGroupsIndexRoute: typeof AuthenticatedCommunityStudyGroupsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1145,7 +1332,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedChatSplatRoute: AuthenticatedChatSplatRoute,
   AuthenticatedCommunitySplatRoute: AuthenticatedCommunitySplatRoute,
+  AuthenticatedCommunityUniversityFeedRoute:
+    AuthenticatedCommunityUniversityFeedRoute,
   AuthenticatedLearnSplatRoute: AuthenticatedLearnSplatRoute,
+  AuthenticatedLearnPastQuestionsRoute: AuthenticatedLearnPastQuestionsRoute,
+  AuthenticatedMentorBecomeAMentorRoute: AuthenticatedMentorBecomeAMentorRoute,
+  AuthenticatedMentorFindRoute: AuthenticatedMentorFindRoute,
+  AuthenticatedMentorMyMentorshipRoute: AuthenticatedMentorMyMentorshipRoute,
   AuthenticatedProposalIdRoute: AuthenticatedProposalIdRoute,
   AuthenticatedThesisIdRoute: AuthenticatedThesisIdRoute,
   AuthenticatedToolsAssignmentRoute:
@@ -1163,6 +1356,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatIndexRoute: AuthenticatedChatIndexRoute,
   AuthenticatedCommunityIndexRoute: AuthenticatedCommunityIndexRoute,
   AuthenticatedLearnIndexRoute: AuthenticatedLearnIndexRoute,
+  AuthenticatedMentorIndexRoute: AuthenticatedMentorIndexRoute,
+  AuthenticatedCommunityStudyGroupsIdRoute:
+    AuthenticatedCommunityStudyGroupsIdRoute,
+  AuthenticatedCommunityStudyGroupsIndexRoute:
+    AuthenticatedCommunityStudyGroupsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -1174,6 +1372,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcademicIntegrityRoute: AcademicIntegrityRoute,
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,

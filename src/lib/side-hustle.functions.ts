@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI, callAIText } from "./ai-utils.server";
-import { notifyToolCompleted } from "./mail-helper";
+import { dispatchNotification } from "./notifications";
 
 const SideHustleInput = z.object({
   skills: z.string().min(2).max(2000),
@@ -99,7 +99,9 @@ ${data.experience}`;
     }
 
     // Fire-and-forget email notification
-    notifyToolCompleted(userId, "side_hustle", {
+    dispatchNotification(userId, {
+      kind: "tool_completed",
+      tool: "side_hustle",
       downloadUrl: recordId ? `https://www.mybrainpadi.com/tools/history` : undefined,
     });
 

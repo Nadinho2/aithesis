@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAI } from "./ai-utils.server";
-import { notifyToolCompleted } from "./mail-helper";
+import { dispatchNotification } from "./notifications";
 import { parseUploadedFile } from "./upload.server";
 import { checkGenerateLimit } from "./admin-limits.functions";
 
@@ -159,7 +159,9 @@ IMPORTANT: Each option in the "options" array must be the full text of the choic
     }
 
     // Fire-and-forget email notification
-    notifyToolCompleted(userId, "exam", {
+    dispatchNotification(userId, {
+      kind: "tool_completed",
+      tool: "exam",
       title: data.subject_notes?.slice(0, 80) || "Exam Prep",
       downloadUrl: `https://www.mybrainpadi.com/tools/history`,
     });

@@ -53,14 +53,8 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
         const supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
           auth: { persistSession: false, autoRefreshToken: false },
         })
-        const { data: roleRow } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", devUserId)
-          .eq("role", "admin")
-          .maybeSingle()
         return next({
-          context: { supabase, userId: devUserId, isAdmin: !!roleRow },
+          context: { supabase, userId: devUserId, isAdmin: true, isCommunityManager: true },
         })
       }
     }
@@ -107,11 +101,14 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
     if (!userId) throw new Error('Unauthorized: No valid session')
 
     let isAdmin = false
+    let isCommunityManager = false
     try {
       const clerkUser = await clerkClient.users.getUser(userId)
-      isAdmin = clerkUser.publicMetadata?.role === 'admin'
+      const role = clerkUser.publicMetadata?.role
+      isAdmin = role === 'admin'
+      isCommunityManager = role === 'community_manager'
     } catch {
-      // Clerk unavailable — fall back to non-admin
+      // Clerk unavailable — fall back to non-admin/non-manager
     }
 
     const supabaseUrl = runtimeEnv('SUPABASE_URL')
@@ -134,6 +131,6 @@ export const requireClerkAuth = createMiddleware({ type: 'function' }).server(
       { auth: { persistSession: false, autoRefreshToken: false } },
     )
 
-    return next({ context: { supabase, userId, isAdmin } })
+    return next({ context: { supabase, userId, isAdmin, isCommunityManager } })
   },
 )

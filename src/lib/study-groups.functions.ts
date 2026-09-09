@@ -1,0 +1,739 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
+import { z } from "zod";
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+export type GroupMembershipStatus = "pending" | "approved" | "rejected";
+
+export interface StudyGroup {
+  id: string;
+  creator_id: string;
+  name: string;
+  description: string | null;
+  university: string | null;
+  department: string | null;
+  level: string | null;
+  created_at: string;
+}
+
+export interface StudyGroupCard extends StudyGroup {
+  member_count: number;
+  my_status: GroupMembershipStatus | "creator" | null;
+}
+
+export interface StudyGroupMember {
+  user_id: string;
+  full_name: string | null;
+  role: "creator" | "member";
+  status: GroupMembershipStatus;
+  created_at: string;
+}
+
+export interface StudyGroupPost {
+  id: string;
+  group_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author_name: string | null;
+  comment_count: number;
+}
+
+export interface StudyGroupComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author_name: string | null;
+}
+
+export interface StudyGroupFile {
+  id: string;
+  group_id: string;
+  uploader_id: string;
+  file_name: string;
+  mime_type: string | null;
+  size_bytes: number;
+  created_at: string;
+  expires_at: string;
+  uploader_name: string | null;
+  download_url: string;
+}
+
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function fetchNames(
+  supabase: any,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  const map = new Map<string, string>();
+  if (!unique.length) return map;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", unique);
+
+  if (!error) {
+    for (const p of data ?? []) map.set(p.id, p.full_name ?? null);
+  }
+  return map;
+}
+
+async function getMembership(
+  supabase: any,
+  groupId: string,
+  userId: string,
+): Promise<{ status: GroupMembershipStatus; role: string } | null> {
+  const { data, error } = await supabase
+    .from("study_group_memberships")
+    .select("status, role")
+    .eq("group_id", groupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+async function requireApprovedMembership(
+  supabase: any,
+  groupId: string,
+  userId: string,
+): Promise<void> {
+  const m = await getMembership(supabase, groupId, userId);
+  if (!m || m.status !== "approved") {
+    throw new Error("You must be an approved member to do that.");
+  }
+}
+
+function normalizeGroup(row: any): StudyGroup {
+  return {
+    id: row.id,
+    creator_id: row.creator_id,
+    name: row.name,
+    description: row.description ?? null,
+    university: row.university ?? null,
+    department: row.department ?? null,
+    level: row.level ?? null,
+    created_at: row.created_at,
+  };
+}
+
+// ─── Directory ──────────────────────────────────────────────────────────────
+
+export const listStudyGroups = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        filter: z.enum(["all", "mine"]).optional(),
+        query: z.string().optional(),
+      })
+      .parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+    const filter = data.filter ?? "all";
+
+    let q = supabase
+      .from("study_groups")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (filter === "mine") {
+      const { data: myGroups } = await supabase
+        .from("study_group_memberships")
+        .select("group_id")
+        .eq("user_id", userId)
+        .eq("status", "approved");
+      const ids = (myGroups ?? []).map((r: any) => r.group_id);
+      if (ids.length === 0) return [] as StudyGroupCard[];
+      q = q.in("id", ids);
+    }
+
+    if (data.query?.trim()) {
+      const term = data.query.trim();
+      q = q.or(`name.ilike.%${term}%,description.ilike.%${term}%`);
+    }
+
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const groups = (rows ?? []) as any[];
+    const groupIds = groups.map((g) => g.id);
+
+    let memberships: any[] = [];
+    if (groupIds.length > 0) {
+      const { data: m } = await supabase
+        .from("study_group_memberships")
+        .select("group_id, user_id, status, role")
+        .in("group_id", groupIds);
+      memberships = m ?? [];
+    }
+
+    const approvedCount = new Map<string, number>();
+    const myStatus = new Map<string, GroupMembershipStatus | "creator">();
+    for (const m of memberships) {
+      if (m.status === "approved") {
+        approvedCount.set(m.group_id, (approvedCount.get(m.group_id) ?? 0) + 1);
+      }
+      if (m.user_id === userId) {
+        myStatus.set(m.group_id, m.role === "creator" ? "creator" : m.status);
+      }
+    }
+
+    return groups.map(
+      (g) =>
+        ({
+          ...normalizeGroup(g),
+          member_count: approvedCount.get(g.id) ?? 0,
+          my_status: myStatus.get(g.id) ?? null,
+        }) as StudyGroupCard,
+    );
+  });
+
+// ─── Group detail ───────────────────────────────────────────────────────────
+
+export const getStudyGroup = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group, error } = await supabase
+      .from("study_groups")
+      .select("*")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!group) throw new Error("Study group not found.");
+
+    const { data: memberships } = await supabase
+      .from("study_group_memberships")
+      .select("*")
+      .eq("group_id", data.group_id)
+      .order("created_at", { ascending: true });
+
+    const rows = (memberships ?? []) as any[];
+    const names = await fetchNames(
+      supabase,
+      rows.map((r) => r.user_id),
+    );
+
+    const approved = rows.filter((r) => r.status === "approved");
+    const pending = rows.filter((r) => r.status === "pending");
+
+    const toMember = (r: any): StudyGroupMember => ({
+      user_id: r.user_id,
+      full_name: names.get(r.user_id) ?? null,
+      role: r.role,
+      status: r.status,
+      created_at: r.created_at,
+    });
+
+    const myRow = rows.find((r) => r.user_id === userId) ?? null;
+    const isApproved = !!myRow && myRow.status === "approved";
+
+    return {
+      group: normalizeGroup(group) as StudyGroup,
+      is_creator: group.creator_id === userId,
+      my_status: (myRow
+        ? myRow.role === "creator"
+          ? "creator"
+          : myRow.status
+        : null) as GroupMembershipStatus | "creator" | null,
+      member_count: approved.length,
+      members: isApproved ? approved.map(toMember) : [],
+      pending: group.creator_id === userId ? pending.map(toMember) : [],
+    };
+  });
+
+// ─── Create group ───────────────────────────────────────────────────────────
+
+const CreateGroupInput = z.object({
+  name: z.string().min(3).max(120),
+  description: z.string().max(2000).optional(),
+  university: z.string().max(200).optional(),
+  department: z.string().max(200).optional(),
+  level: z.string().max(80).optional(),
+});
+
+export const createStudyGroup = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => CreateGroupInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group, error } = await supabase
+      .from("study_groups")
+      .insert({
+        creator_id: userId,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        university: data.university?.trim() || null,
+        department: data.department?.trim() || null,
+        level: data.level?.trim() || null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    const { error: mErr } = await supabase
+      .from("study_group_memberships")
+      .insert({
+        group_id: group.id,
+        user_id: userId,
+        status: "approved",
+        role: "creator",
+      });
+    if (mErr) throw new Error(mErr.message);
+
+    return { id: group.id };
+  });
+
+// ─── Membership ─────────────────────────────────────────────────────────────
+
+export const requestToJoin = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("creator_id")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (!group) throw new Error("Study group not found.");
+
+    const existing = await getMembership(supabase, data.group_id, userId);
+    if (existing && existing.status !== "rejected") {
+      throw new Error("You already have a membership request or are a member.");
+    }
+
+    const { error } = await supabase.from("study_group_memberships").upsert(
+      {
+        group_id: data.group_id,
+        user_id: userId,
+        status: "pending",
+        role: "member",
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: "group_id,user_id" },
+    );
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+const RespondMembershipInput = z.object({
+  group_id: z.string().uuid(),
+  user_id: z.string().min(1),
+  action: z.enum(["approve", "decline"]),
+});
+
+export const respondToJoinRequest = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => RespondMembershipInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("creator_id")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (!group) throw new Error("Study group not found.");
+    if (group.creator_id !== userId) {
+      throw new Error("Only the group creator can approve members.");
+    }
+
+    const { data: existing } = await supabase
+      .from("study_group_memberships")
+      .select("status")
+      .eq("group_id", data.group_id)
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+    if (!existing || existing.status !== "pending") {
+      throw new Error("This request is not pending.");
+    }
+
+    if (data.action === "approve") {
+      const { error } = await supabase
+        .from("study_group_memberships")
+        .update({ status: "approved" })
+        .eq("group_id", data.group_id)
+        .eq("user_id", data.user_id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabase
+        .from("study_group_memberships")
+        .delete()
+        .eq("group_id", data.group_id)
+        .eq("user_id", data.user_id);
+      if (error) throw new Error(error.message);
+    }
+
+    return { ok: true };
+  });
+
+export const leaveGroup = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("creator_id")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (!group) throw new Error("Study group not found.");
+    if (group.creator_id === userId) {
+      throw new Error("As the creator you cannot leave; delete the group instead.");
+    }
+
+    const { error } = await supabase
+      .from("study_group_memberships")
+      .delete()
+      .eq("group_id", data.group_id)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+export const deleteStudyGroup = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("creator_id")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (!group) throw new Error("Study group not found.");
+    if (group.creator_id !== userId) {
+      throw new Error("Only the group creator can delete the group.");
+    }
+
+    const { error } = await supabase
+      .from("study_groups")
+      .delete()
+      .eq("id", data.group_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+// ─── Feed: posts ────────────────────────────────────────────────────────────
+
+export const listGroupPosts = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    await requireApprovedMembership(supabase, data.group_id, userId);
+
+    const { data: rows, error } = await supabase
+      .from("study_group_posts")
+      .select("*")
+      .eq("group_id", data.group_id)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+
+    const posts = (rows ?? []) as any[];
+    const postIds = posts.map((p) => p.id);
+    const authors = await fetchNames(
+      supabase,
+      posts.map((p) => p.author_id),
+    );
+
+    const commentCounts = new Map<string, number>();
+    if (postIds.length > 0) {
+      const { data: comments } = await supabase
+        .from("study_group_comments")
+        .select("post_id")
+        .in("post_id", postIds);
+      for (const c of comments ?? []) {
+        commentCounts.set(c.post_id, (commentCounts.get(c.post_id) ?? 0) + 1);
+      }
+    }
+
+    return posts.map(
+      (p) =>
+        ({
+          id: p.id,
+          group_id: p.group_id,
+          author_id: p.author_id,
+          body: p.body,
+          created_at: p.created_at,
+          author_name: authors.get(p.author_id) ?? null,
+          comment_count: commentCounts.get(p.id) ?? 0,
+        }) as StudyGroupPost,
+    );
+  });
+
+const CreateGroupPostInput = z.object({
+  group_id: z.string().uuid(),
+  body: z.string().min(1).max(2000),
+});
+
+export const createGroupPost = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => CreateGroupPostInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    await requireApprovedMembership(supabase, data.group_id, userId);
+
+    const { error } = await supabase.from("study_group_posts").insert({
+      group_id: data.group_id,
+      author_id: userId,
+      body: data.body.trim(),
+    });
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+// ─── Feed: comments ─────────────────────────────────────────────────────────
+
+export const listGroupComments = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ post_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: post } = await supabase
+      .from("study_group_posts")
+      .select("group_id")
+      .eq("id", data.post_id)
+      .maybeSingle();
+    if (!post) throw new Error("Post not found.");
+
+    await requireApprovedMembership(supabase, post.group_id, userId);
+
+    const { data: rows, error } = await supabase
+      .from("study_group_comments")
+      .select("*")
+      .eq("post_id", data.post_id)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const authors = await fetchNames(
+      supabase,
+      (rows ?? []).map((r: any) => r.author_id),
+    );
+
+    return (rows ?? []).map(
+      (r: any) =>
+        ({
+          id: r.id,
+          post_id: r.post_id,
+          author_id: r.author_id,
+          body: r.body,
+          created_at: r.created_at,
+          author_name: authors.get(r.author_id) ?? null,
+        }) as StudyGroupComment,
+    );
+  });
+
+const AddGroupCommentInput = z.object({
+  post_id: z.string().uuid(),
+  body: z.string().min(1).max(1000),
+});
+
+export const addGroupComment = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => AddGroupCommentInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: post } = await supabase
+      .from("study_group_posts")
+      .select("group_id")
+      .eq("id", data.post_id)
+      .maybeSingle();
+    if (!post) throw new Error("Post not found.");
+
+    await requireApprovedMembership(supabase, post.group_id, userId);
+
+    const { error } = await supabase.from("study_group_comments").insert({
+      post_id: data.post_id,
+      author_id: userId,
+      body: data.body.trim(),
+    });
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+// ─── Files ──────────────────────────────────────────────────────────────────
+
+async function removeExpiredFiles(supabase: any, groupId: string): Promise<void> {
+  const { data: expired } = await supabase
+    .from("study_group_files")
+    .select("id, storage_path")
+    .eq("group_id", groupId)
+    .lt("expires_at", new Date().toISOString());
+
+  for (const f of expired ?? []) {
+    try {
+      await supabase.storage.from("study-group-files").remove([f.storage_path]);
+    } catch {
+      // best-effort — row cleanup below still applies
+    }
+    await supabase.from("study_group_files").delete().eq("id", f.id);
+  }
+}
+
+export const listGroupFiles = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ group_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    await requireApprovedMembership(supabase, data.group_id, userId);
+    await removeExpiredFiles(supabase, data.group_id);
+
+    const { data: rows, error } = await supabase
+      .from("study_group_files")
+      .select("*")
+      .eq("group_id", data.group_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const files = (rows ?? []) as any[];
+    const names = await fetchNames(
+      supabase,
+      files.map((f) => f.uploader_id),
+    );
+
+    const result: StudyGroupFile[] = [];
+    for (const f of files) {
+      let download_url = "";
+      const { data: signed } = await supabase.storage
+        .from("study-group-files")
+        .createSignedUrl(f.storage_path, 60 * 60 * 24 * 7);
+      if (signed?.signedUrl) download_url = signed.signedUrl;
+
+      result.push({
+        id: f.id,
+        group_id: f.group_id,
+        uploader_id: f.uploader_id,
+        file_name: f.file_name,
+        mime_type: f.mime_type ?? null,
+        size_bytes: Number(f.size_bytes),
+        created_at: f.created_at,
+        expires_at: f.expires_at,
+        uploader_name: names.get(f.uploader_id) ?? null,
+        download_url,
+      });
+    }
+
+    return result;
+  });
+
+const UploadGroupFileInput = z.object({
+  group_id: z.string().uuid(),
+  file_name: z.string().min(1).max(255),
+  mime_type: z.string().min(1).max(120),
+  base64: z.string().min(1),
+});
+
+export const uploadGroupFile = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => UploadGroupFileInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    await requireApprovedMembership(supabase, data.group_id, userId);
+
+    const buffer = Buffer.from(data.base64, "base64");
+    if (buffer.length === 0) throw new Error("File is empty.");
+    if (buffer.length > MAX_FILE_BYTES) {
+      throw new Error("File is too large. Maximum size is 10 MB.");
+    }
+
+    const ext = data.file_name.includes(".")
+      ? data.file_name.slice(data.file_name.lastIndexOf("."))
+      : "";
+    const safeName = data.file_name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${data.group_id}/${crypto.randomUUID()}${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("study-group-files")
+      .upload(storagePath, new Uint8Array(buffer), {
+        contentType: data.mime_type,
+        upsert: false,
+      });
+    if (upErr) throw new Error(upErr.message);
+
+    const { data: row, error: insErr } = await supabase
+      .from("study_group_files")
+      .insert({
+        group_id: data.group_id,
+        uploader_id: userId,
+        file_name: safeName,
+        storage_path: storagePath,
+        mime_type: data.mime_type,
+        size_bytes: buffer.length,
+      })
+      .select("*")
+      .single();
+    if (insErr) {
+      // Roll back the uploaded object to avoid orphans
+      await supabase.storage.from("study-group-files").remove([storagePath]);
+      throw new Error(insErr.message);
+    }
+
+    return { id: row.id };
+  });
+
+export const deleteGroupFile = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => z.object({ file_id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: file } = await supabase
+      .from("study_group_files")
+      .select("uploader_id, group_id, storage_path")
+      .eq("id", data.file_id)
+      .maybeSingle();
+    if (!file) throw new Error("File not found.");
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("creator_id")
+      .eq("id", file.group_id)
+      .maybeSingle();
+
+    if (file.uploader_id !== userId && group?.creator_id !== userId) {
+      throw new Error("You cannot delete this file.");
+    }
+
+    try {
+      await supabase.storage.from("study-group-files").remove([file.storage_path]);
+    } catch {
+      // continue to row deletion
+    }
+    const { error } = await supabase
+      .from("study_group_files")
+      .delete()
+      .eq("id", data.file_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });

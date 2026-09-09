@@ -5,6 +5,7 @@ import {
   Wrench,
   GraduationCap,
   Users,
+  Handshake,
   MessageCircle,
   LogOut,
   CreditCard,
@@ -13,13 +14,14 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
-type Section = "home" | "tools" | "learn" | "community" | "chat";
+type Section = "home" | "tools" | "learn" | "community" | "mentor" | "chat";
 
 const items: { id: Section; label: string; icon: typeof Home; route: string }[] = [
   { id: "home", label: "Home", icon: Home, route: "/dashboard" },
   { id: "tools", label: "Tools", icon: Wrench, route: "/tools/dashboard" },
   { id: "learn", label: "Learn", icon: GraduationCap, route: "/learn" },
   { id: "community", label: "Community", icon: Users, route: "/community" },
+  { id: "mentor", label: "Mentor", icon: Handshake, route: "/mentor/find" },
   { id: "chat", label: "AI Chat", icon: MessageCircle, route: "/chat" },
 ];
 
@@ -27,6 +29,7 @@ export function getSectionFromPath(pathname: string): Section {
   if (pathname.startsWith("/tools")) return "tools";
   if (pathname.startsWith("/learn")) return "learn";
   if (pathname.startsWith("/community")) return "community";
+  if (pathname.startsWith("/mentor")) return "mentor";
   if (pathname.startsWith("/chat")) return "chat";
   return "home";
 }

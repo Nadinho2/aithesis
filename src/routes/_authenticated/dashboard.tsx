@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { verifyPayment } from "@/lib/payment.functions";
 import { getActivePlan } from "@/lib/side-hustle.functions";
 import { getUserLimits, getRecentItems, getQuickStats } from "@/lib/dashboard.functions";
+import { LearningSignalsCard } from "@/components/LearningSignalsCard";
 import {
   Sparkles, CheckCircle, Loader2, XCircle,
   FileText, BookOpen, Zap, Target,
@@ -374,6 +375,9 @@ function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Study Recommendations */}
+        <LearningSignalsCard />
 
         {/* Active Journey */}
         <ActiveJourneyCard />

@@ -30,7 +30,7 @@ function CommunityCatchAllPage() {
       )}
       <ComingSoon
         title="Community is on the way"
-        description="University feeds, study groups, mentorship matching, and a student marketplace are coming soon. We'll notify you the moment Community goes live."
+        description="University feeds, study groups, and a student marketplace are coming soon. We'll notify you the moment Community goes live."
         icon={Users}
         notifyEnabled={true}
         featureName="community"

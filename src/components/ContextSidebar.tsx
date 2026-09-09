@@ -27,10 +27,11 @@ import {
   UserSearch,
   ShoppingBag,
   Briefcase,
+  Handshake,
 } from "lucide-react";
 import { useClerk } from "@clerk/clerk-react";
 
-type Section = "home" | "tools" | "learn" | "community" | "chat";
+type Section = "home" | "tools" | "learn" | "community" | "mentor" | "chat";
 
 interface ContextSidebarProps {
   section: Section;
@@ -291,13 +292,44 @@ function CommunitySidebar() {
             </Link>
           );
         })}
+      </nav>
+    </div>
+  );
+}
 
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 px-4 py-1.5 mt-3">
-          Mentorship
+function MentorSidebar() {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-4 py-5 border-b border-ink/5">
+        <h2 className="font-serif text-lg font-bold text-ink">Mentor</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Learn from those ahead of you</p>
+      </div>
+      <nav className="flex-1 overflow-y-auto py-3">
+        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 px-4 py-1.5">
+          Connect
         </div>
         {[
-          { to: "/community/find-mentor", label: "Find a mentor", icon: UserSearch },
-          { to: "/community/my-mentorship", label: "My mentorship", icon: GraduationCap },
+          { to: "/mentor/find", label: "Find a mentor", icon: UserSearch },
+          { to: "/mentor/my-mentorship", label: "My mentorship", icon: GraduationCap },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-ink/60 hover:bg-ink/5 hover:text-ink transition-colors"
+            >
+              <Icon className="size-4 flex-shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink/40 px-4 py-1.5 mt-3">
+          Give back
+        </div>
+        {[
+          { to: "/mentor/become-a-mentor", label: "Become a mentor", icon: Handshake },
         ].map((item) => {
           const Icon = item.icon;
           return (
@@ -459,6 +491,7 @@ export function ContextSidebar({ section }: ContextSidebarProps) {
       {section === "tools" && <ToolsSidebar />}
       {section === "learn" && <LearnSidebar />}
       {section === "community" && <CommunitySidebar />}
+      {section === "mentor" && <MentorSidebar />}
       {section === "chat" && <ChatSidebar />}
     </aside>
   );

@@ -3,9 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect, Fragment } from "react";
 import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions";
-import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification } from "@/lib/admin.functions";
+import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification, adminListRoles, adminSetRole } from "@/lib/admin.functions";
 import { adminListReferralApplications, adminReviewReferralApplication, adminListReferralCodes, adminSetCodeType } from "@/lib/referral.functions";
-import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2 } from "lucide-react";
+import { adminImportPastQuestions, adminImportPastQuestionsCsv } from "@/lib/past-questions.functions";
+import { listUniversities, adminAddUniversity, adminDeleteUniversity, adminAddDepartment, adminDeleteDepartment, adminImportUniversitiesCsv } from "@/lib/universities.functions";
+import {
+  adminListMentorApplications,
+  adminReviewMentor,
+  type MentorCard,
+} from "@/lib/mentorship.functions";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -13,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
-  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral" | "waitlist">("limits");
+  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral" | "waitlist" | "questions" | "directory" | "roles" | "mentors">("limits");
   const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
@@ -115,6 +122,10 @@ function AdminPage() {
           <TabBtn tab="credits" active={tab} onClick={() => setTab("credits")} label="Bulk Credits" />
           <TabBtn tab="referral" active={tab} onClick={() => setTab("referral")} label="Referral" />
           <TabBtn tab="waitlist" active={tab} onClick={() => setTab("waitlist")} label="Waitlist" />
+          <TabBtn tab="questions" active={tab} onClick={() => setTab("questions")} label="Question Bank" />
+          <TabBtn tab="directory" active={tab} onClick={() => setTab("directory")} label="Directory" />
+          <TabBtn tab="roles" active={tab} onClick={() => setTab("roles")} label="Roles" />
+          <TabBtn tab="mentors" active={tab} onClick={() => setTab("mentors")} label="Mentors" />
         </div>
 
         {tab === "limits" && (
@@ -304,6 +315,10 @@ function AdminPage() {
         {tab === "credits" && <BulkCredits />}
         {tab === "referral" && <ReferralTab />}
         {tab === "waitlist" && <WaitlistTab />}
+        {tab === "questions" && <PastQuestionsAdmin />}
+        {tab === "directory" && <UniversitiesAdmin />}
+        {tab === "roles" && <RoleManager />}
+        {tab === "mentors" && <MentorApplications />}
       </div>
     </div>
   );
@@ -1239,8 +1254,751 @@ function WaitlistTab() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// University / Department directory — admin seed
+// ═══════════════════════════════════════════════════════════
+
+function UniversitiesAdmin() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listUniversities);
+  const addUniFn = useServerFn(adminAddUniversity);
+  const delUniFn = useServerFn(adminDeleteUniversity);
+  const addDeptFn = useServerFn(adminAddDepartment);
+  const delDeptFn = useServerFn(adminDeleteDepartment);
+  const importFn = useServerFn(adminImportUniversitiesCsv);
+
+  const { data: universities = [], isLoading } = useQuery({
+    queryKey: ["universities"],
+    queryFn: () => listFn(),
+  });
+
+  const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
+  const [csvText, setCsvText] = useState("");
+  const [deptDrafts, setDeptDrafts] = useState<Record<string, string>>({});
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["universities"] });
+
+  const addUniMut = useMutation({
+    mutationFn: () => addUniFn({ data: { name, country } }),
+    onSuccess: () => {
+      toast.success("University added.");
+      setName("");
+      setCountry("");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const delUniMut = useMutation({
+    mutationFn: (id: string) => delUniFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("University removed.");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const addDeptMut = useMutation({
+    mutationFn: (v: { university_id: string; name: string }) => addDeptFn({ data: v }),
+    onSuccess: (_res, v) => {
+      toast.success("Department added.");
+      setDeptDrafts((prev) => ({ ...prev, [v.university_id]: "" }));
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const delDeptMut = useMutation({
+    mutationFn: (id: string) => delDeptFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Department removed.");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const importMut = useMutation({
+    mutationFn: () => importFn({ data: { csv: csvText } }),
+    onSuccess: (res: any) => {
+      toast.success(`Imported ${res.universities} university/ies and ${res.departments} department(s).`);
+      setCsvText("");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <University className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Seed the university &amp; department directory used by onboarding, settings, and past questions.
+        </p>
+      </div>
+
+      {/* Add university */}
+      <div className="border border-ink/10 rounded-sm p-4 space-y-3">
+        <h3 className="text-sm font-medium">Add university</h3>
+        <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+          <label className="block">
+            <span className={labelCls}>Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. University of Lagos" className={inputCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Country (optional)</span>
+            <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Nigeria" className={inputCls} />
+          </label>
+          <button
+            onClick={() => {
+              if (!name.trim()) return toast.error("University name is required.");
+              addUniMut.mutate();
+            }}
+            disabled={addUniMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-ink text-bone rounded-sm hover:bg-sage transition-colors disabled:opacity-50"
+          >
+            {addUniMut.isPending ? <Loader2 className="size-4 animate-spin inline" /> : "Add"}
+          </button>
+        </div>
+      </div>
+
+      {/* Bulk CSV import */}
+      <div className="border border-ink/10 rounded-sm p-4 space-y-3">
+        <h3 className="text-sm font-medium">Bulk import (CSV)</h3>
+        <p className="text-xs text-ink/50">
+          One row per line: <code className="bg-ink/5 px-1 rounded">University,Department</code>. Repeated universities are merged automatically.
+        </p>
+        <textarea
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          rows={6}
+          placeholder={"University of Lagos,Computer Science\nUniversity of Lagos,Economics\nUniversity of Ibadan,Law"}
+          className="mt-1 w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white font-mono focus:outline-none focus:border-verde/50"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm cursor-pointer text-ink/60 hover:text-ink">
+            Upload .csv
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                file
+                  .text()
+                  .then((t) => setCsvText(t))
+                  .catch(() => toast.error("Could not read file."));
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            onClick={() => {
+              if (!csvText.trim()) return toast.error("Paste or upload CSV content first.");
+              importMut.mutate();
+            }}
+            disabled={importMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50"
+          >
+            {importMut.isPending ? <Loader2 className="size-4 animate-spin inline" /> : "Import CSV"}
+          </button>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center gap-3 text-ink/60">
+          <Loader2 className="size-5 animate-spin" /> Loading directory…
+        </div>
+      )}
+
+      {!isLoading && universities.length === 0 && (
+        <p className="text-sm text-ink/50">No universities yet. Add your first one above.</p>
+      )}
+
+      <div className="space-y-4">
+        {universities.map((u) => (
+          <div key={u.id} className="border border-ink/10 rounded-sm p-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="min-w-0">
+                <span className="font-medium">{u.name}</span>
+                {u.country && <span className="text-xs text-ink/40 ml-2">{u.country}</span>}
+              </div>
+              <button
+                onClick={() => delUniMut.mutate(u.id)}
+                className="text-red-500 hover:text-red-700 shrink-0"
+                title="Delete university"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+
+            <div className="pl-3 border-l border-ink/10 space-y-1.5">
+              {u.departments.length === 0 && (
+                <p className="text-xs text-ink/40">No departments yet.</p>
+              )}
+              {u.departments.map((d) => (
+                <div key={d.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span>{d.name}</span>
+                  <button
+                    onClick={() => delDeptMut.mutate(d.id)}
+                    className="text-red-500 hover:text-red-700 shrink-0"
+                    title="Delete department"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-2 items-center pt-1">
+                <input
+                  value={deptDrafts[u.id] ?? ""}
+                  onChange={(e) => setDeptDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                  placeholder="Add department (e.g. Computer Science)"
+                  className={inputCls}
+                />
+                <button
+                  onClick={() => {
+                    const deptName = (deptDrafts[u.id] ?? "").trim();
+                    if (!deptName) return toast.error("Department name is required.");
+                    addDeptMut.mutate({ university_id: u.id, name: deptName });
+                  }}
+                  disabled={addDeptMut.isPending}
+                  className="px-3 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 shrink-0"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Past Questions Bank — Admin import
+// ═══════════════════════════════════════════════════════════
+
+type ImportCategory = "university" | "waec" | "neco" | "jamb";
+
+interface PendingQuestion {
+  category: ImportCategory;
+  university: string;
+  course: string;
+  level: string;
+  year: string;
+  subject: string;
+  question_type: "objectives" | "theory";
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+  marks: number;
+}
+
+const EMPTY_QUESTION: PendingQuestion = {
+  category: "university",
+  university: "",
+  course: "",
+  level: "",
+  year: "",
+  subject: "",
+  question_type: "objectives",
+  question: "",
+  options: [],
+  answer: "",
+  explanation: "",
+  marks: 0,
+};
+
+const inputCls =
+  "mt-1 w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-verde/50";
+const labelCls = "text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60";
+
+function PastQuestionsAdmin() {
+  const importFn = useServerFn(adminImportPastQuestions);
+  const importCsvFn = useServerFn(adminImportPastQuestionsCsv);
+  const listUnisFn = useServerFn(listUniversities);
+  const { data: universities = [] } = useQuery({
+    queryKey: ["universities"],
+    queryFn: () => listUnisFn(),
+  });
+  const [form, setForm] = useState<PendingQuestion>(EMPTY_QUESTION);
+  const [optionsText, setOptionsText] = useState("");
+  const [batch, setBatch] = useState<PendingQuestion[]>([]);
+  const [csvText, setCsvText] = useState("");
+
+  const set = (key: keyof PendingQuestion, value: any) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const importMut = useMutation({
+    mutationFn: () => importFn({ data: { questions: batch } }),
+    onSuccess: (res: any) => {
+      toast.success(`Imported ${res.imported} question(s)`);
+      setBatch([]);
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const csvMut = useMutation({
+    mutationFn: () => importCsvFn({ data: { csv: csvText } }),
+    onSuccess: (res: any) => {
+      toast.success(`Imported ${res.imported} question(s) from CSV.`);
+      setCsvText("");
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function addToBatch() {
+    const options = optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
+
+    if (!form.question.trim()) return toast.error("Question text is required.");
+    if (!form.answer.trim()) return toast.error("Answer is required.");
+    if (form.category === "university") {
+      if (!form.university.trim()) return toast.error("University is required.");
+      if (!form.course.trim()) return toast.error("Course is required.");
+    } else if (!form.subject.trim()) {
+      return toast.error("Subject is required for this category.");
+    }
+    if (form.question_type === "objectives" && options.length < 2) {
+      return toast.error("Objectives need at least 2 options (one per line).");
+    }
+
+    const isUniversity = form.category === "university";
+    setBatch((prev) => [
+      ...prev,
+      {
+        ...form,
+        options,
+        university: isUniversity ? form.university.trim() : "",
+        course: isUniversity ? form.course.trim() : "",
+        level: isUniversity ? form.level.trim() : "",
+        subject: form.subject.trim(),
+      },
+    ]);
+    setForm(EMPTY_QUESTION);
+    setOptionsText("");
+  }
+
+  function removeFromBatch(index: number) {
+    setBatch((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <BookOpen className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Seed the past questions bank. University questions need a university + course; WAEC/NECO/JAMB need a subject.
+        </p>
+      </div>
+
+      {/* Bulk CSV import */}
+      <div className="border border-ink/10 rounded-sm p-4 space-y-3">
+        <h3 className="text-sm font-medium">Bulk import (CSV)</h3>
+        <p className="text-xs text-ink/50">
+          One question per row. Columns:{" "}
+          <code className="bg-ink/5 px-1 rounded">category,university,course,level,year,subject,question_type,question,options,answer,explanation,marks</code>.
+          Objectives options use <code className="bg-ink/5 px-1 rounded">|</code>; wrap fields containing commas in quotes.
+        </p>
+        <textarea
+          value={csvText}
+          onChange={(e) => setCsvText(e.target.value)}
+          rows={6}
+          placeholder={'university,University of Lagos,Computer Science,200,2024,,objectives,"What is 2+2?","2|3|4|5",4,,1'}
+          className="mt-1 w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white font-mono focus:outline-none focus:border-verde/50"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm cursor-pointer text-ink/60 hover:text-ink">
+            Upload .csv
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                file
+                  .text()
+                  .then((t) => setCsvText(t))
+                  .catch(() => toast.error("Could not read file."));
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <button
+            onClick={() => {
+              if (!csvText.trim()) return toast.error("Paste or upload CSV content first.");
+              csvMut.mutate();
+            }}
+            disabled={csvMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50"
+          >
+            {csvMut.isPending ? <Loader2 className="size-4 animate-spin inline" /> : "Import CSV"}
+          </button>
+        </div>
+      </div>
+
+      <div className="border border-ink/10 rounded-sm p-4 space-y-4">
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className={labelCls}>Category</span>
+            <select
+              value={form.category}
+              onChange={(e) => set("category", e.target.value as ImportCategory)}
+              className={inputCls}
+            >
+              <option value="university">University</option>
+              <option value="waec">WAEC</option>
+              <option value="neco">NECO</option>
+              <option value="jamb">JAMB</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className={labelCls}>Type</span>
+            <select
+              value={form.question_type}
+              onChange={(e) => set("question_type", e.target.value as "objectives" | "theory")}
+              className={inputCls}
+            >
+              <option value="objectives">Objectives</option>
+              <option value="theory">Theory</option>
+            </select>
+          </label>
+
+          {form.category === "university" ? (
+            <>
+              <label className="block">
+                <span className={labelCls}>University</span>
+                <select value={form.university} onChange={(e) => set("university", e.target.value)} className={inputCls}>
+                  <option value="">Select university</option>
+                  {universities.map((u) => (
+                    <option key={u.id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Course</span>
+                <input value={form.course} onChange={(e) => set("course", e.target.value)} className={inputCls} />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Level (optional)</span>
+                <input value={form.level} onChange={(e) => set("level", e.target.value)} className={inputCls} />
+              </label>
+            </>
+          ) : (
+            <label className="block">
+              <span className={labelCls}>Subject</span>
+              <input value={form.subject} onChange={(e) => set("subject", e.target.value)} className={inputCls} />
+            </label>
+          )}
+
+          <label className="block">
+            <span className={labelCls}>Year (optional)</span>
+            <input value={form.year} onChange={(e) => set("year", e.target.value)} className={inputCls} />
+          </label>
+        </div>
+
+        <label className="block">
+          <span className={labelCls}>Question</span>
+          <textarea value={form.question} onChange={(e) => set("question", e.target.value)} rows={2} className={inputCls} />
+        </label>
+
+        {form.question_type === "objectives" && (
+          <label className="block">
+            <span className={labelCls}>Options (one per line)</span>
+            <textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={4} className={inputCls} />
+          </label>
+        )}
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className={labelCls}>Answer</span>
+            <textarea value={form.answer} onChange={(e) => set("answer", e.target.value)} rows={2} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Explanation (optional)</span>
+            <textarea value={form.explanation} onChange={(e) => set("explanation", e.target.value)} rows={2} className={inputCls} />
+          </label>
+        </div>
+
+        <label className="block max-w-[200px]">
+          <span className={labelCls}>Marks</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={form.marks}
+            onChange={(e) => set("marks", Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+            className={inputCls}
+          />
+        </label>
+
+        <button
+          onClick={addToBatch}
+          className="px-4 py-2 text-sm font-medium bg-ink text-bone rounded-sm hover:bg-sage transition-colors"
+        >
+          + Add to batch
+        </button>
+      </div>
+
+      {batch.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-sm">Pending ({batch.length})</h3>
+            <button
+              onClick={() => importMut.mutate()}
+              disabled={importMut.isPending}
+              className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {importMut.isPending ? <Loader2 className="size-4 animate-spin inline mr-1" /> : null}
+              Import {batch.length} question(s)
+            </button>
+          </div>
+          <div className="space-y-2">
+            {batch.map((q, i) => (
+              <div key={i} className="flex items-start justify-between gap-3 border border-ink/10 rounded-sm p-3">
+                <div className="text-sm min-w-0">
+                  <span className="text-[10px] uppercase text-ink/40">{q.category}</span>{" "}
+                  <span className="font-medium">{q.question}</span>
+                  <span className="text-xs text-ink/40"> · {q.category === "university" ? q.course : q.subject}</span>
+                </div>
+                <button onClick={() => removeFromBatch(i)} className="text-red-500 hover:text-red-700 shrink-0" title="Remove">
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
 // Tab Button helper
 // ═══════════════════════════════════════════════════════════
+
+function RoleManager() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListRoles);
+  const setFn = useServerFn(adminSetRole);
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: () => listFn(),
+  });
+
+  const mut = useMutation({
+    mutationFn: (v: { user_id: string; role: "admin" | "community_manager" | "none" }) =>
+      setFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Role updated.");
+      qc.invalidateQueries({ queryKey: ["admin-roles"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const roleLabel = (role: string | null) =>
+    role === "admin" ? "Admin" : role === "community_manager" ? "Community Manager" : "None";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Grant or revoke global roles. Admins can access this panel; community managers can moderate the community.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-ink/50">
+          <Loader2 className="size-4 animate-spin" /> Loading users…
+        </div>
+      ) : (
+        <div className="border border-ink/10 rounded-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-ink/5 text-left">
+              <tr>
+                <th className="px-3 py-2 font-medium text-xs text-ink/60">User</th>
+                <th className="px-3 py-2 font-medium text-xs text-ink/60">Role</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ink/5">
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td className="px-3 py-2 align-top">
+                    <div className="font-medium">{u.email ?? u.id.slice(0, 8)}</div>
+                    {u.first_name || u.last_name ? (
+                      <div className="text-xs text-ink/50">
+                        {[u.first_name, u.last_name].filter(Boolean).join(" ")}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      value={u.role ?? "none"}
+                      onChange={(e) =>
+                        mut.mutate({
+                          user_id: u.id,
+                          role: e.target.value as "admin" | "community_manager" | "none",
+                        })
+                      }
+                      disabled={mut.isPending}
+                      className={inputCls + " max-w-[180px]"}
+                      title={roleLabel(u.role)}
+                    >
+                      <option value="none">None</option>
+                      <option value="community_manager">Community Manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && (
+            <p className="px-3 py-4 text-sm text-ink/50">No users found.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MentorApplications() {
+  const listFn = useServerFn(adminListMentorApplications);
+  const reviewFn = useServerFn(adminReviewMentor);
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-mentors"],
+    queryFn: () => listFn(),
+  });
+
+  const reviewMut = useMutation({
+    mutationFn: (v: { user_id: string; action: "approve" | "reject" }) =>
+      reviewFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-mentors"] });
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-3 text-ink/60 py-8">
+        <Loader2 className="size-5 animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  const pending = (data ?? []).filter((m: MentorCard) => m.status === "pending");
+  const others = (data ?? []).filter((m: MentorCard) => m.status !== "pending");
+
+  return (
+    <div>
+      <p className="text-ink-secondary max-w-xl text-sm mb-6">
+        Review mentor applications. Approved mentors appear in the student-facing directory.
+      </p>
+
+      {pending.length === 0 ? (
+        <p className="text-sm text-ink/50 mb-6">No pending applications.</p>
+      ) : (
+        <div className="space-y-4 mb-8">
+          {pending.map((m: MentorCard) => (
+            <div key={m.id} className="border border-ink/10 rounded-sm p-4 bg-white">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{m.full_name ?? m.user_id}</p>
+                  <p className="text-xs text-ink/50">{m.headline}</p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => reviewMut.mutate({ user_id: m.user_id, action: "approve" })}
+                    disabled={reviewMut.isPending}
+                    className="px-3 py-1.5 bg-verde text-white rounded-sm text-xs font-medium hover:bg-verde-dark disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => reviewMut.mutate({ user_id: m.user_id, action: "reject" })}
+                    disabled={reviewMut.isPending}
+                    className="px-3 py-1.5 border border-ink/20 text-ink rounded-sm text-xs font-medium hover:bg-ink/5 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+
+              {m.bio && (
+                <p className="text-xs text-ink/60 mt-2 whitespace-pre-wrap">{m.bio}</p>
+              )}
+
+              {(m.university || m.department || m.level || m.availability) && (
+                <div className="flex flex-wrap gap-2 mt-3 text-[11px] text-ink/60">
+                  {m.university && (
+                    <span className="px-2 py-0.5 bg-paper border border-ink/10 rounded-sm">{m.university}</span>
+                  )}
+                  {m.department && (
+                    <span className="px-2 py-0.5 bg-paper border border-ink/10 rounded-sm">{m.department}</span>
+                  )}
+                  {m.level && (
+                    <span className="px-2 py-0.5 bg-paper border border-ink/10 rounded-sm">{m.level}</span>
+                  )}
+                  {m.availability && (
+                    <span className="px-2 py-0.5 bg-paper border border-ink/10 rounded-sm">{m.availability}</span>
+                  )}
+                </div>
+              )}
+
+              {m.expertise_areas.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {m.expertise_areas.map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-verde/10 text-verde-dark border border-verde/20"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {others.length > 0 && (
+        <div>
+          <h3 className="font-serif text-lg text-ink mb-3">Reviewed</h3>
+          <div className="space-y-2">
+            {others.map((m: MentorCard) => (
+              <div
+                key={m.id}
+                className="border border-ink/10 rounded-sm p-3 bg-white flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">{m.full_name ?? m.user_id}</p>
+                  <p className="text-xs text-ink/50 truncate">{m.headline}</p>
+                </div>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium capitalize flex-shrink-0 ${
+                    m.status === "approved" ? "bg-verde-light text-verde-dark" : "bg-ink/10 text-ink/60"
+                  }`}
+                >
+                  {m.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TabBtn({ tab, active, onClick, label }: { tab: string; active: string; onClick: () => void; label: string }) {
   return (
