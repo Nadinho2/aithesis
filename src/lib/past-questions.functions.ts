@@ -419,6 +419,14 @@ function normalizeCategory(raw: string): QuestionCategory | null {
   return null;
 }
 
+function normalizeQuestionType(raw: string): PastQuestionType | null {
+  const v = (raw ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!v) return "objectives";
+  if (v.includes("objectiv") || v.includes("mcq") || v.includes("multiple choice") || v === "obj") return "objectives";
+  if (v.includes("theor") || v.includes("essay") || v.includes("subjective") || v.includes("written")) return "theory";
+  return null;
+}
+
 const CSV_COLUMNS = [
   "category",
   "university",
@@ -472,7 +480,8 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
 
       const categoryRaw = get(row, "category");
       const category = normalizeCategory(categoryRaw);
-      const questionTypeRaw = (get(row, "question_type").toLowerCase() || "objectives") as PastQuestionType;
+      const questionTypeRaw = get(row, "question_type");
+      const questionType = normalizeQuestionType(questionTypeRaw);
       const university = get(row, "university");
       const course = get(row, "course");
       const level = get(row, "level");
@@ -491,7 +500,7 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
         throw new Error(`Row ${lineNo}: invalid category "${categoryRaw}".`);
       }
       const validTypes: PastQuestionType[] = ["objectives", "theory"];
-      if (!validTypes.includes(questionTypeRaw)) {
+      if (!questionType || !validTypes.includes(questionType)) {
         throw new Error(`Row ${lineNo}: invalid question_type "${questionTypeRaw}".`);
       }
       if (!answer) throw new Error(`Row ${lineNo}: answer is required.`);
@@ -513,7 +522,7 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
         level: isUniversity ? (level || null) : null,
         year: year || null,
         subject: !isUniversity ? subject : subject || null,
-        question_type: questionTypeRaw,
+        question_type: questionType,
         question,
         options,
         answer,
