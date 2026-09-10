@@ -13,6 +13,7 @@ import {
   type QuestionCategory,
 } from "@/lib/past-questions.functions";
 import { getMyProfile, type ExamTrack } from "@/lib/profile.functions";
+import { adminCheck } from "@/lib/admin.functions";
 import {
   ArrowLeft,
   Search,
@@ -69,10 +70,19 @@ function PastQuestionsPage() {
     queryFn: () => getProfileFn(),
   });
 
+  const adminFn = useServerFn(adminCheck);
+  const { data: roleData } = useQuery({
+    queryKey: ["admin-check"],
+    queryFn: () => adminFn(),
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = !!roleData?.isAdmin;
+
   const learnerType = profile?.learner_type ?? null;
 
   // Which categories this learner may browse, driven by their profile.
   const availableCategories: QuestionCategory[] = useMemo(() => {
+    if (isAdmin) return ["university", "waec", "neco", "jamb"];
     if (learnerType === "university") return ["university"];
     if (learnerType === "pre_university") {
       const tracks = (profile?.exam_tracks ?? []).filter((t): t is ExamTrack =>
@@ -81,7 +91,7 @@ function PastQuestionsPage() {
       return tracks.length ? (tracks as QuestionCategory[]) : ["waec", "neco", "jamb"];
     }
     return ["university", "waec", "neco", "jamb"];
-  }, [learnerType, profile?.exam_tracks]);
+  }, [isAdmin, learnerType, profile?.exam_tracks]);
 
   const { data: facets } = useQuery({
     queryKey: ["past-question-facets"],
@@ -101,26 +111,28 @@ function PastQuestionsPage() {
   // Pre-fill filters once the learner profile loads.
   useEffect(() => {
     if (scopeInitialized || !profile) return;
-    if (learnerType === "university") {
-      setFilters((f) => ({
-        ...f,
-        category: "university",
-        university: profile.university ?? "",
-        course: "",
-        subject: "",
-      }));
-    } else if (learnerType === "pre_university") {
-      const tracks = profile.exam_tracks ?? [];
-      setFilters((f) => ({
-        ...f,
-        category: (tracks[0] as QuestionCategory | undefined) ?? "waec",
-        university: "",
-        course: "",
-        subject: "",
-      }));
+    if (!isAdmin) {
+      if (learnerType === "university") {
+        setFilters((f) => ({
+          ...f,
+          category: "university",
+          university: profile.university ?? "",
+          course: "",
+          subject: "",
+        }));
+      } else if (learnerType === "pre_university") {
+        const tracks = profile.exam_tracks ?? [];
+        setFilters((f) => ({
+          ...f,
+          category: (tracks[0] as QuestionCategory | undefined) ?? "waec",
+          university: "",
+          course: "",
+          subject: "",
+        }));
+      }
     }
     setScopeInitialized(true);
-  }, [scopeInitialized, profile, learnerType]);
+  }, [scopeInitialized, profile, learnerType, isAdmin]);
 
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -200,7 +212,7 @@ function PastQuestionsPage() {
     setResults([]);
   }
 
-  if (learnerType === "professional") {
+  if (learnerType === "professional" && !isAdmin) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-y-auto">

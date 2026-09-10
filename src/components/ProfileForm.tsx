@@ -57,6 +57,7 @@ export function ProfileForm({
 
   const selectedUni = universities.find((u) => u.name === university);
   const selectedFaculty = selectedUni?.faculties.find((f) => f.name === faculty);
+  const locked = !!initialProfile?.learner_type;
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -100,6 +101,12 @@ export function ProfileForm({
 
   return (
     <form onSubmit={submit} className="space-y-6">
+      {locked && (
+        <div className="rounded-sm border border-ink/10 bg-ink/5 p-3 text-sm text-ink/60">
+          Your academic details are locked after setup. Contact support if you need to change them.
+        </div>
+      )}
+
       <div>
         <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-2 block">
           I am a…
@@ -113,7 +120,8 @@ export function ProfileForm({
                 type="button"
                 key={opt.value}
                 onClick={() => setLearnerType(opt.value)}
-                className={`text-left p-4 rounded-sm border transition-all ${
+                disabled={locked}
+                className={`text-left p-4 rounded-sm border transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                   active
                     ? "border-ink bg-ink/5 ring-1 ring-ink/20"
                     : "border-ink/10 hover:border-sage/40"
@@ -142,6 +150,7 @@ export function ProfileForm({
                 setDepartment("");
               }}
               className={inputCls}
+              disabled={locked}
             >
               <option value="">Select university</option>
               {universities.map((u) => (
@@ -162,7 +171,7 @@ export function ProfileForm({
                 setDepartment("");
               }}
               className={inputCls}
-              disabled={!university}
+              disabled={locked || !university}
             >
               <option value="">Select faculty</option>
               {(selectedUni?.faculties ?? []).map((f) => (
@@ -180,7 +189,7 @@ export function ProfileForm({
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               className={inputCls}
-              disabled={!faculty}
+              disabled={locked || !faculty}
             >
               <option value="">Select department</option>
               {(selectedFaculty?.departments ?? []).map((d) => (
@@ -194,7 +203,7 @@ export function ProfileForm({
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
               Level
             </label>
-            <select value={level} onChange={(e) => setLevel(e.target.value)} className={inputCls}>
+            <select value={level} onChange={(e) => setLevel(e.target.value)} className={inputCls} disabled={locked}>
               <option value="">Select level</option>
               {LEVELS.map((l) => (
                 <option key={l} value={l}>
@@ -220,7 +229,8 @@ export function ProfileForm({
                     type="button"
                     key={e.value}
                     onClick={() => toggleExam(e.value)}
-                    className={`px-3 py-1.5 rounded-sm border text-sm transition-colors ${
+                    disabled={locked}
+                    className={`px-3 py-1.5 rounded-sm border text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                       active
                         ? "bg-ink text-bone border-ink"
                         : "border-ink/15 text-ink/60 hover:bg-ink/5"
@@ -236,7 +246,7 @@ export function ProfileForm({
             <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">
               Class
             </label>
-            <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className={inputCls}>
+            <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className={inputCls} disabled={locked}>
               <option value="">Select class</option>
               {CLASS_LEVELS.map((c) => (
                 <option key={c} value={c}>
@@ -252,21 +262,23 @@ export function ProfileForm({
         <p className="text-sm text-ink/50">No extra details needed — you're all set.</p>
       )}
 
-      <button
-        type="submit"
-        disabled={saveMut.isPending}
-        className="px-5 py-2.5 bg-ink text-bone rounded-sm text-sm font-medium hover:bg-sage transition-colors flex items-center gap-2 disabled:opacity-60"
-      >
-        {saveMut.isPending ? (
-          <>
-            <Loader2 className="size-4 animate-spin" /> Saving…
-          </>
-        ) : (
-          <>
-            <Check className="size-4" /> Save &amp; continue
-          </>
-        )}
-      </button>
+      {!locked && (
+        <button
+          type="submit"
+          disabled={saveMut.isPending}
+          className="px-5 py-2.5 bg-ink text-bone rounded-sm text-sm font-medium hover:bg-sage transition-colors flex items-center gap-2 disabled:opacity-60"
+        >
+          {saveMut.isPending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Saving…
+            </>
+          ) : (
+            <>
+              <Check className="size-4" /> Save &amp; continue
+            </>
+          )}
+        </button>
+      )}
     </form>
   );
 }

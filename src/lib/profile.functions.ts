@@ -67,7 +67,18 @@ export const saveMyProfile = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => SaveProfileInput.parse(i))
   .handler(async ({ data, context }) => {
-    const { userId, supabase } = context as any;
+    const { userId, supabase, isAdmin } = context as any;
+
+    // Academic identity fields are locked once onboarding is complete (learner_type is set).
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("learner_type")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (existing?.learner_type && !isAdmin) {
+      throw new Error("Your academic details are locked after setup. Contact support to change them.");
+    }
 
     const isUniversity = data.learner_type === "university";
     const isPreUni = data.learner_type === "pre_university";

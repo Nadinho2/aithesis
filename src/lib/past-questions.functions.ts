@@ -52,11 +52,11 @@ async function loadLearnerScope(supabase: any, userId: string): Promise<LearnerS
 export const pastQuestionFacets = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .handler(async ({ context }) => {
-    const { userId, supabase } = context as any;
+    const { userId, supabase, isAdmin } = context as any;
     const scope = await loadLearnerScope(supabase, userId);
 
-    // Professional learners use the thesis/proposal tools, not the question bank.
-    if (scope.learner_type === "professional") {
+    // Admins can browse all universities/categories for QA/testing.
+    if (!isAdmin && scope.learner_type === "professional") {
       return { categories: [], universities: [], courses: [], levels: [], subjects: [] };
     }
 
@@ -65,14 +65,16 @@ export const pastQuestionFacets = createServerFn({ method: "GET" })
       .select("category, university, course, level, subject")
       .eq("status", "published");
 
-    if (scope.learner_type === "university") {
-      q = q.eq("category", "university");
-      if (scope.university) q = q.eq("university", scope.university);
-    } else if (scope.learner_type === "pre_university") {
-      if (scope.exam_tracks.length === 0) {
-        return { categories: [], universities: [], courses: [], levels: [], subjects: [] };
+    if (!isAdmin) {
+      if (scope.learner_type === "university") {
+        q = q.eq("category", "university");
+        if (scope.university) q = q.eq("university", scope.university);
+      } else if (scope.learner_type === "pre_university") {
+        if (scope.exam_tracks.length === 0) {
+          return { categories: [], universities: [], courses: [], levels: [], subjects: [] };
+        }
+        q = q.in("category", scope.exam_tracks);
       }
-      q = q.in("category", scope.exam_tracks);
     }
 
     const { data } = await q;
@@ -113,11 +115,11 @@ export const searchPastQuestions = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])
   .inputValidator((i: unknown) => SearchInput.parse(i))
   .handler(async ({ data, context }) => {
-    const { userId, supabase } = context as any;
+    const { userId, supabase, isAdmin } = context as any;
     const scope = await loadLearnerScope(supabase, userId);
 
     // Professional learners use the thesis/proposal tools, not the question bank.
-    if (scope.learner_type === "professional") return [];
+    if (!isAdmin && scope.learner_type === "professional") return [];
 
     let query = supabase
       .from("past_questions")
@@ -130,16 +132,18 @@ export const searchPastQuestions = createServerFn({ method: "GET" })
     let category = data.category;
     let university = data.university;
 
-    if (scope.learner_type === "university") {
-      category = "university";
-      university = data.university || scope.university || undefined;
-    } else if (scope.learner_type === "pre_university") {
-      if (scope.exam_tracks.length === 0) return [];
-      category =
-        category && scope.exam_tracks.includes(category)
-          ? category
-          : (scope.exam_tracks[0] as QuestionCategory);
-      university = undefined;
+    if (!isAdmin) {
+      if (scope.learner_type === "university") {
+        category = "university";
+        university = data.university || scope.university || undefined;
+      } else if (scope.learner_type === "pre_university") {
+        if (scope.exam_tracks.length === 0) return [];
+        category =
+          category && scope.exam_tracks.includes(category)
+            ? category
+            : (scope.exam_tracks[0] as QuestionCategory);
+        university = undefined;
+      }
     }
 
     if (category) query = query.eq("category", category);
