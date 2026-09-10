@@ -333,6 +333,8 @@ export const adminImportPastQuestions = createServerFn({ method: "POST" })
     if (!context.isAdmin) throw new Error("Forbidden: admin role required");
     const supabase = context.supabase as any;
 
+    const universityNames = await loadUniversityNames(supabase);
+
     const rows = data.questions.map((q) => {
       const isUniversity = q.category === "university";
       if (isUniversity && !q.university) throw new Error("University questions require a university.");
@@ -341,7 +343,7 @@ export const adminImportPastQuestions = createServerFn({ method: "POST" })
 
       return {
         category: q.category,
-        university: isUniversity ? q.university : null,
+        university: isUniversity ? canonicalUniversityName(q.university ?? "", universityNames) : null,
         course: isUniversity ? q.course : null,
         level: isUniversity ? q.level ?? null : null,
         year: q.year ?? null,
@@ -431,6 +433,30 @@ function normalizeQuestionType(raw: string): PastQuestionType | null {
   return null;
 }
 
+async function loadUniversityNames(supabase: any): Promise<string[]> {
+  const { data } = await supabase.from("universities").select("name").limit(1000);
+  return ((data ?? []) as Array<{ name: string }>).map((u) => u.name.trim()).filter(Boolean);
+}
+
+// Normalize a free-text university to its canonical directory name so learner
+// scoping (exact .eq on university) matches what onboarding saved on profiles.
+function canonicalUniversityName(raw: string, names: string[]): string {
+  const input = (raw ?? "").trim();
+  if (!input) return input;
+
+  const exact = names.find((n) => n.toLowerCase() === input.toLowerCase());
+  if (exact) return exact;
+
+  // "Imo State University (IMSU)" -> "Imo State University"
+  const stripped = input.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  if (stripped && stripped.toLowerCase() !== input.toLowerCase()) {
+    const match = names.find((n) => n.toLowerCase() === stripped.toLowerCase());
+    if (match) return match;
+  }
+
+  return input;
+}
+
 const CSV_COLUMNS = [
   "category",
   "university",
@@ -452,6 +478,8 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!context.isAdmin) throw new Error("Forbidden: admin role required");
     const supabase = context.supabase as any;
+
+    const universityNames = await loadUniversityNames(supabase);
 
     const rows = parseCsv(data.csv).filter((r) => r.some((f) => f.trim() !== ""));
     if (rows.length === 0) throw new Error("No rows found in CSV.");
@@ -521,7 +549,7 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
 
       built.push({
         category: category,
-        university: isUniversity ? university : null,
+        university: isUniversity ? canonicalUniversityName(university, universityNames) : null,
         course: isUniversity ? course : null,
         level: isUniversity ? (level || null) : null,
         year: year || null,
