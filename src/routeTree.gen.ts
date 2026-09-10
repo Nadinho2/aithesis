@@ -53,6 +53,10 @@ import { Route as AuthenticatedProposalIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedMentorMyMentorshipRouteImport } from './routes/_authenticated/mentor/my-mentorship'
 import { Route as AuthenticatedMentorFindRouteImport } from './routes/_authenticated/mentor/find'
 import { Route as AuthenticatedMentorBecomeAMentorRouteImport } from './routes/_authenticated/mentor/become-a-mentor'
+import { Route as AuthenticatedLearnSubjectsRouteImport } from './routes/_authenticated/learn/subjects'
+import { Route as AuthenticatedLearnStudyPlannerRouteImport } from './routes/_authenticated/learn/study-planner'
+import { Route as AuthenticatedLearnSavedRouteImport } from './routes/_authenticated/learn/saved'
+import { Route as AuthenticatedLearnProgressRouteImport } from './routes/_authenticated/learn/progress'
 import { Route as AuthenticatedLearnPastQuestionsRouteImport } from './routes/_authenticated/learn/past-questions'
 import { Route as AuthenticatedLearnSplatRouteImport } from './routes/_authenticated/learn/$'
 import { Route as AuthenticatedCommunityUniversityFeedRouteImport } from './routes/_authenticated/community/university-feed'
@@ -301,6 +305,29 @@ const AuthenticatedMentorBecomeAMentorRoute =
     path: '/mentor/become-a-mentor',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLearnSubjectsRoute =
+  AuthenticatedLearnSubjectsRouteImport.update({
+    id: '/learn/subjects',
+    path: '/learn/subjects',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnStudyPlannerRoute =
+  AuthenticatedLearnStudyPlannerRouteImport.update({
+    id: '/learn/study-planner',
+    path: '/learn/study-planner',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnSavedRoute = AuthenticatedLearnSavedRouteImport.update({
+  id: '/learn/saved',
+  path: '/learn/saved',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLearnProgressRoute =
+  AuthenticatedLearnProgressRouteImport.update({
+    id: '/learn/progress',
+    path: '/learn/progress',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLearnPastQuestionsRoute =
   AuthenticatedLearnPastQuestionsRouteImport.update({
     id: '/learn/past-questions',
@@ -419,6 +446,10 @@ export interface FileRoutesByFullPath {
   '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
   '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/learn/progress': typeof AuthenticatedLearnProgressRoute
+  '/learn/saved': typeof AuthenticatedLearnSavedRoute
+  '/learn/study-planner': typeof AuthenticatedLearnStudyPlannerRoute
+  '/learn/subjects': typeof AuthenticatedLearnSubjectsRoute
   '/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
   '/mentor/find': typeof AuthenticatedMentorFindRoute
   '/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
@@ -479,6 +510,10 @@ export interface FileRoutesByTo {
   '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
   '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/learn/progress': typeof AuthenticatedLearnProgressRoute
+  '/learn/saved': typeof AuthenticatedLearnSavedRoute
+  '/learn/study-planner': typeof AuthenticatedLearnStudyPlannerRoute
+  '/learn/subjects': typeof AuthenticatedLearnSubjectsRoute
   '/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
   '/mentor/find': typeof AuthenticatedMentorFindRoute
   '/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
@@ -541,6 +576,10 @@ export interface FileRoutesById {
   '/_authenticated/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/_authenticated/learn/$': typeof AuthenticatedLearnSplatRoute
   '/_authenticated/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
+  '/_authenticated/learn/progress': typeof AuthenticatedLearnProgressRoute
+  '/_authenticated/learn/saved': typeof AuthenticatedLearnSavedRoute
+  '/_authenticated/learn/study-planner': typeof AuthenticatedLearnStudyPlannerRoute
+  '/_authenticated/learn/subjects': typeof AuthenticatedLearnSubjectsRoute
   '/_authenticated/mentor/become-a-mentor': typeof AuthenticatedMentorBecomeAMentorRoute
   '/_authenticated/mentor/find': typeof AuthenticatedMentorFindRoute
   '/_authenticated/mentor/my-mentorship': typeof AuthenticatedMentorMyMentorshipRoute
@@ -603,6 +642,10 @@ export interface FileRouteTypes {
     | '/community/university-feed'
     | '/learn/$'
     | '/learn/past-questions'
+    | '/learn/progress'
+    | '/learn/saved'
+    | '/learn/study-planner'
+    | '/learn/subjects'
     | '/mentor/become-a-mentor'
     | '/mentor/find'
     | '/mentor/my-mentorship'
@@ -663,6 +706,10 @@ export interface FileRouteTypes {
     | '/community/university-feed'
     | '/learn/$'
     | '/learn/past-questions'
+    | '/learn/progress'
+    | '/learn/saved'
+    | '/learn/study-planner'
+    | '/learn/subjects'
     | '/mentor/become-a-mentor'
     | '/mentor/find'
     | '/mentor/my-mentorship'
@@ -724,6 +771,10 @@ export interface FileRouteTypes {
     | '/_authenticated/community/university-feed'
     | '/_authenticated/learn/$'
     | '/_authenticated/learn/past-questions'
+    | '/_authenticated/learn/progress'
+    | '/_authenticated/learn/saved'
+    | '/_authenticated/learn/study-planner'
+    | '/_authenticated/learn/subjects'
     | '/_authenticated/mentor/become-a-mentor'
     | '/_authenticated/mentor/find'
     | '/_authenticated/mentor/my-mentorship'
@@ -1083,6 +1134,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMentorBecomeAMentorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/learn/subjects': {
+      id: '/_authenticated/learn/subjects'
+      path: '/learn/subjects'
+      fullPath: '/learn/subjects'
+      preLoaderRoute: typeof AuthenticatedLearnSubjectsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/study-planner': {
+      id: '/_authenticated/learn/study-planner'
+      path: '/learn/study-planner'
+      fullPath: '/learn/study-planner'
+      preLoaderRoute: typeof AuthenticatedLearnStudyPlannerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/saved': {
+      id: '/_authenticated/learn/saved'
+      path: '/learn/saved'
+      fullPath: '/learn/saved'
+      preLoaderRoute: typeof AuthenticatedLearnSavedRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/progress': {
+      id: '/_authenticated/learn/progress'
+      path: '/learn/progress'
+      fullPath: '/learn/progress'
+      preLoaderRoute: typeof AuthenticatedLearnProgressRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/learn/past-questions': {
       id: '/_authenticated/learn/past-questions'
       path: '/learn/past-questions'
@@ -1296,6 +1375,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCommunityUniversityFeedRoute: typeof AuthenticatedCommunityUniversityFeedRoute
   AuthenticatedLearnSplatRoute: typeof AuthenticatedLearnSplatRoute
   AuthenticatedLearnPastQuestionsRoute: typeof AuthenticatedLearnPastQuestionsRoute
+  AuthenticatedLearnProgressRoute: typeof AuthenticatedLearnProgressRoute
+  AuthenticatedLearnSavedRoute: typeof AuthenticatedLearnSavedRoute
+  AuthenticatedLearnStudyPlannerRoute: typeof AuthenticatedLearnStudyPlannerRoute
+  AuthenticatedLearnSubjectsRoute: typeof AuthenticatedLearnSubjectsRoute
   AuthenticatedMentorBecomeAMentorRoute: typeof AuthenticatedMentorBecomeAMentorRoute
   AuthenticatedMentorFindRoute: typeof AuthenticatedMentorFindRoute
   AuthenticatedMentorMyMentorshipRoute: typeof AuthenticatedMentorMyMentorshipRoute
@@ -1336,6 +1419,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedCommunityUniversityFeedRoute,
   AuthenticatedLearnSplatRoute: AuthenticatedLearnSplatRoute,
   AuthenticatedLearnPastQuestionsRoute: AuthenticatedLearnPastQuestionsRoute,
+  AuthenticatedLearnProgressRoute: AuthenticatedLearnProgressRoute,
+  AuthenticatedLearnSavedRoute: AuthenticatedLearnSavedRoute,
+  AuthenticatedLearnStudyPlannerRoute: AuthenticatedLearnStudyPlannerRoute,
+  AuthenticatedLearnSubjectsRoute: AuthenticatedLearnSubjectsRoute,
   AuthenticatedMentorBecomeAMentorRoute: AuthenticatedMentorBecomeAMentorRoute,
   AuthenticatedMentorFindRoute: AuthenticatedMentorFindRoute,
   AuthenticatedMentorMyMentorshipRoute: AuthenticatedMentorMyMentorshipRoute,

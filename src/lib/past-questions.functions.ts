@@ -28,13 +28,13 @@ function isCorrectAnswer(selected: string, answer: string): boolean {
 }
 
 // ─── Learner scoping helpers ──────────────────────────────────────────────
-interface LearnerScope {
+export interface LearnerScope {
   learner_type: "university" | "pre_university" | "professional" | null;
   university: string | null;
   exam_tracks: string[];
 }
 
-async function loadLearnerScope(supabase: any, userId: string): Promise<LearnerScope> {
+export async function loadLearnerScope(supabase: any, userId: string): Promise<LearnerScope> {
   const { data } = await supabase
     .from("profiles")
     .select("learner_type, university, exam_tracks")

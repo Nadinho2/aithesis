@@ -28,6 +28,18 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/learn/past-questions")({
+  validateSearch: (search: Record<string, unknown>) => {
+    const cat = search.category;
+    return {
+      category:
+        cat === "university" || cat === "waec" || cat === "neco" || cat === "jamb"
+          ? cat
+          : undefined,
+      university: typeof search.university === "string" ? search.university : undefined,
+      course: typeof search.course === "string" ? search.course : undefined,
+      subject: typeof search.subject === "string" ? search.subject : undefined,
+    };
+  },
   head: () => ({ meta: [{ title: "Past Questions — Mybrainpadi" }] }),
   component: PastQuestionsPage,
 });
@@ -58,6 +70,8 @@ const INITIAL_FILTERS: Filters = {
 function PastQuestionsPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const deepLinked = !!(search.category || search.university || search.course || search.subject);
 
   const facetsFn = useServerFn(pastQuestionFacets);
   const searchFn = useServerFn(searchPastQuestions);
@@ -105,12 +119,22 @@ function PastQuestionsPage() {
   });
 
   const [phase, setPhase] = useState<Phase>("browse");
-  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...INITIAL_FILTERS,
+    category: (search.category ?? INITIAL_FILTERS.category) as QuestionCategory,
+    university: search.university ?? "",
+    course: search.course ?? "",
+    subject: search.subject ?? "",
+  }));
   const [scopeInitialized, setScopeInitialized] = useState(false);
 
   // Pre-fill filters once the learner profile loads.
   useEffect(() => {
     if (scopeInitialized || !profile) return;
+    if (deepLinked) {
+      setScopeInitialized(true);
+      return;
+    }
     if (!isAdmin) {
       if (learnerType === "university") {
         setFilters((f) => ({
@@ -132,7 +156,7 @@ function PastQuestionsPage() {
       }
     }
     setScopeInitialized(true);
-  }, [scopeInitialized, profile, learnerType, isAdmin]);
+  }, [scopeInitialized, profile, learnerType, isAdmin, deepLinked]);
 
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
