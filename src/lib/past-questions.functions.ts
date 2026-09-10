@@ -409,6 +409,16 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
+function normalizeCategory(raw: string): QuestionCategory | null {
+  const v = (raw ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!v) return "university";
+  if (v.includes("university")) return "university";
+  if (v.includes("waec")) return "waec";
+  if (v.includes("neco")) return "neco";
+  if (v.includes("jamb")) return "jamb";
+  return null;
+}
+
 const CSV_COLUMNS = [
   "category",
   "university",
@@ -460,7 +470,8 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
     dataRows.forEach((row, i) => {
       const lineNo = i + 1;
 
-      const categoryRaw = (get(row, "category").toLowerCase() || "university") as QuestionCategory;
+      const categoryRaw = get(row, "category");
+      const category = normalizeCategory(categoryRaw);
       const questionTypeRaw = (get(row, "question_type").toLowerCase() || "objectives") as PastQuestionType;
       const university = get(row, "university");
       const course = get(row, "course");
@@ -476,7 +487,7 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
       if (!question) return; // skip blank lines
 
       const validCategories: QuestionCategory[] = ["university", "waec", "neco", "jamb"];
-      if (!validCategories.includes(categoryRaw)) {
+      if (!category || !validCategories.includes(category)) {
         throw new Error(`Row ${lineNo}: invalid category "${categoryRaw}".`);
       }
       const validTypes: PastQuestionType[] = ["objectives", "theory"];
@@ -485,10 +496,10 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
       }
       if (!answer) throw new Error(`Row ${lineNo}: answer is required.`);
 
-      const isUniversity = categoryRaw === "university";
+      const isUniversity = category === "university";
       if (isUniversity && !university) throw new Error(`Row ${lineNo}: university questions require a university.`);
       if (isUniversity && !course) throw new Error(`Row ${lineNo}: university questions require a course.`);
-      if (!isUniversity && !subject) throw new Error(`Row ${lineNo}: ${categoryRaw.toUpperCase()} questions require a subject.`);
+      if (!isUniversity && !subject) throw new Error(`Row ${lineNo}: ${category.toUpperCase()} questions require a subject.`);
 
       const options = optionsRaw
         ? optionsRaw.split("|").map((o) => o.trim()).filter(Boolean)
@@ -496,7 +507,7 @@ export const adminImportPastQuestionsCsv = createServerFn({ method: "POST" })
       const marks = marksRaw ? Math.max(0, Math.min(100, parseInt(marksRaw, 10) || 0)) : 0;
 
       built.push({
-        category: categoryRaw,
+        category: category,
         university: isUniversity ? university : null,
         course: isUniversity ? course : null,
         level: isUniversity ? (level || null) : null,
