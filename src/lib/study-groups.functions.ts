@@ -78,12 +78,64 @@ async function fetchNames(
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, username")
     .in("id", unique);
 
+  const profileById = new Map<string, { full_name: string | null; username: string | null }>();
   if (!error) {
-    for (const p of data ?? []) map.set(p.id, p.full_name ?? null);
+    for (const p of data ?? []) {
+      profileById.set(p.id, {
+        full_name: p.full_name || null,
+        username: p.username || null,
+      });
+    }
   }
+
+  // Backfill missing usernames from Clerk in one bulk call, then persist.
+  const missing = unique.filter((id) => !profileById.get(id)?.username);
+  if (missing.length) {
+    try {
+      const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+      if (clerkSecretKey) {
+        const { createClerkClient } = await import("@clerk/backend");
+        const clerk = createClerkClient({ secretKey: clerkSecretKey });
+        const res = await clerk.users.getUserList({ userId: missing, limit: missing.length });
+        const patches: Array<Record<string, any>> = [];
+
+        for (const u of res.data ?? []) {
+          const existing = profileById.get(u.id) ?? { full_name: null, username: null };
+          const username = u.username ?? null;
+          const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ").trim() || null;
+
+          const patch: Record<string, any> = { id: u.id };
+          if (username && !existing.username) {
+            patch.username = username;
+            existing.username = username;
+          }
+          if (fullName && !existing.full_name) {
+            patch.full_name = fullName;
+            existing.full_name = fullName;
+          }
+          profileById.set(u.id, existing);
+          if (Object.keys(patch).length > 1) patches.push(patch);
+        }
+
+        if (patches.length) {
+          await supabase.from("profiles").upsert(patches, { onConflict: "id" });
+        }
+      }
+    } catch {
+      // Clerk unavailable — keep whatever profile data we already have.
+    }
+  }
+
+  // Display name: prefer username, fall back to full name.
+  for (const id of unique) {
+    const p = profileById.get(id);
+    const display = p?.username || p?.full_name || null;
+    if (display) map.set(id, display);
+  }
+
   return map;
 }
 
