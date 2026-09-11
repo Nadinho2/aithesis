@@ -8,7 +8,7 @@ import {
   pastQuestionFacets,
   submitPastQuestionQuiz,
   getLearningSignals,
-  startAskPadi,
+  askPadiAboutQuestion,
   type PastQuestion,
   type QuizResult,
   type QuestionCategory,
@@ -79,7 +79,7 @@ function PastQuestionsPage() {
   const searchFn = useServerFn(searchPastQuestions);
   const submitFn = useServerFn(submitPastQuestionQuiz);
   const signalsFn = useServerFn(getLearningSignals);
-  const startAskPadiFn = useServerFn(startAskPadi);
+  const askPadiFn = useServerFn(askPadiAboutQuestion);
   const getProfileFn = useServerFn(getMyProfile);
 
   const { data: profile } = useQuery({
@@ -164,6 +164,8 @@ function PastQuestionsPage() {
   const [questions, setQuestions] = useState<PastQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<QuizResult[]>([]);
+  const [padiLoadingId, setPadiLoadingId] = useState<string | null>(null);
+  const [padiAnswers, setPadiAnswers] = useState<Record<string, string>>({});
 
   const searchMutation = useMutation({
     mutationFn: () =>
@@ -212,11 +214,12 @@ function PastQuestionsPage() {
 
   const askPadiMutation = useMutation({
     mutationFn: (questionId: string) =>
-      startAskPadiFn({ data: { question_id: questionId } }),
-    onSuccess: (res) => {
-      window.location.href = `/chat?chatId=${res.chatId}`;
+      askPadiFn({ data: { question_id: questionId } }),
+    onSuccess: (res, questionId) => {
+      setPadiAnswers((prev) => ({ ...prev, [questionId]: res.answer }));
     },
     onError: (e) => toast.error(String(e)),
+    onSettled: () => setPadiLoadingId(null),
   });
 
   const setFilter = (key: keyof Filters, value: string) =>
@@ -661,14 +664,32 @@ function PastQuestionsPage() {
                       </div>
                     )}
 
-                    <div className="mt-3 flex justify-end">
-                      <button
-                        onClick={() => askPadiMutation.mutate(q.id)}
-                        disabled={askPadiMutation.isPending}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-sage hover:text-verde transition-colors disabled:opacity-50"
-                      >
-                        <Sparkles className="size-3.5" /> Ask PADI
-                      </button>
+                    <div className="mt-3 flex flex-col gap-2">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => {
+                            setPadiLoadingId(q.id);
+                            askPadiMutation.mutate(q.id);
+                          }}
+                          disabled={padiLoadingId === q.id}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-sage hover:text-verde transition-colors disabled:opacity-50"
+                        >
+                          {padiLoadingId === q.id ? (
+                            <Loader2 className="size-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="size-3.5" />
+                          )}
+                          {padiLoadingId === q.id ? "PADI is thinking…" : "Ask PADI"}
+                        </button>
+                      </div>
+                      {padiAnswers[q.id] && (
+                        <div className="bg-sage/5 border border-sage/20 rounded-sm p-3 text-xs text-ink/80 leading-relaxed">
+                          <div className="flex items-center gap-1.5 text-sage font-semibold mb-1">
+                            <Sparkles className="size-3.5" /> PADI
+                          </div>
+                          <p className="whitespace-pre-line">{padiAnswers[q.id]}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

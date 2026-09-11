@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
+import { callAIText } from "./ai-utils.server";
 
 export type PastQuestionType = "objectives" | "theory";
 export type QuestionCategory = "university" | "waec" | "neco" | "jamb";
@@ -341,12 +342,12 @@ export const getLearningSignals = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-// ─── Ask PADI: open a question-scoped chat thread ─────────────────────────
-const StartAskPadiInput = z.object({ question_id: z.string().uuid() });
+// ─── Ask PADI: inline explanation for a specific question ─────────────────
+const AskPadiInput = z.object({ question_id: z.string().uuid() });
 
-export const startAskPadi = createServerFn({ method: "POST" })
+export const askPadiAboutQuestion = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
-  .inputValidator((i: unknown) => StartAskPadiInput.parse(i))
+  .inputValidator((i: unknown) => AskPadiInput.parse(i))
   .handler(async ({ data, context }) => {
     const { userId, supabase } = context as any;
 
@@ -361,35 +362,6 @@ export const startAskPadi = createServerFn({ method: "POST" })
     if (!q) throw new Error("Question not found.");
 
     const topic = (q.subject || q.course || "General").trim();
-    const title =
-      "Ask PADI: " +
-      q.question.slice(0, 40) +
-      (q.question.length > 40 ? "…" : "");
-
-    const { data: chat, error: chatErr } = await supabase
-      .from("chats")
-      .insert({
-        user_id: userId,
-        title,
-        context: {
-          kind: "past_question",
-          question_id: q.id,
-          question: q.question,
-          options: Array.isArray(q.options) ? q.options : [],
-          answer: q.answer,
-          explanation: q.explanation ?? null,
-          subject: q.subject ?? null,
-          course: q.course ?? null,
-          question_type: q.question_type,
-        },
-      })
-      .select("id")
-      .single();
-
-    if (chatErr || !chat) {
-      console.error("startAskPadi chat create error:", chatErr);
-      throw new Error("Could not start Ask PADI.");
-    }
 
     // Strong signal: asking PADI for help means deeper confusion than a wrong answer.
     try {
@@ -404,7 +376,38 @@ export const startAskPadi = createServerFn({ method: "POST" })
       // Non-critical
     }
 
-    return { chatId: chat.id };
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    if (!apiKey) throw new Error("AI is not configured yet.");
+
+    const opts = Array.isArray(q.options) ? q.options : [];
+    const optionsBlock = opts.length
+      ? `\nOptions:\n${opts
+          .map((o: string, i: number) => `${String.fromCharCode(65 + i)}. ${o}`)
+          .join("\n")}`
+      : "";
+
+    const system =
+      "You are PADI, a helpful study assistant for Nigerian university students. " +
+      "The student is asking about a specific past question they just attempted. " +
+      "Explain the correct answer clearly and simply, and why other options are wrong. " +
+      "Use plain text only, no markdown. Keep it focused and encouraging.";
+
+    const user =
+      `Question: ${q.question}` +
+      optionsBlock +
+      `\nCorrect answer: ${q.answer}` +
+      (q.explanation ? `\nStatic explanation: ${q.explanation}` : "") +
+      (q.subject ? `\nSubject: ${q.subject}` : "") +
+      (q.course ? `\nCourse: ${q.course}` : "") +
+      `\n\nExplain this question and its correct answer in a helpful, encouraging way.`;
+
+    const answer = await callAIText(apiKey, {
+      model: "deepseek-v4-flash",
+      system,
+      user,
+    });
+
+    return { answer: answer.trim() || "Sorry, I couldn't generate an explanation. Try again." };
   });
 
 // ─── Admin: bulk import past questions ─────────────────────────────────────
