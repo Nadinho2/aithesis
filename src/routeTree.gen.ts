@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AcademicIntegrityRouteImport } from './routes/academic-integrity'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CertificateIdRouteImport } from './routes/certificate.$id'
 import { Route as ApiTrackReferralRouteImport } from './routes/api/track-referral'
 import { Route as ApiSubmitUniversityRouteImport } from './routes/api/submit-university'
 import { Route as ApiCustomAnalysisRouteImport } from './routes/api/custom-analysis'
@@ -58,8 +59,13 @@ import { Route as AuthenticatedLearnStudyPlannerRouteImport } from './routes/_au
 import { Route as AuthenticatedLearnSavedRouteImport } from './routes/_authenticated/learn/saved'
 import { Route as AuthenticatedLearnProgressRouteImport } from './routes/_authenticated/learn/progress'
 import { Route as AuthenticatedLearnPastQuestionsRouteImport } from './routes/_authenticated/learn/past-questions'
+import { Route as AuthenticatedLearnMicroCoursesRouteImport } from './routes/_authenticated/learn/micro-courses'
+import { Route as AuthenticatedLearnLearningPathsRouteImport } from './routes/_authenticated/learn/learning-paths'
+import { Route as AuthenticatedLearnCertificatesRouteImport } from './routes/_authenticated/learn/certificates'
 import { Route as AuthenticatedLearnSplatRouteImport } from './routes/_authenticated/learn/$'
 import { Route as AuthenticatedCommunityUniversityFeedRouteImport } from './routes/_authenticated/community/university-feed'
+import { Route as AuthenticatedCommunitySellResourcesRouteImport } from './routes/_authenticated/community/sell-resources'
+import { Route as AuthenticatedCommunityBuyResourcesRouteImport } from './routes/_authenticated/community/buy-resources'
 import { Route as AuthenticatedCommunitySplatRouteImport } from './routes/_authenticated/community/$'
 import { Route as AuthenticatedChatSplatRouteImport } from './routes/_authenticated/chat/$'
 import { Route as AuthenticatedCommunityStudyGroupsIndexRouteImport } from './routes/_authenticated/community/study-groups/index'
@@ -71,6 +77,8 @@ import { Route as AuthenticatedToolsPresentationIdRouteImport } from './routes/_
 import { Route as AuthenticatedToolsExamIdRouteImport } from './routes/_authenticated/tools/exam.$id'
 import { Route as AuthenticatedToolsCvIdRouteImport } from './routes/_authenticated/tools/cv.$id'
 import { Route as AuthenticatedToolsAssignmentIdRouteImport } from './routes/_authenticated/tools/assignment.$id'
+import { Route as AuthenticatedLearnMicroCoursesIdRouteImport } from './routes/_authenticated/learn/micro-courses.$id'
+import { Route as AuthenticatedLearnLearningPathsIdRouteImport } from './routes/_authenticated/learn/learning-paths.$id'
 import { Route as AuthenticatedCommunityStudyGroupsIdRouteImport } from './routes/_authenticated/community/study-groups/$id'
 
 const TermsRoute = TermsRouteImport.update({
@@ -115,6 +123,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificateIdRoute = CertificateIdRouteImport.update({
+  id: '/certificate/$id',
+  path: '/certificate/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTrackReferralRoute = ApiTrackReferralRouteImport.update({
@@ -334,6 +347,24 @@ const AuthenticatedLearnPastQuestionsRoute =
     path: '/learn/past-questions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedLearnMicroCoursesRoute =
+  AuthenticatedLearnMicroCoursesRouteImport.update({
+    id: '/learn/micro-courses',
+    path: '/learn/micro-courses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnLearningPathsRoute =
+  AuthenticatedLearnLearningPathsRouteImport.update({
+    id: '/learn/learning-paths',
+    path: '/learn/learning-paths',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLearnCertificatesRoute =
+  AuthenticatedLearnCertificatesRouteImport.update({
+    id: '/learn/certificates',
+    path: '/learn/certificates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedLearnSplatRoute = AuthenticatedLearnSplatRouteImport.update({
   id: '/learn/$',
   path: '/learn/$',
@@ -343,6 +374,18 @@ const AuthenticatedCommunityUniversityFeedRoute =
   AuthenticatedCommunityUniversityFeedRouteImport.update({
     id: '/community/university-feed',
     path: '/community/university-feed',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCommunitySellResourcesRoute =
+  AuthenticatedCommunitySellResourcesRouteImport.update({
+    id: '/community/sell-resources',
+    path: '/community/sell-resources',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCommunityBuyResourcesRoute =
+  AuthenticatedCommunityBuyResourcesRouteImport.update({
+    id: '/community/buy-resources',
+    path: '/community/buy-resources',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCommunitySplatRoute =
@@ -409,6 +452,18 @@ const AuthenticatedToolsAssignmentIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedToolsAssignmentRoute,
   } as any)
+const AuthenticatedLearnMicroCoursesIdRoute =
+  AuthenticatedLearnMicroCoursesIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedLearnMicroCoursesRoute,
+  } as any)
+const AuthenticatedLearnLearningPathsIdRoute =
+  AuthenticatedLearnLearningPathsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedLearnLearningPathsRoute,
+  } as any)
 const AuthenticatedCommunityStudyGroupsIdRoute =
   AuthenticatedCommunityStudyGroupsIdRouteImport.update({
     id: '/community/study-groups/$id',
@@ -441,10 +496,16 @@ export interface FileRoutesByFullPath {
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
   '/api/submit-university': typeof ApiSubmitUniversityRoute
   '/api/track-referral': typeof ApiTrackReferralRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/chat/$': typeof AuthenticatedChatSplatRoute
   '/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/community/buy-resources': typeof AuthenticatedCommunityBuyResourcesRoute
+  '/community/sell-resources': typeof AuthenticatedCommunitySellResourcesRoute
   '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/learn/certificates': typeof AuthenticatedLearnCertificatesRoute
+  '/learn/learning-paths': typeof AuthenticatedLearnLearningPathsRouteWithChildren
+  '/learn/micro-courses': typeof AuthenticatedLearnMicroCoursesRouteWithChildren
   '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
   '/learn/progress': typeof AuthenticatedLearnProgressRoute
   '/learn/saved': typeof AuthenticatedLearnSavedRoute
@@ -470,6 +531,8 @@ export interface FileRoutesByFullPath {
   '/learn/': typeof AuthenticatedLearnIndexRoute
   '/mentor/': typeof AuthenticatedMentorIndexRoute
   '/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
+  '/learn/learning-paths/$id': typeof AuthenticatedLearnLearningPathsIdRoute
+  '/learn/micro-courses/$id': typeof AuthenticatedLearnMicroCoursesIdRoute
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -505,10 +568,16 @@ export interface FileRoutesByTo {
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
   '/api/submit-university': typeof ApiSubmitUniversityRoute
   '/api/track-referral': typeof ApiTrackReferralRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/chat/$': typeof AuthenticatedChatSplatRoute
   '/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/community/buy-resources': typeof AuthenticatedCommunityBuyResourcesRoute
+  '/community/sell-resources': typeof AuthenticatedCommunitySellResourcesRoute
   '/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/learn/certificates': typeof AuthenticatedLearnCertificatesRoute
+  '/learn/learning-paths': typeof AuthenticatedLearnLearningPathsRouteWithChildren
+  '/learn/micro-courses': typeof AuthenticatedLearnMicroCoursesRouteWithChildren
   '/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
   '/learn/progress': typeof AuthenticatedLearnProgressRoute
   '/learn/saved': typeof AuthenticatedLearnSavedRoute
@@ -534,6 +603,8 @@ export interface FileRoutesByTo {
   '/learn': typeof AuthenticatedLearnIndexRoute
   '/mentor': typeof AuthenticatedMentorIndexRoute
   '/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
+  '/learn/learning-paths/$id': typeof AuthenticatedLearnLearningPathsIdRoute
+  '/learn/micro-courses/$id': typeof AuthenticatedLearnMicroCoursesIdRoute
   '/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -571,10 +642,16 @@ export interface FileRoutesById {
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
   '/api/submit-university': typeof ApiSubmitUniversityRoute
   '/api/track-referral': typeof ApiTrackReferralRoute
+  '/certificate/$id': typeof CertificateIdRoute
   '/_authenticated/chat/$': typeof AuthenticatedChatSplatRoute
   '/_authenticated/community/$': typeof AuthenticatedCommunitySplatRoute
+  '/_authenticated/community/buy-resources': typeof AuthenticatedCommunityBuyResourcesRoute
+  '/_authenticated/community/sell-resources': typeof AuthenticatedCommunitySellResourcesRoute
   '/_authenticated/community/university-feed': typeof AuthenticatedCommunityUniversityFeedRoute
   '/_authenticated/learn/$': typeof AuthenticatedLearnSplatRoute
+  '/_authenticated/learn/certificates': typeof AuthenticatedLearnCertificatesRoute
+  '/_authenticated/learn/learning-paths': typeof AuthenticatedLearnLearningPathsRouteWithChildren
+  '/_authenticated/learn/micro-courses': typeof AuthenticatedLearnMicroCoursesRouteWithChildren
   '/_authenticated/learn/past-questions': typeof AuthenticatedLearnPastQuestionsRoute
   '/_authenticated/learn/progress': typeof AuthenticatedLearnProgressRoute
   '/_authenticated/learn/saved': typeof AuthenticatedLearnSavedRoute
@@ -600,6 +677,8 @@ export interface FileRoutesById {
   '/_authenticated/learn/': typeof AuthenticatedLearnIndexRoute
   '/_authenticated/mentor/': typeof AuthenticatedMentorIndexRoute
   '/_authenticated/community/study-groups/$id': typeof AuthenticatedCommunityStudyGroupsIdRoute
+  '/_authenticated/learn/learning-paths/$id': typeof AuthenticatedLearnLearningPathsIdRoute
+  '/_authenticated/learn/micro-courses/$id': typeof AuthenticatedLearnMicroCoursesIdRoute
   '/_authenticated/tools/assignment/$id': typeof AuthenticatedToolsAssignmentIdRoute
   '/_authenticated/tools/cv/$id': typeof AuthenticatedToolsCvIdRoute
   '/_authenticated/tools/exam/$id': typeof AuthenticatedToolsExamIdRoute
@@ -637,10 +716,16 @@ export interface FileRouteTypes {
     | '/api/custom-analysis'
     | '/api/submit-university'
     | '/api/track-referral'
+    | '/certificate/$id'
     | '/chat/$'
     | '/community/$'
+    | '/community/buy-resources'
+    | '/community/sell-resources'
     | '/community/university-feed'
     | '/learn/$'
+    | '/learn/certificates'
+    | '/learn/learning-paths'
+    | '/learn/micro-courses'
     | '/learn/past-questions'
     | '/learn/progress'
     | '/learn/saved'
@@ -666,6 +751,8 @@ export interface FileRouteTypes {
     | '/learn/'
     | '/mentor/'
     | '/community/study-groups/$id'
+    | '/learn/learning-paths/$id'
+    | '/learn/micro-courses/$id'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
@@ -701,10 +788,16 @@ export interface FileRouteTypes {
     | '/api/custom-analysis'
     | '/api/submit-university'
     | '/api/track-referral'
+    | '/certificate/$id'
     | '/chat/$'
     | '/community/$'
+    | '/community/buy-resources'
+    | '/community/sell-resources'
     | '/community/university-feed'
     | '/learn/$'
+    | '/learn/certificates'
+    | '/learn/learning-paths'
+    | '/learn/micro-courses'
     | '/learn/past-questions'
     | '/learn/progress'
     | '/learn/saved'
@@ -730,6 +823,8 @@ export interface FileRouteTypes {
     | '/learn'
     | '/mentor'
     | '/community/study-groups/$id'
+    | '/learn/learning-paths/$id'
+    | '/learn/micro-courses/$id'
     | '/tools/assignment/$id'
     | '/tools/cv/$id'
     | '/tools/exam/$id'
@@ -766,10 +861,16 @@ export interface FileRouteTypes {
     | '/api/custom-analysis'
     | '/api/submit-university'
     | '/api/track-referral'
+    | '/certificate/$id'
     | '/_authenticated/chat/$'
     | '/_authenticated/community/$'
+    | '/_authenticated/community/buy-resources'
+    | '/_authenticated/community/sell-resources'
     | '/_authenticated/community/university-feed'
     | '/_authenticated/learn/$'
+    | '/_authenticated/learn/certificates'
+    | '/_authenticated/learn/learning-paths'
+    | '/_authenticated/learn/micro-courses'
     | '/_authenticated/learn/past-questions'
     | '/_authenticated/learn/progress'
     | '/_authenticated/learn/saved'
@@ -795,6 +896,8 @@ export interface FileRouteTypes {
     | '/_authenticated/learn/'
     | '/_authenticated/mentor/'
     | '/_authenticated/community/study-groups/$id'
+    | '/_authenticated/learn/learning-paths/$id'
+    | '/_authenticated/learn/micro-courses/$id'
     | '/_authenticated/tools/assignment/$id'
     | '/_authenticated/tools/cv/$id'
     | '/_authenticated/tools/exam/$id'
@@ -821,6 +924,7 @@ export interface RootRouteChildren {
   ApiCustomAnalysisRoute: typeof ApiCustomAnalysisRoute
   ApiSubmitUniversityRoute: typeof ApiSubmitUniversityRoute
   ApiTrackReferralRoute: typeof ApiTrackReferralRoute
+  CertificateIdRoute: typeof CertificateIdRoute
   ApiWithdrawalRequestRoute: typeof ApiWithdrawalRequestRoute
 }
 
@@ -887,6 +991,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certificate/$id': {
+      id: '/certificate/$id'
+      path: '/certificate/$id'
+      fullPath: '/certificate/$id'
+      preLoaderRoute: typeof CertificateIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/track-referral': {
@@ -1169,6 +1280,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLearnPastQuestionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/learn/micro-courses': {
+      id: '/_authenticated/learn/micro-courses'
+      path: '/learn/micro-courses'
+      fullPath: '/learn/micro-courses'
+      preLoaderRoute: typeof AuthenticatedLearnMicroCoursesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/learning-paths': {
+      id: '/_authenticated/learn/learning-paths'
+      path: '/learn/learning-paths'
+      fullPath: '/learn/learning-paths'
+      preLoaderRoute: typeof AuthenticatedLearnLearningPathsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/learn/certificates': {
+      id: '/_authenticated/learn/certificates'
+      path: '/learn/certificates'
+      fullPath: '/learn/certificates'
+      preLoaderRoute: typeof AuthenticatedLearnCertificatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/learn/$': {
       id: '/_authenticated/learn/$'
       path: '/learn/$'
@@ -1181,6 +1313,20 @@ declare module '@tanstack/react-router' {
       path: '/community/university-feed'
       fullPath: '/community/university-feed'
       preLoaderRoute: typeof AuthenticatedCommunityUniversityFeedRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/community/sell-resources': {
+      id: '/_authenticated/community/sell-resources'
+      path: '/community/sell-resources'
+      fullPath: '/community/sell-resources'
+      preLoaderRoute: typeof AuthenticatedCommunitySellResourcesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/community/buy-resources': {
+      id: '/_authenticated/community/buy-resources'
+      path: '/community/buy-resources'
+      fullPath: '/community/buy-resources'
+      preLoaderRoute: typeof AuthenticatedCommunityBuyResourcesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/community/$': {
@@ -1260,6 +1406,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedToolsAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedToolsAssignmentRoute
     }
+    '/_authenticated/learn/micro-courses/$id': {
+      id: '/_authenticated/learn/micro-courses/$id'
+      path: '/$id'
+      fullPath: '/learn/micro-courses/$id'
+      preLoaderRoute: typeof AuthenticatedLearnMicroCoursesIdRouteImport
+      parentRoute: typeof AuthenticatedLearnMicroCoursesRoute
+    }
+    '/_authenticated/learn/learning-paths/$id': {
+      id: '/_authenticated/learn/learning-paths/$id'
+      path: '/$id'
+      fullPath: '/learn/learning-paths/$id'
+      preLoaderRoute: typeof AuthenticatedLearnLearningPathsIdRouteImport
+      parentRoute: typeof AuthenticatedLearnLearningPathsRoute
+    }
     '/_authenticated/community/study-groups/$id': {
       id: '/_authenticated/community/study-groups/$id'
       path: '/community/study-groups/$id'
@@ -1269,6 +1429,36 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedLearnLearningPathsRouteChildren {
+  AuthenticatedLearnLearningPathsIdRoute: typeof AuthenticatedLearnLearningPathsIdRoute
+}
+
+const AuthenticatedLearnLearningPathsRouteChildren: AuthenticatedLearnLearningPathsRouteChildren =
+  {
+    AuthenticatedLearnLearningPathsIdRoute:
+      AuthenticatedLearnLearningPathsIdRoute,
+  }
+
+const AuthenticatedLearnLearningPathsRouteWithChildren =
+  AuthenticatedLearnLearningPathsRoute._addFileChildren(
+    AuthenticatedLearnLearningPathsRouteChildren,
+  )
+
+interface AuthenticatedLearnMicroCoursesRouteChildren {
+  AuthenticatedLearnMicroCoursesIdRoute: typeof AuthenticatedLearnMicroCoursesIdRoute
+}
+
+const AuthenticatedLearnMicroCoursesRouteChildren: AuthenticatedLearnMicroCoursesRouteChildren =
+  {
+    AuthenticatedLearnMicroCoursesIdRoute:
+      AuthenticatedLearnMicroCoursesIdRoute,
+  }
+
+const AuthenticatedLearnMicroCoursesRouteWithChildren =
+  AuthenticatedLearnMicroCoursesRoute._addFileChildren(
+    AuthenticatedLearnMicroCoursesRouteChildren,
+  )
 
 interface AuthenticatedToolsAssignmentRouteChildren {
   AuthenticatedToolsAssignmentIdRoute: typeof AuthenticatedToolsAssignmentIdRoute
@@ -1372,8 +1562,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTopicGeneratorRoute: typeof AuthenticatedTopicGeneratorRoute
   AuthenticatedChatSplatRoute: typeof AuthenticatedChatSplatRoute
   AuthenticatedCommunitySplatRoute: typeof AuthenticatedCommunitySplatRoute
+  AuthenticatedCommunityBuyResourcesRoute: typeof AuthenticatedCommunityBuyResourcesRoute
+  AuthenticatedCommunitySellResourcesRoute: typeof AuthenticatedCommunitySellResourcesRoute
   AuthenticatedCommunityUniversityFeedRoute: typeof AuthenticatedCommunityUniversityFeedRoute
   AuthenticatedLearnSplatRoute: typeof AuthenticatedLearnSplatRoute
+  AuthenticatedLearnCertificatesRoute: typeof AuthenticatedLearnCertificatesRoute
+  AuthenticatedLearnLearningPathsRoute: typeof AuthenticatedLearnLearningPathsRouteWithChildren
+  AuthenticatedLearnMicroCoursesRoute: typeof AuthenticatedLearnMicroCoursesRouteWithChildren
   AuthenticatedLearnPastQuestionsRoute: typeof AuthenticatedLearnPastQuestionsRoute
   AuthenticatedLearnProgressRoute: typeof AuthenticatedLearnProgressRoute
   AuthenticatedLearnSavedRoute: typeof AuthenticatedLearnSavedRoute
@@ -1415,9 +1610,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTopicGeneratorRoute: AuthenticatedTopicGeneratorRoute,
   AuthenticatedChatSplatRoute: AuthenticatedChatSplatRoute,
   AuthenticatedCommunitySplatRoute: AuthenticatedCommunitySplatRoute,
+  AuthenticatedCommunityBuyResourcesRoute:
+    AuthenticatedCommunityBuyResourcesRoute,
+  AuthenticatedCommunitySellResourcesRoute:
+    AuthenticatedCommunitySellResourcesRoute,
   AuthenticatedCommunityUniversityFeedRoute:
     AuthenticatedCommunityUniversityFeedRoute,
   AuthenticatedLearnSplatRoute: AuthenticatedLearnSplatRoute,
+  AuthenticatedLearnCertificatesRoute: AuthenticatedLearnCertificatesRoute,
+  AuthenticatedLearnLearningPathsRoute:
+    AuthenticatedLearnLearningPathsRouteWithChildren,
+  AuthenticatedLearnMicroCoursesRoute:
+    AuthenticatedLearnMicroCoursesRouteWithChildren,
   AuthenticatedLearnPastQuestionsRoute: AuthenticatedLearnPastQuestionsRoute,
   AuthenticatedLearnProgressRoute: AuthenticatedLearnProgressRoute,
   AuthenticatedLearnSavedRoute: AuthenticatedLearnSavedRoute,
@@ -1468,6 +1672,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCustomAnalysisRoute: ApiCustomAnalysisRoute,
   ApiSubmitUniversityRoute: ApiSubmitUniversityRoute,
   ApiTrackReferralRoute: ApiTrackReferralRoute,
+  CertificateIdRoute: CertificateIdRoute,
   ApiWithdrawalRequestRoute: ApiWithdrawalRequestRoute,
 }
 export const routeTree = rootRouteImport
