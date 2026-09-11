@@ -1,7 +1,8 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { listChats } from "@/lib/chat.functions";
 import {
   FileEdit,
   GraduationCap,
@@ -357,6 +358,7 @@ interface ChatLink {
 function ChatSidebar() {
   const { user } = useClerk();
   const userId = user?.id;
+  const listChatsFn = useServerFn(listChats);
 
   // Track active chat from URL for reactive updates
   const [activeChatId, setActiveChatId] = useState<string | null>(() => {
@@ -385,20 +387,7 @@ function ChatSidebar() {
 
   const { data: chats } = useQuery({
     queryKey: ["chat-list", userId],
-    queryFn: async () => {
-      if (!userId) return [];
-      const { data, error } = await (supabase as any)
-        .from("chats")
-        .select("id, title, updated_at")
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-        .limit(50);
-      if (error) {
-        console.error("Failed to fetch chats:", error);
-        return [];
-      }
-      return (data ?? []) as ChatLink[];
-    },
+    queryFn: () => listChatsFn(),
     enabled: !!userId,
     staleTime: 30_000,
   });
@@ -439,7 +428,7 @@ function ChatSidebar() {
     <div className="flex flex-col h-full">
       <div className="px-4 py-5 border-b border-ink/5 flex items-center justify-between">
         <div>
-          <h2 className="font-serif text-lg font-bold text-ink">AI Chat</h2>
+          <h2 className="font-serif text-lg font-bold text-ink">PADI Chat</h2>
         </div>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("chat-new"))}

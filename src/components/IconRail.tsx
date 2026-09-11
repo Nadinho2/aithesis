@@ -22,7 +22,7 @@ const items: { id: Section; label: string; icon: typeof Home; route: string }[] 
   { id: "learn", label: "Learn", icon: GraduationCap, route: "/learn" },
   { id: "community", label: "Community", icon: Users, route: "/community" },
   { id: "mentor", label: "Mentor", icon: Handshake, route: "/mentor/find" },
-  { id: "chat", label: "AI Chat", icon: MessageCircle, route: "/chat" },
+  { id: "chat", label: "PADI Chat", icon: MessageCircle, route: "/chat" },
 ];
 
 export function getSectionFromPath(pathname: string): Section {
