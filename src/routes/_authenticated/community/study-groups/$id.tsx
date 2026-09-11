@@ -16,6 +16,7 @@ import {
   listGroupFiles,
   uploadGroupFile,
   deleteGroupFile,
+  inviteToGroup,
   type StudyGroupPost,
   type StudyGroupComment,
   type StudyGroupFile,
@@ -38,6 +39,8 @@ import {
   Trash2,
   FileText,
   Plus,
+  UserPlus,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useClerk } from "@clerk/clerk-react";
@@ -94,6 +97,7 @@ function StudyGroupDetailPage() {
   const filesFn = useServerFn(listGroupFiles);
   const uploadFn = useServerFn(uploadGroupFile);
   const deleteFileFn = useServerFn(deleteGroupFile);
+  const inviteFn = useServerFn(inviteToGroup);
 
   const [tab, setTab] = useState<"feed" | "members" | "files">("feed");
   const [postDraft, setPostDraft] = useState("");
@@ -101,6 +105,7 @@ function StudyGroupDetailPage() {
   const [commentDraft, setCommentDraft] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ["study-group", id],
@@ -225,6 +230,16 @@ function StudyGroupDetailPage() {
     onError: (e) => toast.error(String(e)),
   });
 
+  const inviteMut = useMutation({
+    mutationFn: (email: string) => inviteFn({ data: { group_id: id, email } }),
+    onSuccess: () => {
+      setInviteEmail("");
+      invalidateAll();
+      toast.success("Invitation sent.");
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
   function toggleComments(postId: string) {
     setExpandedPostId((prev) => (prev === postId ? null : postId));
     setCommentDraft("");
@@ -246,7 +261,7 @@ function StudyGroupDetailPage() {
     );
   }
 
-  const { group, members, pending, my_status, is_creator, member_count } = detail;
+  const { group, members, pending, my_status, is_creator, member_count, invitations } = detail;
 
   return (
     <div className="flex flex-col h-full">
@@ -532,28 +547,87 @@ function StudyGroupDetailPage() {
           )}
 
           {tab === "members" && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {!isApproved ? (
                 <p className="text-sm text-ink/50 bg-card border border-ink/10 rounded-sm p-4">
                   Join the group to view members.
                 </p>
               ) : (
-                members.map((m: StudyGroupMember) => (
-                  <div
-                    key={m.user_id}
-                    className="bg-card border border-ink/10 rounded-sm p-3 flex items-center gap-3"
-                  >
-                    <div className="size-9 rounded-full bg-verde/10 text-verde-dark flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                      {(m.full_name ?? "U").charAt(0).toUpperCase()}
+                <>
+                  <div className="bg-card border border-ink/10 rounded-sm p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <UserPlus className="size-4 text-sage" />
+                      <span className="text-sm font-medium text-ink">Invite a member</span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm text-ink font-medium">{m.full_name ?? "Student"}</div>
-                      <div className="text-xs text-ink/40">
-                        {m.role === "creator" ? "Creator" : "Member"}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="Enter their email address"
+                        className="flex-1 bg-paper border border-ink/15 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-sage"
+                      />
+                      <button
+                        onClick={() => inviteMut.mutate(inviteEmail)}
+                        disabled={inviteMut.isPending || !inviteEmail.trim()}
+                        className="px-4 py-2 bg-ink text-bone rounded-sm text-sm font-medium hover:bg-sage transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {inviteMut.isPending ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Mail className="size-4" />
+                        )}
+                        Invite
+                      </button>
+                    </div>
+                    <p className="text-xs text-ink/40 mt-2">
+                      They'll get an email and can accept or reject from their dashboard.
+                    </p>
+                  </div>
+
+                  {invitations && invitations.length > 0 && (
+                    <div className="space-y-2">
+                      {invitations.map((inv: any) => (
+                        <div
+                          key={inv.id}
+                          className="bg-card border border-ink/10 rounded-sm p-3 flex items-center gap-3"
+                        >
+                          <div className="size-9 rounded-full bg-ink/5 text-ink/60 flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                            {(inv.invitee_name ?? inv.email ?? "U").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm text-ink font-medium">
+                              {inv.invitee_name ?? inv.email ?? "Invited user"}
+                            </div>
+                            {inv.email && (
+                              <div className="text-xs text-ink/40 truncate">{inv.email}</div>
+                            )}
+                          </div>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-bg text-amber-text text-[11px] font-medium flex-shrink-0">
+                            <Clock className="size-3" /> Pending
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {members.map((m: StudyGroupMember) => (
+                    <div
+                      key={m.user_id}
+                      className="bg-card border border-ink/10 rounded-sm p-3 flex items-center gap-3"
+                    >
+                      <div className="size-9 rounded-full bg-verde/10 text-verde-dark flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                        {(m.full_name ?? "U").charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-ink font-medium">{m.full_name ?? "Student"}</div>
+                        <div className="text-xs text-ink/40">
+                          {m.role === "creator" ? "Creator" : "Member"}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </>
               )}
             </div>
           )}

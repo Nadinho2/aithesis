@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { verifyPayment } from "@/lib/payment.functions";
 import { getActivePlan } from "@/lib/side-hustle.functions";
 import { getUserLimits, getRecentItems, getQuickStats } from "@/lib/dashboard.functions";
+import { listMyInvitations, respondToInvitation } from "@/lib/study-groups.functions";
 import { LearningSignalsCard } from "@/components/LearningSignalsCard";
 import {
   Sparkles, CheckCircle, Loader2, XCircle,
-  FileText, BookOpen, Zap, Target,
+  FileText, BookOpen, Target,
   ArrowRight, Clock, Search,
   CreditCard, Gift, Settings, LogOut,
+  Check, X, Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -88,6 +90,7 @@ function ActiveJourneyCard() {
   return (
     <Link
       to="/tools/side-hustle/journey"
+      search={{ skills: "", interests: "" }}
       className="mt-3 block p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-md hover:border-purple-300 transition-all group"
     >
       <div className="flex items-start justify-between mb-2">
@@ -116,6 +119,74 @@ function ActiveJourneyCard() {
         {currentStep} of {totalSteps} phases &middot; Goal: First paying client
       </p>
     </Link>
+  );
+}
+
+/* ─── Group Invitations ─── */
+function GroupInvitationsCard() {
+  const qc = useQueryClient();
+  const listInvites = useServerFn(listMyInvitations);
+  const respondFn = useServerFn(respondToInvitation);
+
+  const { data: invitations } = useQuery({
+    queryKey: ["my-group-invitations"],
+    queryFn: () => listInvites(),
+    staleTime: 15_000,
+  });
+
+  const respondMut = useMutation({
+    mutationFn: ({ invitationId, action }: { invitationId: string; action: "accept" | "reject" }) =>
+      respondFn({ data: { invitation_id: invitationId, action } }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["my-group-invitations"] });
+      qc.invalidateQueries({ queryKey: ["study-groups"] });
+      toast.success(vars.action === "accept" ? "You joined the group." : "Invitation rejected.");
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
+  if (!invitations || invitations.length === 0) return null;
+
+  return (
+    <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">
+      <div className="px-5 py-4 border-b border-ink/5">
+        <h2 className="font-bold text-sm uppercase tracking-[0.12em]">Study Group Invitations</h2>
+        <p className="text-xs text-ink/40 mt-0.5">Accept or reject to join</p>
+      </div>
+      <div className="p-5 space-y-3">
+        {invitations.map((inv: any) => (
+          <div key={inv.id} className="flex items-center gap-3 p-3 rounded-md border border-ink/10 bg-paper">
+            <div className="size-9 rounded-full bg-verde/10 text-verde-dark flex items-center justify-center flex-shrink-0">
+              <Users className="size-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-ink truncate">{inv.group_name}</p>
+              <p className="text-xs text-ink/50">
+                {inv.inviter_name ? `${inv.inviter_name} invited you` : "You've been invited"}
+                {" · "}
+                {new Date(inv.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => respondMut.mutate({ invitationId: inv.id, action: "accept" })}
+                disabled={respondMut.isPending}
+                className="px-3 py-1.5 bg-verde text-white rounded-sm text-xs font-medium hover:bg-verde-dark transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Check className="size-3.5" /> Accept
+              </button>
+              <button
+                onClick={() => respondMut.mutate({ invitationId: inv.id, action: "reject" })}
+                disabled={respondMut.isPending}
+                className="px-3 py-1.5 border border-ink/20 text-ink/60 rounded-sm text-xs font-medium hover:bg-ink/5 transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <X className="size-3.5" /> Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -319,6 +390,9 @@ function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Study Group Invitations */}
+        <GroupInvitationsCard />
 
         {/* Recent Items */}
         <div className="border border-ink/10 rounded-lg overflow-hidden bg-card">

@@ -541,6 +541,32 @@ ${smallNote("Reference this tool: " + tool)}`,
   );
 }
 
+export async function sendGroupInviteEmail({
+  to,
+  name,
+  groupName,
+  inviterName,
+  groupUrl,
+}: {
+  to: string;
+  name: string;
+  groupName: string;
+  inviterName: string;
+  groupUrl: string;
+}): Promise<SendResult> {
+  return send(
+    to,
+    `${inviterName} invited you to a study group — MyBrainPadi`,
+    `${heading("You've been invited to a study group 🎉")}
+${greeting(name)}
+${paragraph(`<strong>${inviterName}</strong> invited you to join the study group <strong>"${groupName}"</strong>.`)}
+${paragraph("You can accept or reject the invitation from your dashboard. It will stay there until you respond.")}
+${ctaButton(`${SITE}/dashboard`, "View Invitation")}
+${secondaryCta(groupUrl, "View Study Group")}
+${smallNote("If you'd rather not join, simply ignore this email or reject the invitation in your dashboard.")}`,
+  );
+}
+
 export async function sendHumanizationFailedEmail({
   to,
   name,

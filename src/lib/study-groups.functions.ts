@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 import { callAIText } from "./ai-utils.server";
+import { sendGroupInviteEmail } from "./mail";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -294,6 +295,31 @@ export const getStudyGroup = createServerFn({ method: "GET" })
     const myRow = rows.find((r) => r.user_id === userId) ?? null;
     const isApproved = !!myRow && myRow.status === "approved";
 
+    let invitations: any[] = [];
+    if (isApproved || group.creator_id === userId) {
+      const { data: invRows } = await supabase
+        .from("study_group_invitations")
+        .select("*")
+        .eq("group_id", data.group_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      const invArr = (invRows ?? []) as any[];
+      if (invArr.length) {
+        const inviteeNames = await fetchNames(
+          supabase,
+          invArr.map((r) => r.invitee_id),
+        );
+        invitations = invArr.map((r) => ({
+          id: r.id,
+          invitee_id: r.invitee_id,
+          email: r.email ?? null,
+          invitee_name: inviteeNames.get(r.invitee_id) ?? null,
+          status: r.status,
+          created_at: r.created_at,
+        }));
+      }
+    }
+
     return {
       group: normalizeGroup(group) as StudyGroup,
       is_creator: group.creator_id === userId,
@@ -305,6 +331,7 @@ export const getStudyGroup = createServerFn({ method: "GET" })
       member_count: approved.length,
       members: isApproved ? approved.map(toMember) : [],
       pending: group.creator_id === userId ? pending.map(toMember) : [],
+      invitations,
     };
   });
 
@@ -874,6 +901,190 @@ export const deleteGroupFile = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.file_id);
     if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+// ─── Invitations ───────────────────────────────────────────────────────────
+
+const SITE_URL = "https://www.mybrainpadi.com";
+
+async function findUserByEmail(
+  email: string,
+): Promise<{ id: string; name: string; email: string } | null> {
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  if (!secretKey) return null;
+  const { createClerkClient } = await import("@clerk/backend");
+  const clerk = createClerkClient({ secretKey });
+  const res = await clerk.users.getUserList({ emailAddress: [email], limit: 1 });
+  const u = res?.data?.[0];
+  if (!u) return null;
+  const name =
+    [u.firstName, u.lastName].filter(Boolean).join(" ").trim() ||
+    u.username ||
+    email.split("@")[0];
+  return {
+    id: u.id,
+    name,
+    email: u.emailAddresses?.[0]?.emailAddress ?? email,
+  };
+}
+
+const InviteInput = z.object({
+  group_id: z.string().uuid(),
+  email: z.string().email(),
+});
+
+export const inviteToGroup = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => InviteInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    await requireApprovedMembership(supabase, data.group_id, userId);
+
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("id, name")
+      .eq("id", data.group_id)
+      .maybeSingle();
+    if (!group) throw new Error("Study group not found.");
+
+    const email = data.email.trim().toLowerCase();
+
+    const invitee = await findUserByEmail(email);
+    if (!invitee) throw new Error("No MyBrainPadi account found with that email.");
+
+    if (invitee.id === userId) throw new Error("You can't invite yourself.");
+
+    const existing = await getMembership(supabase, data.group_id, invitee.id);
+    if (existing && existing.status === "approved") {
+      throw new Error("This user is already a member.");
+    }
+
+    const { data: existingInvite } = await supabase
+      .from("study_group_invitations")
+      .select("id")
+      .eq("group_id", data.group_id)
+      .eq("invitee_id", invitee.id)
+      .maybeSingle();
+    if (existingInvite) throw new Error("This user has already been invited.");
+
+    const { error } = await supabase.from("study_group_invitations").insert({
+      group_id: data.group_id,
+      invitee_id: invitee.id,
+      invited_by: userId,
+      email: invitee.email,
+      status: "pending",
+    });
+    if (error) throw new Error(error.message);
+
+    const names = await fetchNames(supabase, [userId]);
+    const inviterName = names.get(userId) ?? "A MyBrainPadi user";
+
+    try {
+      await sendGroupInviteEmail({
+        to: invitee.email,
+        name: invitee.name,
+        groupName: group.name,
+        inviterName,
+        groupUrl: `${SITE_URL}/community/study-groups/${group.id}`,
+      });
+    } catch {
+      // Email failure must not block the invitation.
+    }
+
+    return { ok: true };
+  });
+
+export const listMyInvitations = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: rows, error } = await supabase
+      .from("study_group_invitations")
+      .select("id, group_id, invited_by, created_at")
+      .eq("invitee_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const invites = (rows ?? []) as any[];
+    if (!invites.length) return [];
+
+    const groupIds = [...new Set(invites.map((i) => i.group_id))];
+    const { data: groups } = await supabase
+      .from("study_groups")
+      .select("id, name")
+      .in("id", groupIds);
+    const groupNameById = new Map<string, string>();
+    for (const g of groups ?? []) groupNameById.set(g.id, g.name);
+
+    const names = await fetchNames(
+      supabase,
+      invites.map((i) => i.invited_by),
+    );
+
+    return invites.map((i) => ({
+      id: i.id,
+      group_id: i.group_id,
+      group_name: groupNameById.get(i.group_id) ?? "Study group",
+      inviter_name: names.get(i.invited_by) ?? null,
+      created_at: i.created_at,
+    }));
+  });
+
+const RespondInvitationInput = z.object({
+  invitation_id: z.string().uuid(),
+  action: z.enum(["accept", "reject"]),
+});
+
+export const respondToInvitation = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => RespondInvitationInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: invite } = await supabase
+      .from("study_group_invitations")
+      .select("*")
+      .eq("id", data.invitation_id)
+      .maybeSingle();
+    if (!invite) throw new Error("Invitation not found.");
+    if (invite.invitee_id !== userId) {
+      throw new Error("This invitation is not for you.");
+    }
+    if (invite.status !== "pending") {
+      throw new Error("This invitation has already been answered.");
+    }
+
+    const now = new Date().toISOString();
+
+    if (data.action === "accept") {
+      const { error: mErr } = await supabase
+        .from("study_group_memberships")
+        .upsert(
+          {
+            group_id: invite.group_id,
+            user_id: userId,
+            status: "approved",
+            role: "member",
+            created_at: now,
+          },
+          { onConflict: "group_id,user_id" },
+        );
+      if (mErr) throw new Error(mErr.message);
+    }
+
+    const { error: updErr } = await supabase
+      .from("study_group_invitations")
+      .update({
+        status: data.action === "accept" ? "accepted" : "rejected",
+        responded_at: now,
+      })
+      .eq("id", data.invitation_id);
+    if (updErr) throw new Error(updErr.message);
 
     return { ok: true };
   });
