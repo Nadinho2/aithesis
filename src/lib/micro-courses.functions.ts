@@ -425,7 +425,7 @@ Rules:
 - Keep it concrete and immediately useful, not theoretical.`;
 
     const parsed = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       max_tokens: 8000,
       system,
       user: `Lesson title: ${data.title}\nTopic: ${data.topic}`,

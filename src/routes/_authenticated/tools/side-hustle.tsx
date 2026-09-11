@@ -12,6 +12,10 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/side-hustle")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    skills: typeof search.skills === "string" ? search.skills : "",
+    interests: typeof search.interests === "string" ? search.interests : "",
+  }),
   head: () => ({ meta: [{ title: "Side Hustle Finder — Mybrainpadi" }] }),
   component: SideHustlePage,
 });
@@ -222,6 +226,7 @@ function MilestoneCard({
 }
 
 function SideHustlePage() {
+  const search = Route.useSearch();
   // If a child route is matched (detail page), render Outlet
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   if (pathname !== "/tools/side-hustle") return <Outlet />;
@@ -229,13 +234,13 @@ function SideHustlePage() {
   const startPlanFn = useServerFn(startSideHustlePlan);
   const adviceFn = useServerFn(askPhaseAdvice);
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({
-    skills: "",
-    interests: "",
+  const [answers, setAnswers] = useState<Record<string, string>>(() => ({
+    skills: search.skills ?? "",
+    interests: search.interests ?? "",
     time: "",
     goal: "",
     experience: "",
-  });
+  }));
   const [result, setResult] = useState<any>(null);
   const [startingIndex, setStartingIndex] = useState<number | null>(null);
   const [journeyPlan, setJourneyPlan] = useState<any>(null);
@@ -457,6 +462,7 @@ function SideHustlePage() {
             <Link
               to="/tools/side-hustle/$id"
               params={{ id: result.recordId }}
+              search={{ skills: "", interests: "" }}
               className="flex items-center gap-1.5 text-xs px-4 py-2 border border-purple-200 text-purple-700 rounded-sm hover:bg-purple-50 transition-colors"
             >
               <ExternalLink className="size-3.5" />
@@ -568,6 +574,7 @@ function SideHustlePage() {
             <Link
               to="/tools/side-hustle/$id"
               params={{ id: result.recordId }}
+              search={{ skills: "", interests: "" }}
               className="flex items-center gap-1.5 text-xs px-4 py-2 border border-purple-200 text-purple-700 rounded-sm hover:bg-purple-50 transition-colors"
             >
               <ExternalLink className="size-3.5" />

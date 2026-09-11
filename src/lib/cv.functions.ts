@@ -86,7 +86,7 @@ export const generateCv = createServerFn({ method: "POST" })
     if (data.file_base64 && data.file_mime) {
       const parsed = await parseUploadedFile(data.file_base64, data.file_mime, data.file_name ?? "");
       const raw = await callAI(apiKey, {
-        model: "deepseek-reasoner",
+        model: "deepseek-v4-flash",
         max_tokens: 4096,
         system: `You are a CV parser. Extract the following fields from the document below.
 If a field is not present, use an empty string "".
@@ -125,7 +125,7 @@ Return ONLY valid JSON (no markdown, no code fences):
       let jdAnalysis: any = {};
       try {
         jdAnalysis = await callAI(apiKey, {
-          model: "deepseek-reasoner",
+          model: "deepseek-v4-flash",
           max_tokens: 2048,
           system: `You are a job market analyst. Analyze this job description and extract:
 
@@ -161,7 +161,7 @@ Return ONLY valid JSON (no markdown, no code fences):
 
       // Step 2: Tailor the CV for this specific job
       const tailored = await callAI(apiKey, {
-        model: "deepseek-reasoner",
+        model: "deepseek-v4-flash",
         max_tokens: 4096,
         system: `You are a professional CV writer helping a candidate tailor their CV for a specific job application.
 
@@ -198,7 +198,7 @@ Return ONLY valid JSON (no markdown, no code fences):
     } else {
       // ── Generic professional enhancement (existing behaviour) ──
       const enhanced = await callAI(apiKey, {
-        model: "deepseek-reasoner",
+        model: "deepseek-v4-flash",
         max_tokens: 4096,
         system: `You are a professional CV writer for the Nigerian and international job market.
 Rewrite this CV information to be concise, achievement-oriented, and optimised for ATS (Applicant Tracking Systems).

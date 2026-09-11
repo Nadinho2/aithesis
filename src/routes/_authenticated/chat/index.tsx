@@ -1,24 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listChats, getChatMessages } from "@/lib/chat.functions";
 import { useClerk } from "@clerk/clerk-react";
 import { ArrowUp, Sparkles, Plus, Clock, X, ArrowLeft } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  created_at: string;
-}
-
-interface ChatLink {
-  id: string;
-  title: string;
-  updated_at: string;
-}
 
 const suggestedPrompts = [
   "Explain a concept from my course",
@@ -35,6 +22,7 @@ export function ChatPage() {
   const { user } = useClerk();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const listChatsFn = useServerFn(listChats);
   const getMsgsFn = useServerFn(getChatMessages);
@@ -108,6 +96,62 @@ export function ChatPage() {
     setIsLoading(false);
     setHistoryOpen(false);
     window.history.replaceState(null, "", `/chat?chatId=${id}`);
+  }
+
+  function goToSuggestion(suggestion: { tool?: string; prefill?: Record<string, string> }) {
+    const p = suggestion.prefill ?? {};
+    switch (suggestion.tool) {
+      case "topic-discovery":
+        navigate({
+          to: "/topic-generator",
+          search: {
+            area_of_interest: p.area_of_interest ?? "",
+            department: p.department ?? "",
+            course: p.course ?? "",
+          },
+        });
+        break;
+      case "thesis":
+        navigate({
+          to: "/new-thesis",
+          search: {
+            title: p.title ?? "",
+            area_of_interest: p.area_of_interest ?? "",
+            department: p.department ?? "",
+            level: p.level ?? "",
+          },
+        });
+        break;
+      case "proposal":
+        navigate({
+          to: "/quick-proposal",
+          search: {
+            title: p.title ?? "",
+            area_of_interest: p.area_of_interest ?? "",
+            department: p.department ?? "",
+            level: p.level ?? "",
+          },
+        });
+        break;
+      case "cv":
+        navigate({
+          to: "/tools/cv",
+          search: {
+            job_title: p.job_title ?? "",
+            job_description: p.job_description ?? "",
+          },
+        });
+        break;
+      case "side-hustle":
+        navigate({
+          to: "/tools/side-hustle",
+          search: {
+            skills: p.skills ?? "",
+            interests: p.interests ?? "",
+          },
+        });
+        break;
+    }
   }
 
   // Listen for chat events from ContextSidebar (desktop)
@@ -306,8 +350,19 @@ export function ChatPage() {
                     style={{ backgroundColor: "#0F6E56" }}>
                     <Sparkles className="size-3.5 text-white" />
                   </div>
-                  <div className={`px-4 py-2.5 rounded-2xl rounded-bl-md border border-ink/10 bg-white text-sm leading-relaxed text-ink ${isMobile ? "max-w-[85%]" : "max-w-[75%]"}`}>
-                    {msg.content}
+                  <div className={`flex flex-col ${isMobile ? "max-w-[85%]" : "max-w-[75%]"}`}>
+                    <div className="px-4 py-2.5 rounded-2xl rounded-bl-md border border-ink/10 bg-white text-sm leading-relaxed text-ink">
+                      {msg.content}
+                    </div>
+                    {msg.suggestion?.tool && msg.suggestion.label && (
+                      <button
+                        onClick={() => goToSuggestion(msg.suggestion!)}
+                        className="mt-2 self-start inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-verde/40 bg-verde/5 text-sm font-medium text-verde hover:bg-verde/10 transition-colors"
+                      >
+                        <Sparkles className="size-3.5" />
+                        {msg.suggestion.label}
+                      </button>
+                    )}
                   </div>
                 </div>
               )

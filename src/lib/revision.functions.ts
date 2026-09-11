@@ -71,7 +71,7 @@ export const reviseProposalWithFeedback = createServerFn({ method: "POST" })
     }, null, 2);
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       system: `You are an academic writing assistant helping a student revise their research proposal based on supervisor feedback.
 
 RULES:
@@ -163,7 +163,7 @@ export const reviseThesisWithFeedback = createServerFn({ method: "POST" })
     }, null, 2);
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       system: `You are an academic writing assistant helping a student revise their thesis chapters based on supervisor feedback.
 
 RULES:
@@ -253,7 +253,7 @@ export const reviseAssignmentWithFeedback = createServerFn({ method: "POST" })
     const existingContent = JSON.stringify(sections, null, 2);
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       system: `You are an academic writing assistant helping a student revise their assignment sections based on lecturer feedback.
 
 RULES:

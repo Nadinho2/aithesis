@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
 
 export const Route = createFileRoute("/_authenticated/new-thesis")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    title: typeof search.title === "string" ? search.title : "",
+    area_of_interest: typeof search.area_of_interest === "string" ? search.area_of_interest : "",
+    department: typeof search.department === "string" ? search.department : "",
+    level: typeof search.level === "string" ? search.level : "",
+  }),
   head: () => ({ meta: [{ title: "Draft Thesis — Mybrainpadi" }] }),
   component: NewThesisPage,
 });
@@ -28,18 +34,31 @@ function NewThesisPage() {
     citation_style: "apa_7" | "harvard";
   }>();
 
-  const [form, setForm] = useState(savedForm ?? {
-    title: "",
-    problem_statement: "",
-    research_gap: "",
-    objectives: ["", "", ""],
-    department: "",
-    area_of_interest: "",
-    country: "",
-    research_type: "",
-    level: "undergraduate" as "undergraduate" | "masters" | "phd",
-    target_words: 8000,
-    citation_style: "apa_7" as "apa_7" | "harvard",
+  const search = Route.useSearch();
+
+  const [form, setForm] = useState(() => {
+    const base = savedForm ?? {
+      title: "",
+      problem_statement: "",
+      research_gap: "",
+      objectives: ["", "", ""],
+      department: "",
+      area_of_interest: "",
+      country: "",
+      research_type: "",
+      level: "undergraduate" as "undergraduate" | "masters" | "phd",
+      target_words: 8000,
+      citation_style: "apa_7" as "apa_7" | "harvard",
+    };
+    return {
+      ...base,
+      title: search.title || base.title,
+      area_of_interest: search.area_of_interest || base.area_of_interest,
+      department: search.department || base.department,
+      level: search.level === "masters" || search.level === "phd" || search.level === "undergraduate"
+        ? (search.level as "undergraduate" | "masters" | "phd")
+        : base.level,
+    };
   });
 
   useEffect(() => {

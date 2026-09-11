@@ -113,6 +113,14 @@ export const Route = createFileRoute("/api/chat")({
               content: m.content.trim(),
             }));
 
+          // Fetch the chat's scoped context (e.g. Ask PADI past question)
+          const { data: chatRow } = await db
+            .from("chats")
+            .select("context")
+            .eq("id", chatId)
+            .maybeSingle();
+          const chatContext = (chatRow?.context ?? {}) as Record<string, any>;
+
           // Step 4: Call DeepSeek API
           const deepseekKey = runtimeEnv("DEEPSEEK_API_KEY");
           if (!deepseekKey) {
@@ -123,9 +131,43 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           let aiResponse: string;
+          let replyText = "";
+          let suggestion: any = null;
           try {
-            const systemPrompt =
-              "You are a helpful, encouraging study assistant for Nigerian university students on MyBrainPadi. Explain concepts clearly and simply, as if teaching a student who is still learning. Use short paragraphs. When explaining academic concepts, ground examples in real-world or Nigerian context where natural. Do not use markdown bold or italic syntax — write in plain text. Keep responses focused and not overly long unless the student asks for detail. If asked something outside academic or career topics, gently redirect to how you can help with their studies or career.";
+            const baseSystemPrompt =
+              "You are a helpful, encouraging study assistant for Nigerian university students on MyBrainPadi. Explain concepts clearly and simply, as if teaching a student who is still learning. Use short paragraphs. When explaining academic concepts, ground examples in real-world or Nigerian context where natural. Do not use markdown bold or italic syntax, write in plain text. Keep responses focused and not overly long unless the student asks for detail. If asked something outside academic or career topics, gently redirect to how you can help with their studies or career.";
+
+            let systemPrompt = baseSystemPrompt;
+            if (chatContext?.kind === "past_question") {
+              const opts = Array.isArray(chatContext.options) ? chatContext.options : [];
+              const optionsBlock = opts.length
+                ? `\nOptions:\n${opts
+                    .map((o: string, i: number) => `${String.fromCharCode(65 + i)}. ${o}`)
+                    .join("\n")}`
+                : "";
+              systemPrompt =
+                baseSystemPrompt +
+                `\n\nThe student is asking about a specific past question they just attempted. Use this context so they do not need to re-explain it:` +
+                `\nQuestion: ${chatContext.question}` +
+                optionsBlock +
+                `\nCorrect answer: ${chatContext.answer}` +
+                (chatContext.explanation ? `\nStatic explanation: ${chatContext.explanation}` : "") +
+                (chatContext.subject ? `\nSubject: ${chatContext.subject}` : "") +
+                (chatContext.course ? `\nCourse: ${chatContext.course}` : "") +
+                `\n\nThey have already attempted the question, so it is fine to explain the correct answer and why other options are wrong. Tailor your answer to their specific confusion.`;
+            }
+
+            systemPrompt +=
+              `\n\nRouting: if the student's need clearly maps to a tool on the platform, you may suggest it, but only when it genuinely helps. Never be pushy or salesy. ` +
+              `Available tools and their pre-fill keys: ` +
+              `topic-discovery (find or develop a research topic): area_of_interest, department, course. ` +
+              `thesis (draft a full thesis): title, area_of_interest, department, level (one of undergraduate, masters, phd). ` +
+              `proposal (draft a research proposal): title, area_of_interest, department, level (one of undergraduate, masters, phd). ` +
+              `cv (tailor a CV to a job): job_title, job_description. ` +
+              `side-hustle (discover a side hustle): skills, interests. ` +
+              `Reply with a JSON object only, in this exact shape: {"reply": string, "suggestion": null} ` +
+              `or {"reply": string, "suggestion": {"tool": "...", "label": "short button label", "prefill": { ...only the relevant keys above... }}}. ` +
+              `"suggestion" must be null unless a route genuinely fits. Keep "label" to four words or fewer.`;
 
             const messagesForDebug = [
               { role: "system", content: systemPrompt.slice(0, 80) + "..." },
@@ -142,6 +184,7 @@ export const Route = createFileRoute("/api/chat")({
                 model: "deepseek-v4-flash",
                 temperature: 0.7,
                 max_tokens: 1000,
+                response_format: { type: "json_object" },
                 messages: [
                   { role: "system", content: systemPrompt },
                   ...previousMessages,
@@ -171,6 +214,19 @@ export const Route = createFileRoute("/api/chat")({
               console.error("DeepSeek V4 empty response:", JSON.stringify(payload).slice(0, 500));
               throw new Error("Empty response from AI");
             }
+
+            // Parse the JSON reply + optional routing suggestion
+            try {
+              const parsed = JSON.parse(aiResponse);
+              const reply = parsed && typeof parsed.reply === "string" ? parsed.reply.trim() : "";
+              replyText = reply || aiResponse;
+              if (parsed && parsed.suggestion && typeof parsed.suggestion === "object") {
+                suggestion = parsed.suggestion;
+              }
+            } catch {
+              // Model returned plain text; treat the whole thing as the reply
+              replyText = aiResponse;
+            }
           } catch (err: any) {
             console.error("DeepSeek call failed:", err?.message ?? err);
             return new Response(
@@ -182,7 +238,7 @@ export const Route = createFileRoute("/api/chat")({
           // Step 5: Insert assistant response
           const { error: assistantMsgError } = await db
             .from("chat_messages")
-            .insert({ chat_id: chatId, role: "assistant", content: aiResponse });
+            .insert({ chat_id: chatId, role: "assistant", content: replyText, suggestion });
 
           if (assistantMsgError) {
             console.error("Failed to insert assistant message:", assistantMsgError);
@@ -200,7 +256,7 @@ export const Route = createFileRoute("/api/chat")({
 
           // Step 8: Return response
           return new Response(
-            JSON.stringify({ chatId, message: aiResponse }),
+            JSON.stringify({ chatId, message: replyText, suggestion }),
             {
               status: 200,
               headers: { "Content-Type": "application/json" },

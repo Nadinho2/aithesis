@@ -107,7 +107,7 @@ export function trimToExactWords(text: string, n: number): string {
  * Call any supported AI model and return a parsed JSON object.
  *
  * Works with:
- *   deepseek-v4-flash / deepseek-reasoner (via DeepSeek API)
+ *   deepseek-v4-flash / deepseek-v4-pro (via DeepSeek API)
  *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
  *
  * @param apiKey - Provider API key. Optional for Gemini (reads GEMINI_API_KEY env).
@@ -133,7 +133,7 @@ export async function callAI(
  * Call any supported AI model and return raw text content.
  *
  * Works with:
- *   deepseek-v4-flash / deepseek-reasoner (via DeepSeek API)
+ *   deepseek-v4-flash / deepseek-v4-pro (via DeepSeek API)
  *   gemini-2.5-flash / gemini-2.5-pro (via Gemini API)
  *
  * Useful for long-form prose where embedding text inside JSON would risk
@@ -154,9 +154,5 @@ export async function callAIText(
   },
 ): Promise<string> {
   const result = await callProvider(apiKey, opts);
-  let content = result.content;
-  if (result.isReasoner) {
-    content = stripReasoningTags(content);
-  }
-  return content.trim();
+  return stripReasoningTags(result.content).trim();
 }

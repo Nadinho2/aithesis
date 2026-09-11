@@ -19,11 +19,16 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tools/cv")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    job_title: typeof search.job_title === "string" ? search.job_title : "",
+    job_description: typeof search.job_description === "string" ? search.job_description : "",
+  }),
   head: () => ({ meta: [{ title: "CV Maker — Mybrainpadi" }] }),
   component: CvPage,
 });
 
 function CvPage() {
+  const search = Route.useSearch();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   if (pathname !== "/tools/cv") return <Outlet />;
 
@@ -52,9 +57,9 @@ function CvPage() {
   const [useForm, setUseForm] = useState(false);
 
   // ── Job tailoring state ──
-  const [tailorMode, setTailorMode] = useState(false);
-  const [jobDescription, setJobDescription] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
+  const [tailorMode, setTailorMode] = useState(!!(search.job_title || search.job_description));
+  const [jobDescription, setJobDescription] = useState(search.job_description ?? "");
+  const [jobTitle, setJobTitle] = useState(search.job_title ?? "");
   const [company, setCompany] = useState("");
 
   const mut = useMutation({

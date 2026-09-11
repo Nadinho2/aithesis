@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
+import { callAIText } from "./ai-utils.server";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ export interface StudyGroupComment {
   body: string;
   created_at: string;
   author_name: string | null;
+  is_padi: boolean;
 }
 
 export interface StudyGroupFile {
@@ -484,6 +486,71 @@ export const listGroupPosts = createServerFn({ method: "GET" })
     );
   });
 
+// ─── @PADI mention handling ───────────────────────────────────────────────
+
+const PADI_MENTION = /@padi\b/i;
+
+function hasPadiMention(text: string): boolean {
+  return PADI_MENTION.test(text);
+}
+
+async function generatePadiReply(opts: {
+  group: any;
+  postBody: string;
+  trigger: string;
+}): Promise<string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) return "";
+
+  const contextLines = [
+    opts.group?.name ? `Group: ${opts.group.name}` : "",
+    opts.group?.department ? `Department: ${opts.group.department}` : "",
+    opts.group?.level ? `Level: ${opts.group.level}` : "",
+  ].filter(Boolean);
+  const contextBlock = contextLines.length ? contextLines.join("\n") + "\n\n" : "";
+
+  const system =
+    "You are PADI, a friendly study assistant inside a Nigerian university study group. " +
+    "Answer the student's question clearly and simply, as if teaching a peer who is still learning. " +
+    "Use short paragraphs and plain text only (no markdown bold, italic, or bullet symbols). " +
+    "Keep the reply focused and not overly long unless the student asks for detail. " +
+    "Ground academic examples in Nigerian context where natural. Never be pushy or salesy.";
+
+  const user =
+    `${contextBlock}Group discussion (for context):\n${opts.postBody}\n\n` +
+    `The message addressed to you (@PADI):\n${opts.trigger}\n\n` +
+    "Reply to the student's question directly.";
+
+  const reply = await callAIText(apiKey, {
+    model: "deepseek-v4-flash",
+    system,
+    user,
+  });
+  return reply.trim();
+}
+
+async function maybeReplyAsPadi(
+  supabase: any,
+  postId: string,
+  group: any,
+  postBody: string,
+  trigger: string,
+): Promise<void> {
+  if (!hasPadiMention(trigger)) return;
+  try {
+    const body = await generatePadiReply({ group, postBody, trigger });
+    if (!body) return;
+    await supabase.from("study_group_comments").insert({
+      post_id: postId,
+      author_id: "padi",
+      body,
+      is_padi: true,
+    });
+  } catch (e: any) {
+    console.error("PADI group reply failed:", e?.message ?? e);
+  }
+}
+
 const CreateGroupPostInput = z.object({
   group_id: z.string().uuid(),
   body: z.string().min(1).max(2000),
@@ -497,12 +564,22 @@ export const createGroupPost = createServerFn({ method: "POST" })
 
     await requireApprovedMembership(supabase, data.group_id, userId);
 
-    const { error } = await supabase.from("study_group_posts").insert({
-      group_id: data.group_id,
-      author_id: userId,
-      body: data.body.trim(),
-    });
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("name, department, level")
+      .eq("id", data.group_id)
+      .maybeSingle();
+
+    const body = data.body.trim();
+
+    const { data: post, error } = await supabase
+      .from("study_group_posts")
+      .insert({ group_id: data.group_id, author_id: userId, body })
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
+
+    await maybeReplyAsPadi(supabase, post.id, group, body, body);
 
     return { ok: true };
   });
@@ -544,7 +621,8 @@ export const listGroupComments = createServerFn({ method: "GET" })
           author_id: r.author_id,
           body: r.body,
           created_at: r.created_at,
-          author_name: authors.get(r.author_id) ?? null,
+          author_name: r.is_padi ? "PADI" : authors.get(r.author_id) ?? null,
+          is_padi: !!r.is_padi,
         }) as StudyGroupComment,
     );
   });
@@ -562,19 +640,29 @@ export const addGroupComment = createServerFn({ method: "POST" })
 
     const { data: post } = await supabase
       .from("study_group_posts")
-      .select("group_id")
+      .select("group_id, body")
       .eq("id", data.post_id)
       .maybeSingle();
     if (!post) throw new Error("Post not found.");
 
     await requireApprovedMembership(supabase, post.group_id, userId);
 
+    const { data: group } = await supabase
+      .from("study_groups")
+      .select("name, department, level")
+      .eq("id", post.group_id)
+      .maybeSingle();
+
+    const body = data.body.trim();
+
     const { error } = await supabase.from("study_group_comments").insert({
       post_id: data.post_id,
       author_id: userId,
-      body: data.body.trim(),
+      body,
     });
     if (error) throw new Error(error.message);
+
+    await maybeReplyAsPadi(supabase, data.post_id, group, post.body, body);
 
     return { ok: true };
   });

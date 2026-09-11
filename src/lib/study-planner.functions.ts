@@ -238,11 +238,31 @@ export const generateStudyPlan = createServerFn({ method: "POST" })
       .map((s: any) => s.subject)
       .filter(Boolean) as string[];
 
+    // Weighted event-level signals (wrong_answer=1, ask_padi_click=3, course_completed=10).
+    const { data: events } = await supabase
+      .from("learning_signal_events")
+      .select("topic, signal_type, weight")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    const topicWeight = new Map<string, number>();
+    for (const e of (events ?? []) as Array<{ topic: string; weight: number }>) {
+      const topic = (e.topic ?? "").trim();
+      if (!topic) continue;
+      topicWeight.set(topic, (topicWeight.get(topic) ?? 0) + (Number(e.weight) || 0));
+    }
+    const weightedTopics = Array.from(topicWeight.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([topic]) => topic);
+
     const requestedSubjects = (data.subjects ?? [])
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const subjectPool = Array.from(new Set([...weakSubjects, ...requestedSubjects]));
+    const subjectPool = Array.from(
+      new Set([...weightedTopics, ...weakSubjects, ...requestedSubjects]),
+    );
 
     const contextLines: string[] = [];
     if (profile?.learner_type === "university") {
@@ -258,6 +278,11 @@ export const generateStudyPlan = createServerFn({ method: "POST" })
 
     if (subjectPool.length > 0) {
       contextLines.push(`Subjects to focus on (prioritise the first ones): ${subjectPool.join(", ")}.`);
+    }
+    if (weightedTopics.length > 0) {
+      contextLines.push(
+        `Topics PADI detected need the most attention (weighted by wrong answers and help requests): ${weightedTopics.join(", ")}.`,
+      );
     }
     if (weakSubjects.length > 0) {
       contextLines.push(`Weakest areas (revise these most): ${weakSubjects.join(", ")}.`);
@@ -301,7 +326,7 @@ Rules:
 - Return between ${minTasks} and ${maxTasks} tasks total.`;
 
     const parsed = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       max_tokens: 12000,
       system: systemPrompt,
       user: userPrompt,
@@ -337,4 +362,65 @@ Rules:
 
     if (error) throw new Error(error.message);
     return (inserted ?? []).map(normalizeTask) as StudyTask[];
+  });
+
+// ─── Adaptive insights from weighted learning signal events ───────────────
+// Reads the raw per-event feed (learning_signal_events) rather than the
+// aggregate rollup, so the planner can adapt to the *strength* of each signal:
+//   wrong_answer      -> 1
+//   ask_padi_click    -> 3 (asking PADI signals deeper confusion)
+//   course_completed  -> 10 (strong positive signal)
+
+export interface TopicSignal {
+  topic: string;
+  wrong_answers: number;
+  padi_requests: number;
+  courses_completed: number;
+  total_weight: number;
+}
+
+export interface AdaptiveInsights {
+  topics: TopicSignal[]; // sorted by total_weight descending
+  strongest: TopicSignal | null;
+  totalEvents: number;
+}
+
+export const getAdaptiveInsights = createServerFn({ method: "GET" })
+  .middleware([requireClerkAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data, error } = await supabase
+      .from("learning_signal_events")
+      .select("topic, signal_type, weight")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(500);
+
+    if (error) throw new Error(error.message);
+
+    const map = new Map<string, TopicSignal>();
+    for (const e of (data ?? []) as Array<{ topic: string; signal_type: string; weight: number }>) {
+      const topic = (e.topic ?? "").trim() || "General";
+      const cur = map.get(topic) ?? {
+        topic,
+        wrong_answers: 0,
+        padi_requests: 0,
+        courses_completed: 0,
+        total_weight: 0,
+      };
+      if (e.signal_type === "wrong_answer") cur.wrong_answers += 1;
+      else if (e.signal_type === "ask_padi_click") cur.padi_requests += 1;
+      else if (e.signal_type === "course_completed") cur.courses_completed += 1;
+      cur.total_weight += Number(e.weight) || 0;
+      map.set(topic, cur);
+    }
+
+    const topics = Array.from(map.values()).sort((a, b) => b.total_weight - a.total_weight);
+
+    return {
+      topics,
+      strongest: topics[0] ?? null,
+      totalEvents: (data ?? []).length,
+    } as AdaptiveInsights;
   });

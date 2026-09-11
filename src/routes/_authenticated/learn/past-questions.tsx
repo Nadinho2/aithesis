@@ -8,6 +8,7 @@ import {
   pastQuestionFacets,
   submitPastQuestionQuiz,
   getLearningSignals,
+  startAskPadi,
   type PastQuestion,
   type QuizResult,
   type QuestionCategory,
@@ -24,6 +25,7 @@ import {
   RefreshCw,
   GraduationCap,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -77,6 +79,7 @@ function PastQuestionsPage() {
   const searchFn = useServerFn(searchPastQuestions);
   const submitFn = useServerFn(submitPastQuestionQuiz);
   const signalsFn = useServerFn(getLearningSignals);
+  const startAskPadiFn = useServerFn(startAskPadi);
   const getProfileFn = useServerFn(getMyProfile);
 
   const { data: profile } = useQuery({
@@ -203,6 +206,15 @@ function PastQuestionsPage() {
       setResults(res);
       setPhase("results");
       refetchSignals();
+    },
+    onError: (e) => toast.error(String(e)),
+  });
+
+  const askPadiMutation = useMutation({
+    mutationFn: (questionId: string) =>
+      startAskPadiFn({ data: { question_id: questionId } }),
+    onSuccess: (res) => {
+      window.location.href = `/chat?chatId=${res.chatId}`;
     },
     onError: (e) => toast.error(String(e)),
   });
@@ -648,6 +660,16 @@ function PastQuestionsPage() {
                         </div>
                       </div>
                     )}
+
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={() => askPadiMutation.mutate(q.id)}
+                        disabled={askPadiMutation.isPending}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-sage hover:text-verde transition-colors disabled:opacity-50"
+                      >
+                        <Sparkles className="size-3.5" /> Ask PADI
+                      </button>
+                    </div>
                   </div>
                 );
               })}

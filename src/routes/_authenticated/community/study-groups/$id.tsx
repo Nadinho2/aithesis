@@ -24,6 +24,7 @@ import {
 import {
   ArrowLeft,
   Send,
+  Sparkles,
   Users,
   MessageCircle,
   Loader2,
@@ -399,7 +400,7 @@ function StudyGroupDetailPage() {
                   <textarea
                     value={postDraft}
                     onChange={(e) => setPostDraft(e.target.value)}
-                    placeholder="Share an update with the group…"
+                    placeholder="Share an update, or mention @PADI for help…"
                     rows={3}
                     className="w-full bg-paper border border-ink/15 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-sage resize-y"
                   />
@@ -461,14 +462,34 @@ function StudyGroupDetailPage() {
                               ) : (
                                 comments.map((c: StudyGroupComment) => (
                                   <div key={c.id} className="flex items-start gap-2">
-                                    <div className="size-7 rounded-full bg-ink/5 text-ink/60 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                                      {(c.author_name ?? "U").charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="min-w-0 flex-1 bg-paper border border-ink/5 rounded-sm px-3 py-2">
-                                      <div className="text-xs text-ink/50 mb-0.5">
-                                        {c.author_name ?? "Student"} · {timeAgo(c.created_at)}
+                                    {c.is_padi ? (
+                                      <div className="size-7 rounded-full bg-verde text-white flex items-center justify-center flex-shrink-0">
+                                        <Sparkles className="size-3.5" />
                                       </div>
-                                      <p className="text-sm text-ink break-words">{c.body}</p>
+                                    ) : (
+                                      <div className="size-7 rounded-full bg-ink/5 text-ink/60 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                                        {(c.author_name ?? "U").charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <div
+                                      className={`min-w-0 flex-1 rounded-sm px-3 py-2 ${
+                                        c.is_padi
+                                          ? "bg-verde/5 border border-verde/20"
+                                          : "bg-paper border border-ink/5"
+                                      }`}
+                                    >
+                                      <div className="text-xs mb-0.5 flex items-center gap-1.5 flex-wrap">
+                                        <span className={c.is_padi ? "font-semibold text-verde-dark" : "text-ink/50"}>
+                                          {c.author_name ?? "Student"}
+                                        </span>
+                                        {c.is_padi && (
+                                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-verde/10 text-verde-dark text-[10px] font-semibold">
+                                            <Sparkles className="size-2.5" /> PADI
+                                          </span>
+                                        )}
+                                        <span className="text-ink/40">· {timeAgo(c.created_at)}</span>
+                                      </div>
+                                      <p className="text-sm text-ink break-words whitespace-pre-wrap">{c.body}</p>
                                     </div>
                                   </div>
                                 ))
@@ -484,7 +505,7 @@ function StudyGroupDetailPage() {
                                       commentMut.mutate({ postId: p.id, body: commentDraft });
                                     }
                                   }}
-                                  placeholder="Write a comment…"
+                                  placeholder="Reply… mention @PADI for help"
                                   className="flex-1 bg-paper border border-ink/15 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-sage"
                                 />
                                 <button

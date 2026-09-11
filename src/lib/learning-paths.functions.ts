@@ -320,7 +320,7 @@ Rules:
 - Keep paths practical and career/academic oriented.`;
 
     const parsed = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       max_tokens: 6000,
       system,
       user: `Lessons:\n${courseList.map((t) => `- ${t}`).join("\n")}`,

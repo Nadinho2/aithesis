@@ -7,6 +7,11 @@ import { Sparkles, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/topic-generator")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    area_of_interest: typeof search.area_of_interest === "string" ? search.area_of_interest : "",
+    department: typeof search.department === "string" ? search.department : "",
+    course: typeof search.course === "string" ? search.course : "",
+  }),
   head: () => ({ meta: [{ title: "Topic Discovery — Mybrainpadi" }] }),
   component: TopicGeneratorPage,
 });
@@ -15,10 +20,11 @@ function TopicGeneratorPage() {
   const fn = useServerFn(generateTopics);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const search = Route.useSearch();
   const [form, setForm] = useState({
-    department: "",
-    course: "",
-    area_of_interest: "",
+    department: search.department ?? "",
+    course: search.course ?? "",
+    area_of_interest: search.area_of_interest ?? "",
     country: "",
     research_type: "",
     count: 5,

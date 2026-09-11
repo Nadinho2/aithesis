@@ -4,7 +4,7 @@
  *
  * Model naming convention:
  *   deepseek-v4-flash   → DeepSeek V4 Flash (JSON mode supported)
- *   deepseek-reasoner   → DeepSeek R1 (no JSON mode, has reasoning tags)
+ *   deepseek-v4-pro     → DeepSeek V4 Pro (JSON mode supported)
  *   gemini-2.5-flash    → Gemini 2.5 Flash (JSON mode via mime_type)
  *   gemini-2.5-pro      → Gemini 2.5 Pro (JSON mode via mime_type)
  */
@@ -20,8 +20,6 @@ type ProviderOpts = {
 
 type ProviderResult = {
   content: string;
-  /** Whether the response came from deepseek-reasoner (for tag stripping) */
-  isReasoner: boolean;
 };
 
 // ─── Env helpers ───────────────────────────────────────────────────────────
@@ -40,7 +38,6 @@ async function callDeepSeek(
   apiKey: string,
   opts: ProviderOpts,
 ): Promise<ProviderResult> {
-  const isReasoner = opts.model === "deepseek-reasoner";
   const body: Record<string, any> = {
     model: opts.model,
     messages: [
@@ -49,7 +46,7 @@ async function callDeepSeek(
     ],
   };
   // Only enforce JSON mode when explicitly requested (callAI), not for plain text (callAIText)
-  if (!isReasoner && opts.jsonMode) body.response_format = { type: "json_object" };
+  if (opts.jsonMode) body.response_format = { type: "json_object" };
   if (opts.max_tokens) body.max_tokens = opts.max_tokens;
 
   const resp = await fetch("https://api.deepseek.com/chat/completions", {
@@ -78,7 +75,7 @@ async function callDeepSeek(
     console.error("DeepSeek empty response:", JSON.stringify(payload).slice(0, 500));
     throw new Error("Did not receive a response.");
   }
-  return { content, isReasoner };
+  return { content };
 }
 
 // ─── Gemini ────────────────────────────────────────────────────────────────
@@ -151,7 +148,7 @@ async function callGemini(
 
   const content = candidate.content.parts.map((p: any) => p.text ?? "").join("\n");
   if (!content) throw new Error("Did not receive a response.");
-  return { content, isReasoner: false };
+  return { content };
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
@@ -200,7 +197,7 @@ export async function callProvider(
  */
 export function extractJSON(content: string): any {
   let cleaned = content.trim();
-  // Strip reasoning tags (deepseek-reasoner)
+  // Strip reasoning tags
   cleaned = cleaned.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();
   // Strip markdown fences
   cleaned = cleaned.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
@@ -216,7 +213,7 @@ export function extractJSON(content: string): any {
 }
 
 /**
- * Strip reasoning tags from text content (for non-JSON responses from reasoner models).
+ * Strip reasoning tags from text content.
  */
 export function stripReasoningTags(content: string): string {
   return content.replace(/<reasoning>[\s\S]*?<\/reasoning>/g, "").trim();

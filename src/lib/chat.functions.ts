@@ -46,5 +46,10 @@ export const getChatMessages = createServerFn({ method: "GET" })
       role: string;
       content: string;
       created_at: string;
+      suggestion?: {
+        tool?: string;
+        label?: string;
+        prefill?: Record<string, string>;
+      } | null;
     }[];
   });

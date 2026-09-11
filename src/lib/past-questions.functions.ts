@@ -216,6 +216,14 @@ export const submitPastQuestionQuiz = createServerFn({ method: "POST" })
       is_correct: boolean | null;
     }> = [];
 
+    const wrongSignals: Array<{
+      user_id: string;
+      topic: string;
+      signal_type: string;
+      weight: number;
+      metadata: Record<string, unknown>;
+    }> = [];
+
     for (const a of data.answers) {
       const q = byId.get(a.question_id);
       if (!q) continue;
@@ -236,11 +244,36 @@ export const submitPastQuestionQuiz = createServerFn({ method: "POST" })
         selected_answer: a.selected_answer,
         is_correct: correct,
       });
+
+      if (correct === false) {
+        wrongSignals.push({
+          user_id: userId,
+          topic: (q.subject || q.course || "General").trim(),
+          signal_type: "wrong_answer",
+          weight: 1,
+          metadata: {
+            question_id: a.question_id,
+            course: q.course ?? null,
+            question_type: q.question_type,
+            selected_answer: a.selected_answer,
+            correct_answer: q.answer,
+          },
+        });
+      }
     }
 
     // Record attempts (non-blocking best effort)
     if (attempts.length > 0) {
       await supabase.from("past_question_attempts").insert(attempts);
+    }
+
+    // Record wrong-answer learning signal events (best effort, never fail the quiz)
+    if (wrongSignals.length > 0) {
+      try {
+        await supabase.from("learning_signal_events").insert(wrongSignals);
+      } catch {
+        // Non-critical — don't fail the quiz submission
+      }
     }
 
     // Aggregate learning signals per subject (non-blocking best effort)
@@ -306,6 +339,72 @@ export const getLearningSignals = createServerFn({ method: "GET" })
 
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+// ─── Ask PADI: open a question-scoped chat thread ─────────────────────────
+const StartAskPadiInput = z.object({ question_id: z.string().uuid() });
+
+export const startAskPadi = createServerFn({ method: "POST" })
+  .middleware([requireClerkAuth])
+  .inputValidator((i: unknown) => StartAskPadiInput.parse(i))
+  .handler(async ({ data, context }) => {
+    const { userId, supabase } = context as any;
+
+    const { data: q, error } = await supabase
+      .from("past_questions")
+      .select("id, question, options, answer, explanation, subject, course, question_type")
+      .eq("id", data.question_id)
+      .eq("status", "published")
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!q) throw new Error("Question not found.");
+
+    const topic = (q.subject || q.course || "General").trim();
+    const title =
+      "Ask PADI: " +
+      q.question.slice(0, 40) +
+      (q.question.length > 40 ? "…" : "");
+
+    const { data: chat, error: chatErr } = await supabase
+      .from("chats")
+      .insert({
+        user_id: userId,
+        title,
+        context: {
+          kind: "past_question",
+          question_id: q.id,
+          question: q.question,
+          options: Array.isArray(q.options) ? q.options : [],
+          answer: q.answer,
+          explanation: q.explanation ?? null,
+          subject: q.subject ?? null,
+          course: q.course ?? null,
+          question_type: q.question_type,
+        },
+      })
+      .select("id")
+      .single();
+
+    if (chatErr || !chat) {
+      console.error("startAskPadi chat create error:", chatErr);
+      throw new Error("Could not start Ask PADI.");
+    }
+
+    // Strong signal: asking PADI for help means deeper confusion than a wrong answer.
+    try {
+      await supabase.from("learning_signal_events").insert({
+        user_id: userId,
+        topic,
+        signal_type: "ask_padi_click",
+        weight: 3,
+        metadata: { question_id: q.id, question_type: q.question_type },
+      });
+    } catch {
+      // Non-critical
+    }
+
+    return { chatId: chat.id };
   });
 
 // ─── Admin: bulk import past questions ─────────────────────────────────────

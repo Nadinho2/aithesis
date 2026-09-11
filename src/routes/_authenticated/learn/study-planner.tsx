@@ -10,6 +10,7 @@ import {
   toggleStudyTask,
   deleteStudyTask,
   generateStudyPlan,
+  getAdaptiveInsights,
   type StudyTask,
   type TaskPriority,
   type TaskSource,
@@ -101,6 +102,7 @@ function StudyPlannerPage() {
   const deleteFn = useServerFn(deleteStudyTask);
   const generateFn = useServerFn(generateStudyPlan);
   const signalsFn = useServerFn(getLearningSignals);
+  const insightsFn = useServerFn(getAdaptiveInsights);
   const facetsFn = useServerFn(pastQuestionFacets);
 
   const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
@@ -125,6 +127,11 @@ function StudyPlannerPage() {
   const { data: signals } = useQuery({
     queryKey: ["learning-signals"],
     queryFn: () => signalsFn(),
+  });
+
+  const { data: insights } = useQuery({
+    queryKey: ["adaptive-insights"],
+    queryFn: () => insightsFn(),
   });
 
   const { data: facets } = useQuery({
@@ -414,6 +421,38 @@ function StudyPlannerPage() {
                   >
                     <span className="font-medium">{s.subject}</span>
                     <span className="text-ink/50">{s.accuracy}%</span>
+                    <Plus className="size-3 text-sage" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Adaptive insights */}
+          {insights && insights.topics.length > 0 && (
+            <div className="mb-6 bg-card border border-sage/20 rounded-sm p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="size-4 text-sage" />
+                <h2 className="text-sm font-semibold text-ink">PADI's adaptive insights</h2>
+              </div>
+              <p className="text-xs text-ink/50 mb-3">
+                From your practice and the times you asked PADI for help.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {insights.topics.slice(0, 5).map((t) => (
+                  <button
+                    key={t.topic}
+                    onClick={() => openWeakTask(t.topic)}
+                    className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-sm border border-ink/10 bg-paper hover:bg-sage/5 transition-colors"
+                    title="Add a study task for this topic"
+                  >
+                    <span className="font-medium">{t.topic}</span>
+                    {t.wrong_answers > 0 && (
+                      <span className="text-red-500 font-semibold">{t.wrong_answers} wrong</span>
+                    )}
+                    {t.padi_requests > 0 && (
+                      <span className="text-sage font-semibold">asked PADI {t.padi_requests}×</span>
+                    )}
                     <Plus className="size-3 text-sage" />
                   </button>
                 ))}

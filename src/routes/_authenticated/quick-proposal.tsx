@@ -10,6 +10,12 @@ import { toast } from "sonner";
 import { StructureBuilder } from "@/components/StructureBuilder";
 
 export const Route = createFileRoute("/_authenticated/quick-proposal")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    title: typeof search.title === "string" ? search.title : "",
+    area_of_interest: typeof search.area_of_interest === "string" ? search.area_of_interest : "",
+    department: typeof search.department === "string" ? search.department : "",
+    level: typeof search.level === "string" ? search.level : "",
+  }),
   head: () => ({ meta: [{ title: "Draft Proposal — Mybrainpadi" }] }),
   component: QuickProposalPage,
 });
@@ -28,6 +34,8 @@ function QuickProposalPage() {
     citation_style: "apa_7" | "harvard";
   }>();
 
+  const search = Route.useSearch();
+
   const defaultForm = {
     title: "",
     problem_statement: "",
@@ -42,7 +50,18 @@ function QuickProposalPage() {
     citation_style: "apa_7" as "apa_7" | "harvard",
   };
 
-  const [form, setForm] = useState(savedForm ?? defaultForm);
+  const [form, setForm] = useState(() => {
+    const base = savedForm ?? defaultForm;
+    return {
+      ...base,
+      title: search.title || base.title,
+      area_of_interest: search.area_of_interest || base.area_of_interest,
+      department: search.department || base.department,
+      level: search.level === "masters" || search.level === "phd" || search.level === "undergraduate"
+        ? (search.level as "undergraduate" | "masters" | "phd")
+        : base.level,
+    };
+  });
 
   const checkAccessFn = useServerFn(checkAccess);
 

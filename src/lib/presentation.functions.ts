@@ -81,7 +81,7 @@ export const generatePresentation = createServerFn({ method: "POST" })
     }
 
     const raw = await callAI(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       max_tokens: 64000,
       system: `You are a senior academic and presentation designer creating a ${data.slide_count}-slide presentation on "${topic}" for a Nigerian university audience.
 

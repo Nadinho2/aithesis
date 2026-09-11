@@ -50,7 +50,7 @@ async function callDeepSeekWithRetry(
 ): Promise<string> {
   try {
     return await callAIText(apiKey, {
-      model: "deepseek-reasoner",
+      model: "deepseek-v4-flash",
       system,
       user,
     });
@@ -59,7 +59,7 @@ async function callDeepSeekWithRetry(
     if (e?.message?.includes("Rate limit") || e?.message?.includes("429")) {
       await new Promise((r) => setTimeout(r, 1000));
       return await callAIText(apiKey, {
-        model: "deepseek-reasoner",
+        model: "deepseek-v4-flash",
         system,
         user,
       });
