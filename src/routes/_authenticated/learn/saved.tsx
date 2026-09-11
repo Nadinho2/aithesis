@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   past_question: "Question",
   study_plan: "Study plan",
   learning_path: "Learning path",
+  micro_course: "Lesson",
 };
 
 function SavedPage() {

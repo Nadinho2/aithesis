@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
 
-export type SavedItemType = "past_question" | "subject" | "study_plan" | "learning_path";
+export type SavedItemType = "past_question" | "subject" | "study_plan" | "learning_path" | "micro_course";
 
 export interface SavedItem {
   id: string;
@@ -12,7 +12,7 @@ export interface SavedItem {
   created_at: string;
 }
 
-const ITEM_TYPES = ["past_question", "subject", "study_plan", "learning_path"] as const;
+const ITEM_TYPES = ["past_question", "subject", "study_plan", "learning_path", "micro_course"] as const;
 
 export const getSavedItems = createServerFn({ method: "GET" })
   .middleware([requireClerkAuth])

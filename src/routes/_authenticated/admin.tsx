@@ -6,13 +6,15 @@ import { adminListLimits, updateUserLimits } from "@/lib/admin-limits.functions"
 import { adminListTransactions, adminListUniversitySubmissions, adminMarkUniversityDone, adminGetSettings, adminUpdateSettings, adminBulkSetCredits, adminListNotifications, adminDeleteNotification, adminListRoles, adminSetRole } from "@/lib/admin.functions";
 import { adminListReferralApplications, adminReviewReferralApplication, adminListReferralCodes, adminSetCodeType } from "@/lib/referral.functions";
 import { adminImportPastQuestions, adminImportPastQuestionsCsv } from "@/lib/past-questions.functions";
+import { adminListMicroCourses, adminUpsertMicroCourse, adminDeleteMicroCourse, adminGenerateMicroCourseScript } from "@/lib/micro-courses.functions";
+import { adminListLearningPaths, adminUpsertLearningPath, adminDeleteLearningPath, adminSuggestPathGrouping } from "@/lib/learning-paths.functions";
 import { listUniversities, adminAddUniversity, adminDeleteUniversity, adminAddFaculty, adminDeleteFaculty, adminAddDepartment, adminDeleteDepartment, adminImportUniversitiesCsv } from "@/lib/universities.functions";
 import {
   adminListMentorApplications,
   adminReviewMentor,
   type MentorCard,
 } from "@/lib/mentorship.functions";
-import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2, BookOpen } from "lucide-react";
+import { Loader2, Shield, Save, X, Search, CheckCircle, XCircle, Clock, University, ExternalLink, DollarSign, ToggleLeft, Users, Gift, Mail, Trash2, BookOpen, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -20,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminPage() {
-  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral" | "waitlist" | "questions" | "directory" | "roles" | "mentors">("limits");
+  const [tab, setTab] = useState<"limits" | "transactions" | "university" | "pricing" | "tools" | "credits" | "referral" | "waitlist" | "questions" | "microcourses" | "learningpaths" | "directory" | "roles" | "mentors">("limits");
   const [txSearchEmail, setTxSearchEmail] = useState("");
   const qc = useQueryClient();
   const fn = useServerFn(adminListLimits);
@@ -123,6 +125,8 @@ function AdminPage() {
           <TabBtn tab="referral" active={tab} onClick={() => setTab("referral")} label="Referral" />
           <TabBtn tab="waitlist" active={tab} onClick={() => setTab("waitlist")} label="Waitlist" />
           <TabBtn tab="questions" active={tab} onClick={() => setTab("questions")} label="Question Bank" />
+          <TabBtn tab="microcourses" active={tab} onClick={() => setTab("microcourses")} label="Micro Courses" />
+          <TabBtn tab="learningpaths" active={tab} onClick={() => setTab("learningpaths")} label="Learning Paths" />
           <TabBtn tab="directory" active={tab} onClick={() => setTab("directory")} label="Directory" />
           <TabBtn tab="roles" active={tab} onClick={() => setTab("roles")} label="Roles" />
           <TabBtn tab="mentors" active={tab} onClick={() => setTab("mentors")} label="Mentors" />
@@ -316,6 +320,8 @@ function AdminPage() {
         {tab === "referral" && <ReferralTab />}
         {tab === "waitlist" && <WaitlistTab />}
         {tab === "questions" && <PastQuestionsAdmin />}
+        {tab === "microcourses" && <MicroCoursesAdmin />}
+        {tab === "learningpaths" && <LearningPathsAdmin />}
         {tab === "directory" && <UniversitiesAdmin />}
         {tab === "roles" && <RoleManager />}
         {tab === "mentors" && <MentorApplications />}
@@ -1589,6 +1595,513 @@ const EMPTY_QUESTION: PendingQuestion = {
 const inputCls =
   "mt-1 w-full border border-ink/20 rounded-sm px-3 py-2 text-sm bg-white focus:outline-none focus:border-verde/50";
 const labelCls = "text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60";
+
+function LearningPathsAdmin() {
+  const listFn = useServerFn(adminListLearningPaths);
+  const upsertFn = useServerFn(adminUpsertLearningPath);
+  const deleteFn = useServerFn(adminDeleteLearningPath);
+  const suggestFn = useServerFn(adminSuggestPathGrouping);
+  const courseListFn = useServerFn(adminListMicroCourses);
+  const qc = useQueryClient();
+
+  const { data: paths, isLoading } = useQuery({
+    queryKey: ["admin-learning-paths"],
+    queryFn: () => listFn(),
+  });
+  const { data: allCourses } = useQuery({
+    queryKey: ["admin-micro-courses"],
+    queryFn: () => courseListFn(),
+  });
+  const publishedCourses = (allCourses ?? []).filter((c: any) => c.status === "published");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+
+  const courseTitle = new Map<string, string>(publishedCourses.map((c: any) => [c.id, c.title]));
+
+  function resetForm() {
+    setEditId(null);
+    setTitle("");
+    setDescription("");
+    setStatus("draft");
+    setSelectedIds([]);
+    setSuggestions([]);
+  }
+
+  function editPath(p: any) {
+    setEditId(p.id);
+    setTitle(p.title);
+    setDescription(p.description ?? "");
+    setStatus(p.status);
+    setSelectedIds((p.steps ?? []).map((s: any) => s.course_id));
+  }
+
+  function move(arr: string[], index: number, dir: -1 | 1): string[] {
+    const next = [...arr];
+    const target = index + dir;
+    if (target < 0 || target >= next.length) return next;
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  }
+
+  const suggestMut = useMutation({
+    mutationFn: () => suggestFn(),
+    onSuccess: (res: any) => setSuggestions(Array.isArray(res) ? res : []),
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const saveMut = useMutation({
+    mutationFn: () =>
+      upsertFn({
+        data: { id: editId ?? undefined, title, description, status, course_ids: selectedIds },
+      }),
+    onSuccess: () => {
+      toast.success("Path saved.");
+      qc.invalidateQueries({ queryKey: ["admin-learning-paths"] });
+      resetForm();
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Path deleted.");
+      qc.invalidateQueries({ queryKey: ["admin-learning-paths"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <BookOpen className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Group published Micro Courses into guided Learning Paths. Use the generator to get a starting grouping, then reorder steps and publish.
+        </p>
+      </div>
+
+      {/* Existing paths */}
+      <div className="border border-ink/10 rounded-sm p-4">
+        <h3 className="text-sm font-medium mb-3">Paths</h3>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-ink/50 py-4">
+            <Loader2 className="size-4 animate-spin" /> Loading…
+          </div>
+        ) : !paths || paths.length === 0 ? (
+          <p className="text-sm text-ink/50">No paths yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {paths.map((p: any) => (
+              <div key={p.id} className="flex items-center gap-3 border border-ink/10 rounded-sm px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{p.title}</p>
+                  <p className="text-xs text-ink/40">
+                    {p.steps?.length ?? 0} steps · {p.status}
+                  </p>
+                </div>
+                <button onClick={() => editPath(p)} className="px-3 py-1.5 text-xs border border-ink/15 rounded-sm hover:bg-ink/5">
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteMut.mutate(p.id)}
+                  className="size-8 rounded-sm flex items-center justify-center text-ink/40 hover:text-red-600 hover:bg-red-50"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Editor */}
+      <div className="border border-ink/10 rounded-sm p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">{editId ? "Edit path" : "New path"}</h3>
+          <button
+            onClick={() => suggestMut.mutate()}
+            disabled={suggestMut.isPending || publishedCourses.length < 2}
+            className="px-3 py-1.5 text-xs font-medium border border-verde text-verde rounded-sm hover:bg-verde/5 disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {suggestMut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" />}
+            Suggest grouping
+          </button>
+        </div>
+
+        {/* AI suggestions */}
+        {suggestions.length > 0 && (
+          <div className="bg-sage/5 border border-sage/20 rounded-sm p-3 space-y-2">
+            <p className="text-xs font-medium text-ink/60">Suggested paths (click to apply):</p>
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setTitle(s.title ?? "");
+                  setDescription(s.description ?? "");
+                  setSelectedIds((s.course_ids ?? []).filter((id: string) => courseTitle.has(id)));
+                  setSuggestions([]);
+                }}
+                className="w-full text-left text-xs border border-sage/30 rounded-sm px-3 py-2 hover:bg-sage/10"
+              >
+                <span className="font-medium text-ink">{s.title}</span>
+                <span className="text-ink/50"> · {(s.course_ids ?? []).length} lessons</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className={labelCls}>Title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Status</span>
+            <select value={status} onChange={(e) => setStatus(e.target.value as any)} className={inputCls}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+        </div>
+
+        <label className="block">
+          <span className={labelCls}>Description</span>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls} />
+        </label>
+
+        {/* Step picker */}
+        <div>
+          <span className={labelCls}>Steps (click a lesson to add/remove; reorder below)</span>
+          <div className="flex flex-wrap gap-2">
+            {publishedCourses.map((c: any) => {
+              const selected = selectedIds.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() =>
+                    setSelectedIds((prev) => (selected ? prev.filter((id) => id !== c.id) : [...prev, c.id]))
+                  }
+                  className={`px-2.5 py-1.5 text-xs rounded-sm border transition-colors ${
+                    selected ? "border-verde bg-verde/10 text-verde" : "border-ink/15 hover:border-ink/30"
+                  }`}
+                >
+                  {c.title}
+                </button>
+              );
+            })}
+            {publishedCourses.length === 0 && <p className="text-xs text-ink/50">No published lessons yet.</p>}
+          </div>
+        </div>
+
+        {/* Ordered steps */}
+        {selectedIds.length > 0 && (
+          <div>
+            <span className={labelCls}>Step order</span>
+            <div className="space-y-1.5">
+              {selectedIds.map((id, i) => (
+                <div key={id} className="flex items-center gap-2 border border-ink/10 rounded-sm px-3 py-1.5">
+                  <span className="text-xs text-ink/40 font-semibold w-5">{i + 1}.</span>
+                  <span className="text-sm flex-1 truncate">{courseTitle.get(id) ?? id}</span>
+                  <button
+                    onClick={() => setSelectedIds((prev) => move(prev, i, -1))}
+                    disabled={i === 0}
+                    className="size-7 rounded-sm flex items-center justify-center text-ink/40 hover:bg-ink/5 disabled:opacity-30"
+                    aria-label="Move up"
+                  >
+                    <ArrowUp className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds((prev) => move(prev, i, 1))}
+                    disabled={i === selectedIds.length - 1}
+                    className="size-7 rounded-sm flex items-center justify-center text-ink/40 hover:bg-ink/5 disabled:opacity-30"
+                    aria-label="Move down"
+                  >
+                    <ArrowDown className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (!title.trim()) return toast.error("Title is required.");
+              saveMut.mutate();
+            }}
+            disabled={saveMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+          >
+            {saveMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {editId ? "Save changes" : "Create path"}
+          </button>
+          {editId && (
+            <button onClick={resetForm} className="px-4 py-2 text-sm border border-ink/15 rounded-sm hover:bg-ink/5">
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MicroCoursesAdmin() {
+  const listFn = useServerFn(adminListMicroCourses);
+  const upsertFn = useServerFn(adminUpsertMicroCourse);
+  const deleteFn = useServerFn(adminDeleteMicroCourse);
+  const generateFn = useServerFn(adminGenerateMicroCourseScript);
+  const qc = useQueryClient();
+
+  const { data: courses, isLoading } = useQuery({
+    queryKey: ["admin-micro-courses"],
+    queryFn: () => listFn(),
+  });
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<"research" | "career" | "study-skills" | "wellbeing">("study-skills");
+  const [duration, setDuration] = useState(6);
+  const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
+  const [contentJson, setContentJson] = useState("[]");
+  const [questionsJson, setQuestionsJson] = useState("[]");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [draftTopic, setDraftTopic] = useState("");
+
+  const generateMut = useMutation({
+    mutationFn: () => generateFn({ data: { title: title || draftTopic, topic: draftTopic || title } }),
+    onSuccess: (res: any) => {
+      setTitle(res.title ?? "");
+      setDescription(res.description ?? "");
+      setCategory(res.category ?? "study-skills");
+      setDuration(res.duration_minutes ?? 6);
+      setContentJson(JSON.stringify(res.content ?? [], null, 2));
+      setQuestionsJson(JSON.stringify(res.check_questions ?? [], null, 2));
+      toast.success("Draft generated. Review and save.");
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  const saveMut = useMutation({
+    mutationFn: () => {
+      let content: any[] = [];
+      let questions: any[] = [];
+      try {
+        content = JSON.parse(contentJson || "[]");
+      } catch {
+        toast.error("Content must be valid JSON.");
+        throw new Error("Invalid content JSON");
+      }
+      try {
+        questions = JSON.parse(questionsJson || "[]");
+      } catch {
+        toast.error("Questions must be valid JSON.");
+        throw new Error("Invalid questions JSON");
+      }
+      return upsertFn({
+        data: {
+          id: editId ?? undefined,
+          title,
+          description,
+          category,
+          duration_minutes: duration,
+          status,
+          content,
+          check_questions: questions,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Lesson saved.");
+      qc.invalidateQueries({ queryKey: ["admin-micro-courses"] });
+      resetForm();
+    },
+    onError: (e: any) => {
+      if (!String(e).includes("Invalid")) toast.error(String(e));
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Lesson deleted.");
+      qc.invalidateQueries({ queryKey: ["admin-micro-courses"] });
+    },
+    onError: (e: any) => toast.error(String(e)),
+  });
+
+  function resetForm() {
+    setEditId(null);
+    setTitle("");
+    setDescription("");
+    setCategory("study-skills");
+    setDuration(6);
+    setStatus("draft");
+    setContentJson("[]");
+    setQuestionsJson("[]");
+    setDraftTopic("");
+  }
+
+  function editCourse(c: any) {
+    setEditId(c.id);
+    setTitle(c.title);
+    setDescription(c.description ?? "");
+    setCategory(c.category);
+    setDuration(c.duration_minutes);
+    setStatus(c.status);
+    setContentJson(JSON.stringify(c.content ?? [], null, 2));
+    setQuestionsJson(JSON.stringify(c.check_questions ?? [], null, 2));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <BookOpen className="size-4 text-verde" />
+        <p className="text-ink-secondary text-sm">
+          Manage Micro Courses. Content is team-produced — use the generator to draft a lesson, then review and publish.
+        </p>
+      </div>
+
+      {/* Course list */}
+      <div className="border border-ink/10 rounded-sm p-4">
+        <h3 className="text-sm font-medium mb-3">Lessons</h3>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-ink/50 py-4">
+            <Loader2 className="size-4 animate-spin" /> Loading…
+          </div>
+        ) : !courses || courses.length === 0 ? (
+          <p className="text-sm text-ink/50">No lessons yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {courses.map((c: any) => (
+              <div key={c.id} className="flex items-center gap-3 border border-ink/10 rounded-sm px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{c.title}</p>
+                  <p className="text-xs text-ink/40">
+                    {c.category} · {c.duration_minutes} min · {c.status}
+                  </p>
+                </div>
+                <button
+                  onClick={() => editCourse(c)}
+                  className="px-3 py-1.5 text-xs border border-ink/15 rounded-sm hover:bg-ink/5"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteMut.mutate(c.id)}
+                  className="size-8 rounded-sm flex items-center justify-center text-ink/40 hover:text-red-600 hover:bg-red-50"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Editor */}
+      <div className="border border-ink/10 rounded-sm p-4 space-y-4">
+        <h3 className="text-sm font-medium">{editId ? "Edit lesson" : "New lesson"}</h3>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <span className={labelCls}>Title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <span className={labelCls}>Draft topic (optional prompt)</span>
+            <input
+              value={draftTopic}
+              onChange={(e) => setDraftTopic(e.target.value)}
+              placeholder="e.g. How to reference in APA 7"
+              className={inputCls}
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!title.trim() && !draftTopic.trim()) return toast.error("Enter a title or topic first.");
+              generateMut.mutate();
+            }}
+            disabled={generateMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50"
+          >
+            {generateMut.isPending ? <Loader2 className="size-4 animate-spin inline" /> : "Generate draft"}
+          </button>
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-3">
+          <label className="block">
+            <span className={labelCls}>Category</span>
+            <select value={category} onChange={(e) => setCategory(e.target.value as any)} className={inputCls}>
+              <option value="research">Research</option>
+              <option value="career">Career</option>
+              <option value="study-skills">Study skills</option>
+              <option value="wellbeing">Wellbeing</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>Duration (min)</span>
+            <input type="number" min={1} max={60} value={duration} onChange={(e) => setDuration(Number(e.target.value) || 6)} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Status</span>
+            <select value={status} onChange={(e) => setStatus(e.target.value as any)} className={inputCls}>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+        </div>
+
+        <label className="block">
+          <span className={labelCls}>Description</span>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls} />
+        </label>
+
+        <label className="block">
+          <span className={labelCls}>Content blocks (JSON: type heading|text|bullet|tip)</span>
+          <textarea value={contentJson} onChange={(e) => setContentJson(e.target.value)} rows={8} className={`${inputCls} font-mono text-xs`} />
+        </label>
+
+        <label className="block">
+          <span className={labelCls}>Check questions (JSON)</span>
+          <textarea value={questionsJson} onChange={(e) => setQuestionsJson(e.target.value)} rows={8} className={`${inputCls} font-mono text-xs`} />
+        </label>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (!title.trim()) return toast.error("Title is required.");
+              saveMut.mutate();
+            }}
+            disabled={saveMut.isPending}
+            className="px-4 py-2 text-sm font-medium bg-verde text-white rounded-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+          >
+            {saveMut.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {editId ? "Save changes" : "Create lesson"}
+          </button>
+          {editId && (
+            <button
+              onClick={resetForm}
+              className="px-4 py-2 text-sm border border-ink/15 rounded-sm hover:bg-ink/5"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PastQuestionsAdmin() {
   const importFn = useServerFn(adminImportPastQuestions);
