@@ -79,7 +79,7 @@ LEVEL: ${data.level}
 AVAILABLE REFERENCES (cite sparingly — only where relevant):
 ${refContext}`;
 
-  const abstractTarget = Math.max(200, Math.round(target * 0.04));
+  const abstractTarget = Math.min(400, Math.max(200, Math.round(target * 0.03)));
   const chapterWeights = [0.15, 0.32, 0.18, 0.20, 0.15];
   const chapterDefs = [
     {
@@ -162,7 +162,9 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
   ].map((d, i) => ({ ...d, target: Math.max(500, Math.round(target * chapterWeights[i])) }));
 
   const { callAIText } = await import("@/lib/ai-utils.server");
-  const apiKey = runtimeEnv("DEEPSEEK_API_KEY_THESIS") ?? runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const thesisKey = runtimeEnv("DEEPSEEK_API_KEY_THESIS");
+  const fallbackKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const apiKey = thesisKey && !thesisKey.includes("...") && thesisKey.length > 20 ? thesisKey : fallbackKey;
 
   const chapters: Record<string, string> = {};
 
@@ -285,7 +287,7 @@ CRITICAL RULES FOR THESIS:
 
   let abstract = "";
   try {
-    const { callAI } = await import("@/lib/ai-utils.server");
+    const { callAI, callAIText, scrubAITells } = await import("@/lib/ai-utils.server");
     const abstractSystem = [
       `You are a senior academic. Below are the completed chapters of a ${data.level} thesis.`,
       `Write a RESULTS-BASED abstract as a single JSON object: {"abstract":"..."}`,
@@ -295,43 +297,70 @@ CRITICAL RULES FOR THESIS:
       `- Do NOT describe what the thesis "will do", "aims to do", or "explores".`,
       `- Summarise the actual methodology, findings, and conclusions from the chapters below.`,
       `- ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} style.`,
-      `- Target: EXACTLY ${abstractTarget} words. Single paragraph.`,
+      `- Target: approximately ${abstractTarget} words (single paragraph).`,
       `- Use 1-2 citations from the reference list only where they genuinely support a finding.`,
       `- Never invent citations.`,
       `- Vary sentence length and structure. Write natural academic English.`,
     ].join("\n");
 
-    const raw = await callAI(apiKey, {
-      model: "deepseek-v4-pro",
-      max_tokens: 8000,
-      system: abstractSystem,
-      user: `${topicContext}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}\n\nWrite the abstract now.`,
-    });
-    abstract = raw?.abstract ?? "";
+    try {
+      const raw = await callAI(apiKey, {
+        model: "deepseek-v4-flash",
+        max_tokens: 8000,
+        system: abstractSystem,
+        user: `${topicContext}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}\n\nWrite the abstract now.`,
+      });
+      abstract = raw?.abstract ?? "";
+    } catch (jsonErr) {
+      console.warn("[thesis] callAI JSON failed for abstract, falling back to plain text:", jsonErr);
+    }
+
+    // Fallback: if JSON mode returned empty or failed, generate plain text directly
+    if (!abstract || abstract.trim().length === 0) {
+      const plainSystem = [
+        `You are a senior academic. Below are the completed chapters of a ${data.level} thesis.`,
+        `Write a RESULTS-BASED academic abstract (approximately ${abstractTarget} words).`,
+        `Output ONLY the abstract text directly — no title, no "Abstract" heading, no quotes, no conversational preamble.`,
+        ``,
+        `CRITICAL RULES:`,
+        `- Write in PAST TENSE — describe what the study DID, what it FOUND, and what it MEANS.`,
+        `- Do NOT describe what the thesis "will do", "aims to do", or "explores".`,
+        `- Summarise the actual methodology, findings, and conclusions from the chapters below.`,
+        `- ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} style.`,
+        `- Target: approximately ${abstractTarget} words. Single paragraph.`,
+      ].join("\n");
+
+      const plainText = await callAIText(apiKey, {
+        model: "deepseek-v4-flash",
+        max_tokens: 4000,
+        system: plainSystem,
+        user: `${topicContext}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}\n\nWrite the abstract now.`,
+      });
+      abstract = plainText.replace(/^(?:\*{0,2}abstract\*{0,2}[:\s]*)+/i, "").trim();
+    }
 
     // Scrub AI tells from the abstract
     if (abstract) {
-      const { scrubAITells } = await import("@/lib/ai-utils.server");
       abstract = scrubAITells(abstract);
     }
 
-    // Word count retry — re-prompt once if too short
+    // Word count retry — re-prompt once only if significantly too short (< 150 words)
     const abstractWords = countWords(abstract);
-    if (abstractWords < abstractTarget && abstract) {
+    if (abstractWords < 150 && abstract) {
       try {
         const retrySystem = [
-          `You are a senior academic. Your previous abstract was too short — only ${abstractWords} words, but the target is AT LEAST ${abstractTarget} words.`,
+          `You are a senior academic. Your previous abstract was too short — only ${abstractWords} words, but the target is approximately ${abstractTarget} words.`,
           `Expand it with more specific findings from the completed chapters. Keep the same JSON format: {"abstract":"..."}`,
         ].join("\n");
         const retry = await callAI(apiKey, {
-          model: "deepseek-v4-pro",
+          model: "deepseek-v4-flash",
           max_tokens: 8000,
           system: retrySystem,
           user: `CURRENT ABSTRACT:\n${abstract}\n\nCOMPLETED CHAPTER EXCERPTS:\n${chapterSummary}`,
         });
         const expanded = retry?.abstract ?? "";
         if (expanded && countWords(expanded) > abstractWords) {
-          abstract = expanded;
+          abstract = scrubAITells(expanded);
         }
       } catch {
         // Keep original if retry fails
@@ -1006,7 +1035,9 @@ export async function generateProposalContent(payload: {
   const methodTarget = Math.round(target * 0.35);    // Chapter 3: Methodology
 
   const { callAI, callAIText } = await import("@/lib/ai-utils.server");
-  const apiKey = runtimeEnv("DEEPSEEK_API_KEY_PROPOSAL") ?? runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const proposalKey = runtimeEnv("DEEPSEEK_API_KEY_PROPOSAL");
+  const fallbackKey = runtimeEnv("DEEPSEEK_API_KEY") ?? "";
+  const apiKey = proposalKey && !proposalKey.includes("...") && proposalKey.length > 20 ? proposalKey : fallbackKey;
 
   function parseSections(text: string): Record<string, string> {
     const result: Record<string, string> = {};
