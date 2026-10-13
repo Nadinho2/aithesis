@@ -329,12 +329,66 @@ export function formatPartsByStyle(ref: ScholarlyRef, style: "apa_7" | "harvard"
   return style === "harvard" ? formatAPAPartsHarvard(ref) : formatAPAParts(ref);
 }
 
+export function extractSurname(author: string): string {
+  const cleaned = (author || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "Author";
+  if (cleaned.includes(",")) {
+    return cleaned.split(",")[0].trim();
+  }
+  const parts = cleaned.split(" ");
+  return parts[parts.length - 1];
+}
+
+export function formatInTextCitation(ref: ScholarlyRef, style: "apa_7" | "harvard" = "apa_7"): string {
+  const year = ref.year ? String(ref.year) : "n.d.";
+  const rawAuthors = Array.isArray(ref.authors) ? ref.authors : (typeof ref.authors === "string" ? [ref.authors] : []);
+  const authors = rawAuthors.map(extractSurname).filter(Boolean);
+  if (authors.length === 0) {
+    const shortTitle = (ref.title || "Untitled").slice(0, 25).trim();
+    return `("${shortTitle}", ${year})`;
+  }
+  if (authors.length === 1) {
+    return `(${authors[0]}, ${year})`;
+  }
+  if (authors.length === 2) {
+    const conj = style === "harvard" ? "and" : "&";
+    return `(${authors[0]} ${conj} ${authors[1]}, ${year})`;
+  }
+  return `(${authors[0]} et al., ${year})`;
+}
+
+export function extractSearchKeywords(title: string, area?: string): string {
+  const stopWords = new Set([
+    "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for", "with",
+    "by", "about", "against", "between", "into", "through", "during", "before",
+    "after", "above", "below", "from", "up", "down", "out", "over", "under",
+    "again", "further", "then", "once", "here", "there", "when", "where", "why",
+    "how", "all", "any", "both", "each", "few", "more", "most", "other", "some",
+    "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
+    "assessment", "investigation", "analysis", "study", "empirical", "evaluation",
+    "effects", "effect", "impact", "impacts", "role", "roles", "case", "study",
+    "critical", "towards", "among", "across", "within", "overview", "perspective"
+  ]);
+
+  const words = `${title} ${area || ""}`
+    .replace(/[^\w\s]/g, " ")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+
+  const unique = Array.from(new Set(words));
+  return unique.slice(0, 7).join(" ");
+}
+
 export function sortReferences(refs: ScholarlyRef[]): ScholarlyRef[] {
   return [...refs].sort((a, b) => {
-    const aLast = a.authors[0] ?? "";
-    const bLast = b.authors[0] ?? "";
+    const aAuthors = Array.isArray(a.authors) ? a.authors : (typeof a.authors === "string" ? [a.authors] : []);
+    const bAuthors = Array.isArray(b.authors) ? b.authors : (typeof b.authors === "string" ? [b.authors] : []);
+    const aLast = extractSurname(aAuthors[0] ?? "");
+    const bLast = extractSurname(bAuthors[0] ?? "");
     const cmp = aLast.localeCompare(bLast);
     if (cmp !== 0) return cmp;
     return (a.year ?? 0) - (b.year ?? 0);
   });
 }
+

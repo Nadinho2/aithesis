@@ -38,6 +38,7 @@ export async function generateThesisContent(payload: {
     refs: any[];
     isPaid: boolean;
     taskId?: string;
+    custom_chapters?: Array<{ order: number; title: string; sections: string[] }>;
   };
 }): Promise<{ success: boolean; error?: string }> {
   const { userId, data } = payload;
@@ -55,38 +56,123 @@ export async function generateThesisContent(payload: {
   const topicCtx = data.topicCtx;
   const refs = data.refs ?? [];
   const target = data.target_words;
+
+  const { formatInTextCitation, formatAPA, formatHarvard, formatByStyle, sortReferences } = await import("@/lib/scholarly.server");
+
+  // Build structured reference context with explicit in-text citation keys
   const refContext = refs
-    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"}`)
-    .join("\n");
+    .map((r: any, i: number) => {
+      const citeKey = formatInTextCitation(r, data.citation_style as any);
+      const fullCitation = formatByStyle(r, data.citation_style as any);
+      return `[REF ${i + 1}]
+In-Text Citation Key: ${citeKey}
+Full Reference: ${fullCitation}
+Title: ${r.title || "Untitled"}`;
+    })
+    .join("\n\n");
 
   const baseRules = `CITATION STYLE: ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"}
 Write natural academic English as a human researcher would. Vary sentence length and structure.
 RULES:
 - No em dashes (—). Use commas, semicolons, and periods instead.
 - Never use phrases like "This chapter explores", "It is noteworthy", "In conclusion, it can be said", "This study aims to", "The following", "It is important to note".
-- Use only 1-2 key citations per section — focus on depth, not quantity.
-- Never invent citations.
+- CRITICAL CITATION RULE: You MUST cite ONLY from the AVAILABLE REFERENCES list below.
+- Use the exact In-Text Citation Key provided for each reference (e.g., (Surname, Year)).
+- Never invent fictitious scholars, authors, or publication years.
 - Write in clear paragraphs, not bullet points.
 - For numbers above 999, use commas (1,500 not 1500).
 - For equations, use plain text like: Mean = Σx/n, SD = √[Σ(x-x̄)²/(n-1)], t = (x̄₁-x̄₂)/SE, χ² = Σ(O-E)²/E, F = MSB/MSW, r = 0.76.`;
 
+  // Detect empirical qualitative vs quantitative mode
+  const isQualitative =
+    Boolean(topicCtx.research_type && /qualitative|interview|case study|thematic|phenomenolog/i.test(topicCtx.research_type)) ||
+    Boolean(topicCtx.primary_instrument && /interview|focus group|qualitative/i.test(topicCtx.primary_instrument));
+
+  const hasPrimaryData = Boolean(
+    topicCtx.is_primary_data ||
+    topicCtx.primary_instrument ||
+    topicCtx.sample_size ||
+    (topicCtx.sample_questions && topicCtx.sample_questions.length > 0)
+  );
+
+  const primarySection = hasPrimaryData ? `
+PRIMARY EMPIRICAL DATA SPECIFICATIONS:
+- Primary Instrument: ${topicCtx.primary_instrument || (isQualitative ? "Key Informant Interviews (KII) / In-depth Interviews" : "Structured Questionnaire")}
+- Target Population / Informants: ${topicCtx.target_population || "Target participants in " + (topicCtx.country || "the study setting")}
+- Sample Size: ${topicCtx.sample_size || (isQualitative ? "15 in-depth interview participants (at data saturation)" : "250 survey respondents")}
+${topicCtx.sample_questions?.length ? `- Core Research / Interview Questions to Analyse:\n  * ${topicCtx.sample_questions.join("\n  * ")}` : ""}
+${topicCtx.empirical_notes ? `- Key Empirical Field Findings / Participant Notes to Reflect in Analysis:\n  ${topicCtx.empirical_notes}` : ""}
+` : "";
+
   const topicContext = `RESEARCH TOPIC: ${topicCtx.title}
-PROBLEM: ${topicCtx.problem_statement}
+DEPARTMENT / DISCIPLINE: ${topicCtx.department || "Academic Department"}
+LOCATION / CONTEXT: ${topicCtx.country || "Nigeria"}
+AREA OF INTEREST: ${topicCtx.area_of_interest || "Academic Research"}
+RESEARCH TYPE: ${topicCtx.research_type || (isQualitative ? "Empirical Qualitative" : "Empirical Quantitative")}
+PROBLEM STATEMENT: ${topicCtx.problem_statement}
 GAP: ${topicCtx.research_gap}
 OBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}
 LEVEL: ${data.level}
-
-AVAILABLE REFERENCES (cite sparingly — only where relevant):
+${primarySection}
+AVAILABLE REFERENCES (MANDATORY: You must cite ONLY from these references using their In-Text Citation Keys):
 ${refContext}`;
 
+  const isHumanitiesOrHistorical = Boolean(
+    topicCtx.department && /history|humanities|law|literature|philosophy|religious|theology|classics|archaeology|diplomatic|international studies/i.test(topicCtx.department)
+  ) || Boolean(
+    topicCtx.research_type && /historical|doctrinal|archival|qualitative|humanities|textual/i.test(topicCtx.research_type)
+  ) || Boolean(
+    topicCtx.title && /19\d\d|20\d\d|history|origins|pre-colonial|colonial|historical/i.test(topicCtx.title)
+  );
+
   const abstractTarget = Math.min(400, Math.max(200, Math.round(target * 0.03)));
-  const chapterWeights = [0.15, 0.32, 0.18, 0.20, 0.15];
-  const chapterDefs = [
-    {
-      key: "chapter_1_introduction",
-      label: "Chapter 1: Introduction",
-      order: 1,
-      instructions: `Use these numbered sub-sections:
+
+  let chapterDefs: Array<{
+    key: string;
+    label: string;
+    order: number;
+    instructions: string;
+    target: number;
+  }> = [];
+
+  if (data.custom_chapters && data.custom_chapters.length > 0) {
+    const customList = data.custom_chapters;
+    const numChapters = customList.length;
+    const wordsForChapters = Math.max(1000, target - abstractTarget);
+    const avgWords = Math.round(wordsForChapters / numChapters);
+
+    chapterDefs = customList.map((ch, idx) => {
+      const slug = ch.title
+        .toLowerCase()
+        .replace(/^chapter\s*\d+\s*[:\-\—]*/i, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .slice(0, 30)
+        .replace(/^_+|_+$/g, "") || `part_${idx + 1}`;
+      const key = `chapter_${ch.order}_${slug}`;
+
+      const subSecList = ch.sections.map((s, sIdx) => {
+        const hasNum = /^\d+\.\d+/.test(s);
+        return hasNum ? s : `${ch.order}.${sIdx + 1} ${s}`;
+      });
+
+      const instructions = `Use these numbered sub-sections in order:\n${subSecList.join("\n")}\n\nExamine and develop each sub-section comprehensively with scholarly analysis, rigorous evidence, and academic prose. Extensively cite from the AVAILABLE REFERENCES list using their In-Text Citation Keys. Output pure academic narrative.`;
+
+      return {
+        key,
+        label: ch.title,
+        order: ch.order,
+        instructions,
+        target: Math.max(600, avgWords),
+      };
+    });
+  } else {
+    const chapterWeights = [0.15, 0.32, 0.18, 0.20, 0.15];
+    const defaultDefs = [
+      {
+        key: "chapter_1_introduction",
+        label: "Chapter 1: Introduction",
+        order: 1,
+        instructions: `Use these numbered sub-sections:
 1.1 Background to the study
 1.2 Statement of problem
 1.3 Objective of the study
@@ -95,71 +181,89 @@ ${refContext}`;
 1.6 Significant of the study
 1.7 Scope of the study
 1.8 Definition of terms
-Focus on clearly explaining the research problem and why this study matters.`,
-    },
-    {
-      key: "chapter_2_literature_review",
-      label: "Chapter 2: Literature Review",
-      order: 2,
-      instructions: `Use these numbered sub-sections:
+Focus on clearly explaining the research problem and why this study matters. Cite relevant foundational literature from the reference list.`,
+      },
+      {
+        key: "chapter_2_literature_review",
+        label: "Chapter 2: Literature Review",
+        order: 2,
+        instructions: `Use these numbered sub-sections:
 2.1 Conceptual review
 2.2 Empirical Review
 2.3 Theoretical review
 2.4 Theoretical framework
 2.5 Summary of Reviews
 2.6 Gap in literature
-For each area, explain the key ideas and debates — use 1-2 citations where they genuinely support a point. Focus on synthesis and analysis, not listing references.`,
-    },
-    {
-      key: "chapter_3_methodology",
-      label: "Chapter 3: Research Methodology",
-      order: 3,
-      instructions: `Use these numbered sub-sections:
-3.1 Research design
-3.2 Area of the study
-3.3 Population of the study
-3.4 Sample size
-3.5 Sample techniques
-3.6 Instrument for data collection
-3.7 Validity of instrument
-3.8 Reliability of instrument
-3.9 Method of administering data
-3.10 Method of presentation and data analysis
+For each area, explain the key ideas and scholarly debates. Extensively cite from the AVAILABLE REFERENCES list using their In-Text Citation Keys. Focus on synthesis, critique, and academic depth.`,
+      },
+      {
+        key: "chapter_3_methodology",
+        label: "Chapter 3: Research Methodology",
+        order: 3,
+        instructions: isQualitative || isHumanitiesOrHistorical
+          ? `Use these numbered sub-sections:
+3.1 Research design (${isHumanitiesOrHistorical ? "Historical / Archival Analytical Research Design" : "Exploratory / Phenomenological Qualitative Design"})
+3.2 Area of the study (${topicCtx.country || "Study Setting"})
+3.3 Sources of data and Key Informants (${topicCtx.target_population || (isHumanitiesOrHistorical ? "Primary archival records, oral traditions, and secondary historical literature" : "Target study informants")})
+3.4 Sample size and determination (${topicCtx.sample_size || "Determined by data saturation / historical source availability"})
+3.5 Sampling technique (Purposive / Judgemental Sampling with clear inclusion criteria)
+3.6 Instrument for data collection (${isHumanitiesOrHistorical ? "Oral Interview Guide and Archival Document Review Checklist" : "Semi-structured Key Informant Interview Guide"})
+3.7 Trustworthiness and Historical Criticism (Internal and External Criticism of primary sources / Guba & Lincoln framework — do NOT use quantitative Cronbach's alpha)
+3.8 Method of data collection (Audio-recorded oral interviews, verbatim transcription, and archival documentation)
+3.9 Method of data analysis (${isHumanitiesOrHistorical ? "Historical Hermeneutics, Chronological and Thematic Synthesis" : "Braun & Clarke 6-phase Thematic Analysis"})
+3.10 Ethical considerations (Informed consent, participant anonymity, voluntary participation)
+Describe exactly how the study fieldwork was carried out with methodological rigor.`
+          : `Use these numbered sub-sections:
+3.1 Research design (Descriptive Survey Research Design)
+3.2 Area of the study (${topicCtx.country || "Study Setting"})
+3.3 Population of the study (${topicCtx.target_population || "Target study population"})
+3.4 Sample size and determination (${topicCtx.sample_size || "Calculated using Taro Yamane or Cochran formula"})
+3.5 Sampling technique (Stratified / Simple Random Sampling)
+3.6 Instrument for data collection (Structured Questionnaire using 4-point/5-point Likert scale)
+3.7 Validity of instrument (Face and Content validity by panel of experts)
+3.8 Reliability of instrument (Cronbach's alpha reliability coefficient or test-retest)
+3.9 Method of administering data (Questionnaire administration and retrieval procedures)
+3.10 Method of presentation and data analysis (Descriptive statistics with Mean and Standard Deviation, benchmark criterion mean cutoff e.g. 2.50, and inferential hypotheses testing)
 Describe exactly how the research was carried out with methodological detail.`,
-    },
-    {
-      key: "chapter_4_results_findings",
-      label: "Chapter 4: Results and Findings",
-      order: 4,
-      instructions: `Use these numbered sub-sections:
-4.1 Introduction
-4.2 Data analysis and presentation
-4.3 Discussion of findings
-Present findings with data. Use plain text tables formatted like:
-TABLE 1: Distribution of Respondents by Age
-+--------+----------+----------+
-| Age    | Frequency| Percent  |
-+--------+----------+----------+
-| 18-25  | 45       | 30.0%    |
-| 26-35  | 60       | 40.0%    |
-| 36+    | 45       | 30.0%    |
-+--------+----------+----------+
-| Total  | 150      | 100.0%   |
-+--------+----------+----------+
-Include descriptive statistics (mean, standard deviation) and inferential statistics (t-test, ANOVA, chi-square, correlation) as relevant. Show actual computed values.`,
-    },
-    {
-      key: "chapter_5_discussion_conclusion",
-      label: "Chapter 5: Discussion, Conclusion and Recommendations",
-      order: 5,
-      instructions: `Use these numbered sub-sections:
-5.1 Summary of findings
-5.2 Conclusion
-5.3 Limitations of the study
-5.4 Recommendations
-Discuss findings in relation to the literature, conclude, recommend, suggest further studies, and note limitations.`,
-    },
-  ].map((d, i) => ({ ...d, target: Math.max(500, Math.round(target * chapterWeights[i])) }));
+      },
+      {
+        key: "chapter_4_results_findings",
+        label: "Chapter 4: Results and Findings",
+        order: 4,
+        instructions: isQualitative || isHumanitiesOrHistorical
+          ? `Use these numbered sub-sections:
+4.1 Introduction and Demographic Profile of Participants / Historical Setting
+4.2 Thematic Presentation of Findings (Organised around each Research Question and core historical or interview themes. Present Major Themes and Sub-Themes with rich evidence and verbatim quotes)
+4.3 Summary Matrix of Emerging Themes
+4.4 Discussion of Findings (Relate the findings to empirical literature from Chapter Two and theoretical framework)
+DO NOT generate quantitative hypotheses testing or Chi-Square/ANOVA tables. This is an empirical qualitative/humanities study.`
+          : `Use these numbered sub-sections:
+4.1 Introduction and Questionnaire Response Rate (Distributed vs Retrieved)
+4.2 Demographic Profile of Respondents
+4.3 Analysis of Research Questions (Plain text tables with Frequency, Mean, Standard Deviation, and Decision: Agreed/Accepted vs Disagreed/Rejected based on 2.50 criterion cutoff)
+4.4 Hypotheses Testing (State null hypothesis H01, test statistic, p-value < 0.05 decision rule)
+4.5 Discussion of Findings (Compare empirical findings with literature and theoretical framework)
+Present findings with structured tables. Use actual computed values.`,
+      },
+      {
+        key: "chapter_5_discussion_conclusion",
+        label: "Chapter 5: Discussion, Conclusion and Recommendations",
+        order: 5,
+        instructions: `Use these numbered sub-sections:
+5.1 Summary of findings (${isQualitative || isHumanitiesOrHistorical ? "Synthesizing the core qualitative/historical themes discovered" : "Summarizing statistical results and hypothesis decisions"})
+5.2 Conclusion (Substantive conclusions drawn directly from Chapter Four findings)
+5.3 Recommendations (Specific, actionable policy and practical recommendations)
+5.4 Contribution to knowledge
+5.5 Limitations of the study and Suggestions for further research
+Discuss findings in relation to the literature, conclude, recommend, and note limitations.`,
+      },
+    ];
+
+    chapterDefs = defaultDefs.map((d, i) => ({
+      ...d,
+      target: Math.max(500, Math.round(target * chapterWeights[i])),
+    }));
+  }
 
   const { callAIText } = await import("@/lib/ai-utils.server");
   const thesisKey = runtimeEnv("DEEPSEEK_API_KEY_THESIS");
@@ -182,27 +286,27 @@ Discuss findings in relation to the literature, conclude, recommend, suggest fur
         .filter((l) => /^\d+\.\d+\s+/.test(l))
         .map((l) => l.replace(/^\d+\.\d+\s+/, "").trim())
         .filter(Boolean);
-      let system = `You are an experienced Nigerian academic writing a completed research thesis at ${thesisLevel} level. Write ${def.label} for a study titled '${topicCtx.title}' on '${topicCtx.title}' conducted at a Nigerian university.
+      let system = `You are an experienced academic writing a completed research thesis at ${thesisLevel} level. Write ${def.label} for a study titled '${topicCtx.title}' conducted at a university.
 
 CRITICAL RULES FOR THESIS:
 - Use past tense for methodology and findings: 'this study examined', 'data was collected', 'the researcher found'
 - Use present tense for literature review and established facts: 'communication is', 'scholars argue'
-- Chapter Four must present and analyse actual findings with statistical language appropriate to the study
-- Chapter Five must provide conclusions drawn FROM the findings, not restate the objectives
+- ${isQualitative || isHumanitiesOrHistorical ? "This is a QUALITATIVE / HUMANITIES / HISTORICAL study: present rich thematic narrative, historical evidence, participant/informant codes, and verbatim quotes. Do not generate quantitative ANOVA or Chi-Square tests." : "Chapter Four must present and analyse actual findings with statistical language and tables appropriate to the study"}
 - Write approximately ${def.target} words
 - Use ${data.citation_style === "harvard" ? "Harvard" : "APA 7th"} referencing style
-- Include in-text citations: (Surname, Year)
+- Include in-text citations using ONLY the provided In-Text Citation Keys: (Surname, Year) or Surname (Year)
 - Sub-sections required in order: ${sectionLines.join(", ")}
-- Output the chapter text only — no markdown, no headers, no preamble, no conclusion summary at the end`;
+- Output the chapter text directly. Do NOT include meta-planning, internal thinking, scratchpad notes, or commentary about what needs to be written. Start immediately with the chapter title and sections.`;
 
       // Append context from all previously generated chapters
       system += buildPreviousContext(generatedChapters, pipelinePayload as any);
 
-      // Append chapter-specific rules
-      if (def.order === 4) {
-        system += buildChapterFourRules();
-      } else if (def.order === 5) {
-        system += buildChapterFiveRules();
+      // Append chapter-specific rules only for standard 5-chapter template when appropriate
+      const isDefaultTemplate = !data.custom_chapters || data.custom_chapters.length === 0;
+      if (isDefaultTemplate && def.order === 4 && !isHumanitiesOrHistorical) {
+        system += buildChapterFourRules(isQualitative);
+      } else if (isDefaultTemplate && def.order === 5 && !isHumanitiesOrHistorical) {
+        system += buildChapterFiveRules(isQualitative);
       }
 
       chapters[def.key] = await callAIText(apiKey, { model: "deepseek-v4-pro", max_tokens: 64000, system, user: `${topicContext}\n\nWrite ${def.label} now — approximately ${def.target} words. Follow the numbered sub-section structure exactly.` });
@@ -278,12 +382,12 @@ CRITICAL RULES FOR THESIS:
   // ─── Generate abstract AFTER chapters ──────────────────────────────────
   // Now that all chapters exist, the AI can write a genuine results-based
   // abstract instead of a procedural preview of what the thesis "will" do.
-  const ch4Content = chapters["chapter_4_results_findings"] ?? "";
-  const ch5Content = chapters["chapter_5_discussion_conclusion"] ?? "";
+  const lastChapter = chapterDefs[chapterDefs.length - 1];
+  const secondLastChapter = chapterDefs.length > 1 ? chapterDefs[chapterDefs.length - 2] : null;
   const chapterSummary = [
-    `FINDINGS (Chapter 4 excerpt): ${ch4Content.slice(0, 1200)}`,
-    `CONCLUSIONS (Chapter 5 excerpt): ${ch5Content.slice(0, 800)}`,
-  ].join("\n\n");
+    secondLastChapter ? `${secondLastChapter.label} excerpt:\n${(chapters[secondLastChapter.key] ?? "").slice(0, 1200)}` : "",
+    lastChapter ? `${lastChapter.label} excerpt:\n${(chapters[lastChapter.key] ?? "").slice(0, 800)}` : "",
+  ].filter(Boolean).join("\n\n");
 
   let abstract = "";
   try {
@@ -373,22 +477,40 @@ CRITICAL RULES FOR THESIS:
 
   // Scrub AI tells and em dashes from all chapters + abstract
   const { scrubObject } = await import("@/lib/ai-utils.server");
-  const scrubbedChapters = scrubObject(chapters) as Record<string, string>;
+  const scrubbedChapters = scrubObject(chapters) as Record<string, any>;
   const scrubbedAbstract = abstract ? scrubObject(abstract) : "";
+
+  // Attach metadata for dynamic chapter sequence and titles in viewer & Word docx export
+  scrubbedChapters["_meta"] = {
+    chapter_order: chapterDefs.map((d) => [d.label, d.key]),
+    chapter_titles: Object.fromEntries(chapterDefs.map((d) => [d.key, d.label])),
+  };
 
   // Final word count includes the actual abstract
   const finalWordCount = countWords(scrubbedAbstract) + chapterDefs.reduce((s, d) => s + countWords(scrubbedChapters[d.key] ?? ""), 0);
 
   // Save completed thesis
+  const formattedRefList = sortReferences(refs).map((r: any) => ({
+    ...r,
+    citation_key: formatInTextCitation(r, data.citation_style as any),
+    apa: formatAPA(r),
+    harvard: formatHarvard(r),
+    formatted: formatByStyle(r, data.citation_style as any),
+  }));
+
   const { data: created, error } = await supabase
     .from("theses")
     .insert({
       user_id: userId,
       title: topicCtx.title,
       level: data.level,
+      department: topicCtx.department || null,
+      area_of_interest: topicCtx.area_of_interest || null,
+      country: topicCtx.country || null,
+      research_type: topicCtx.research_type || null,
       abstract: scrubbedAbstract,
       chapters: scrubbedChapters,
-      references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}. ${r.journal ?? ""}` })),
+      references_list: formattedRefList,
       word_count: finalWordCount,
       citation_style: data.citation_style,
       status: "completed",
@@ -1021,11 +1143,21 @@ export async function generateProposalContent(payload: {
   const topicCtx = data.topicCtx;
   const refs = data.refs ?? [];
   const target = data.target_words;
-  const refContext = refs
-    .map((r: any, i: number) => `[${i + 1}] ${r.title || "Untitled"}`)
-    .join("\n");
 
-  const topicContext = `RESEARCH TOPIC: ${topicCtx.title}\nPROBLEM: ${topicCtx.problem_statement}\nGAP: ${topicCtx.research_gap}\nOBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}\nLEVEL: ${data.level}\n\nAVAILABLE REFERENCES (cite sparingly — only where relevant):\n${refContext}`;
+  const { formatInTextCitation, formatAPA, formatHarvard, formatByStyle, sortReferences } = await import("@/lib/scholarly.server");
+
+  const refContext = refs
+    .map((r: any, i: number) => {
+      const citeKey = formatInTextCitation(r, data.citation_style as any);
+      const fullCitation = formatByStyle(r, data.citation_style as any);
+      return `[REF ${i + 1}]
+In-Text Citation Key: ${citeKey}
+Full Reference: ${fullCitation}
+Title: ${r.title || "Untitled"}`;
+    })
+    .join("\n\n");
+
+  const topicContext = `RESEARCH TOPIC: ${topicCtx.title}\nPROBLEM: ${topicCtx.problem_statement}\nGAP: ${topicCtx.research_gap}\nOBJECTIVES: ${topicCtx.objectives?.join("; ") ?? ""}\nLEVEL: ${data.level}\n\nAVAILABLE REFERENCES (cite ONLY these using In-Text Citation Keys):\n${refContext}`;
 
   const abstractTarget = Math.max(80, Math.round(target * 0.025));
 
@@ -1206,7 +1338,13 @@ Write only the paragraph text — no headings, no JSON.`;
       level: data.level,
       abstract: scrubbedProposalAbstract,
       sections: scrubbedSections,
-      references_list: refs.map((r: any) => ({ ...r, apa: `${r.authors ?? "Unknown"} (${r.year ?? "n.d."}). ${r.title ?? ""}` })),
+      references_list: sortReferences(refs).map((r: any) => ({
+        ...r,
+        citation_key: formatInTextCitation(r, data.citation_style as any),
+        apa: formatAPA(r),
+        harvard: formatHarvard(r),
+        formatted: formatByStyle(r, data.citation_style as any),
+      })),
       word_count: finalWords,
       citation_style: data.citation_style,
       status: "completed",

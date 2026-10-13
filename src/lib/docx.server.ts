@@ -534,13 +534,31 @@ export async function buildThesisDocx(p: {
     children.push(new Paragraph({ children: [new PageBreak()] }));
   }
 
-  const ordered: Array<[string, string]> = [
+  const defaultOrdered: Array<[string, string]> = [
     ["Chapter 1 — Introduction", "chapter_1_introduction"],
     ["Chapter 2 — Literature Review", "chapter_2_literature_review"],
     ["Chapter 3 — Methodology", "chapter_3_methodology"],
     ["Chapter 4 — Results and Findings", "chapter_4_results_findings"],
     ["Chapter 5 — Summary, Conclusion and Recommendations", "chapter_5_discussion_conclusion"],
   ];
+
+  const metaOrder = (p.chapters as any)?._meta?.chapter_order as Array<[string, string]> | undefined;
+  const metaTitles = (p.chapters as any)?._meta?.chapter_titles as Record<string, string> | undefined;
+
+  let ordered: Array<[string, string]>;
+  if (metaOrder && metaOrder.length > 0) {
+    ordered = metaOrder;
+  } else if (metaTitles) {
+    ordered = defaultOrdered.map(([title, key]) => [metaTitles[key] || title, key]);
+    for (const key of Object.keys(p.chapters || {})) {
+      if (key !== "_meta" && !defaultOrdered.some(([, k]) => k === key)) {
+        ordered.push([metaTitles[key] || key.replace(/^chapter_\d+_/, "").replace(/_/g, " "), key]);
+      }
+    }
+  } else {
+    ordered = defaultOrdered;
+  }
+
   for (let i = 0; i < ordered.length; i++) {
     const [title, key] = ordered[i];
     const v = p.chapters?.[key];
@@ -562,11 +580,17 @@ export async function buildThesisDocx(p: {
       runs.push(new TextRun({ text: parts.venueItalic, italics: true }));
       runs.push(new TextRun({ text: parts.venueTail + " " }));
     }
-    if (parts.url && citationStyle === "apa_7") {
+    const effectiveUrl =
+      parts.url ||
+      ref.url ||
+      (ref.doi
+        ? `https://doi.org/${ref.doi}`
+        : `https://scholar.google.com/scholar?q=${encodeURIComponent(ref.title + " " + (ref.authors?.[0] || ""))}`);
+    if (effectiveUrl && citationStyle === "apa_7") {
       runs.push(
         new ExternalHyperlink({
-          link: parts.url,
-          children: [new TextRun({ text: parts.url, style: "Hyperlink", color: "1a5490" })],
+          link: effectiveUrl,
+          children: [new TextRun({ text: effectiveUrl, style: "Hyperlink", color: "1a5490" })],
         }),
       );
     }

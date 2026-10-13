@@ -38,8 +38,12 @@ async function callDeepSeek(
   apiKey: string,
   opts: ProviderOpts,
 ): Promise<ProviderResult> {
+  const apiModel =
+    opts.model === "deepseek-v4-pro" || opts.model === "deepseek-v4-flash"
+      ? "deepseek-chat"
+      : opts.model;
   const body: Record<string, any> = {
-    model: opts.model,
+    model: apiModel,
     messages: [
       { role: "system", content: opts.system },
       { role: "user", content: opts.user },
@@ -66,14 +70,10 @@ async function callDeepSeek(
   }
 
   const payload = await resp.json();
-  let content = payload?.choices?.[0]?.message?.content;
-  // V4 model defaults to thinking ON — fallback to reasoning_content
+  const content = payload?.choices?.[0]?.message?.content;
   if (!content || content.trim().length === 0) {
-    content = payload?.choices?.[0]?.message?.reasoning_content;
-  }
-  if (!content) {
-    console.error("DeepSeek empty response:", JSON.stringify(payload).slice(0, 500));
-    throw new Error("Did not receive a response.");
+    console.error("DeepSeek empty content response:", JSON.stringify(payload).slice(0, 500));
+    throw new Error("Did not receive a valid content response from DeepSeek.");
   }
   return { content };
 }

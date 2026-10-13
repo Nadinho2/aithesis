@@ -220,7 +220,34 @@ You must remain 100% consistent with everything established in the chapters abov
 /**
  * Build chapter-specific rules block for Chapter 4.
  */
-export function buildChapterFourRules(): string {
+export function buildChapterFourRules(isQualitative = false): string {
+  if (isQualitative) {
+    return `
+
+CHAPTER FOUR SPECIFIC RULES (QUALITATIVE EMPIRICAL / INTERVIEW STUDY):
+
+This chapter presents and analyses qualitative empirical data based EXACTLY on:
+- The research questions and sample interview questions established in Chapter One and Chapter Three
+- The interview sample and key informants described in Chapter Three
+- Thematic analysis principles (Braun & Clarke framework)
+
+CRITICAL QUALITATIVE PRESENTATION RULES:
+- DO NOT generate quantitative hypotheses testing, Chi-square, ANOVA, or p-values. This is a qualitative empirical study.
+- PARTICIPANT PROFILES: Present a profile table of key informants/interviewees using codes (Participant 1 / P1, Participant 2 / P2, etc.) indicating their designation/role, organizational context, and experience, while preserving participant confidentiality.
+- THEMATIC ORGANISATION: For each research question, present the Major Themes and Sub-Themes that emerged from the interview transcripts.
+- VERBATIM PARTICIPANT QUOTES: Integrate authentic verbatim quotations from participants to illustrate each theme. Format quotations in clear indented or distinct paragraphs with attribution, e.g.:
+  Participant 3 (Senior Administrative Officer) remarked:
+  "Whenever network downtime occurs, our transactions are stalled for hours..."
+- THEMATIC MATRIX TABLES: Summarise themes in qualitative matrix tables using this exact structure:
+
+[TABLE: Table 4.2 Summary Matrix of Themes and Core Responses]
+| Research Question | Emerging Theme | Key Informant Summary | Indicative Quotation |
+|-------------------|----------------|-----------------------|----------------------|
+| RQ1 ...           | Theme 1 ...    | Core summary ...      | "Quote excerpt..."   |
+
+- DISCUSSION: Connect empirical interview findings back to theoretical framework and scholarly literature cited in Chapter Two.`;
+  }
+
   return `
 
 CHAPTER FOUR SPECIFIC RULES:
@@ -258,7 +285,19 @@ NUMBERS:
 /**
  * Build chapter-specific rules block for Chapter 5.
  */
-export function buildChapterFiveRules(): string {
+export function buildChapterFiveRules(isQualitative = false): string {
+  if (isQualitative) {
+    return `
+
+CHAPTER FIVE SPECIFIC RULES (QUALITATIVE EMPIRICAL STUDY):
+
+This chapter draws conclusions ONLY from the qualitative themes and findings established in Chapter Four.
+- Summary of Findings must synthesize the key qualitative themes corresponding to each research question
+- Conclusion must reflect the lived experiences, structural realities, and participant insights from the field
+- Practical Recommendations must be actionable, institutional, policy-oriented, and directly tied to the empirical themes
+- Contribution to Knowledge: highlight the qualitative depth and contextual nuances this study provides to existing literature`;
+  }
+
   return `
 
 CHAPTER FIVE SPECIFIC RULES:

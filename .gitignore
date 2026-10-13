@@ -34,3 +34,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Local thesis generation scripts
+scripts/generate_ubon_akwa.ts

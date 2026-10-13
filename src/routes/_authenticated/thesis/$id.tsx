@@ -6,7 +6,7 @@ import { getThesis, exportThesisDocx } from "@/lib/theses.functions";
 import { updateThesisChapters, reviseThesisWithFeedback } from "@/lib/revision.functions";
 import {
   ArrowLeft, Loader2, BookOpen, Download,
-  Edit3, Save, X, Upload, RefreshCw,
+  Edit3, Save, X, Upload, RefreshCw, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,14 +90,6 @@ function ThesisPage() {
     setRevFile({ base64: b64, mime: f.type, name: f.name });
   };
 
-  const enterEdit = () => {
-    if (!data) return;
-    const e: Record<string, string> = {};
-    for (const k of CHAPTER_KEYS) e[k] = ((data.thesis.chapters ?? {}) as Record<string, string>)[k] ?? "";
-    setEditChapters(e);
-    setEditAbstract(data.thesis.abstract ?? "");
-    setEditMode(true);
-  };
 
   const handleDownload = async () => {
     setDlBusy(true);
@@ -121,6 +113,32 @@ function ThesisPage() {
   if (error || !data) return <div className="p-10 text-ink/60">Thesis not found.</div>;
 
   const thesis = data.thesis;
+  const metaOrder = (thesis.chapters as any)?._meta?.chapter_order as Array<[string, string]> | undefined;
+  const metaTitles = (thesis.chapters as any)?._meta?.chapter_titles as Record<string, string> | undefined;
+
+  let activeChapters: Array<[string, string]>;
+  if (metaOrder && metaOrder.length > 0) {
+    activeChapters = metaOrder;
+  } else if (metaTitles) {
+    activeChapters = CHAPTERS.map(([title, key]) => [metaTitles[key] || title, key]);
+    for (const key of Object.keys(thesis.chapters || {})) {
+      if (key !== "_meta" && !CHAPTERS.some(([, k]) => k === key)) {
+        activeChapters.push([metaTitles[key] || key.replace(/^chapter_\d+_/, "").replace(/_/g, " "), key]);
+      }
+    }
+  } else {
+    activeChapters = CHAPTERS;
+  }
+
+  const enterEdit = () => {
+    if (!data) return;
+    const e: Record<string, string> = {};
+    for (const [, k] of activeChapters) e[k] = ((data.thesis.chapters ?? {}) as Record<string, string>)[k] ?? "";
+    setEditChapters(e);
+    setEditAbstract(data.thesis.abstract ?? "");
+    setEditMode(true);
+  };
+
   const c = (editMode ? editChapters : (thesis.chapters ?? {})) as Record<string, string>;
   const refs = ((thesis.references_list ?? []) as Array<{ apa: string; url: string | null; source: string }>);
 
@@ -170,7 +188,7 @@ function ThesisPage() {
       ) : null}
 
       {/* Chapters */}
-      {CHAPTERS.map(([title, key]) =>
+      {activeChapters.map(([title, key]) =>
         editMode ? (
           <EditableSection key={key} title={title} value={editChapters[key] ?? ""} onChange={(v) => setEditChapters({ ...editChapters, [key]: v })} />
         ) : (
@@ -180,16 +198,36 @@ function ThesisPage() {
 
       {/* References */}
       <div className="mt-12 pt-6 border-t border-ink/10 max-w-full">
-        <h2 className="font-serif text-2xl mb-4 flex items-center gap-2"><BookOpen className="size-5 text-sage" /> References</h2>
-        <ol className="space-y-3 text-sm text-ink/80 break-words [overflow-wrap:anywhere]">
-          {refs.map((r, i) => (
-            <li key={i} className="leading-relaxed break-words">
-              <span className="font-mono text-[10px] text-ink/40 mr-2">[{i + 1}]</span>
-              {r.url ? <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:text-sage underline-offset-2 hover:underline break-words [overflow-wrap:anywhere]">{r.apa}</a> : <span className="break-words [overflow-wrap:anywhere]">{r.apa}</span>}
-              <span className="ml-2 text-[10px] uppercase tracking-wider text-ink/40 whitespace-nowrap">{SOURCE_LABELS[r.source] ?? r.source}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 className="font-serif text-2xl flex items-center gap-2"><BookOpen className="size-5 text-sage" /> References</h2>
+          <span className="text-xs text-ink/50 uppercase tracking-wider">
+            {(thesis as any).citation_style === "harvard" ? "Harvard Style" : "APA 7th Edition"} · Alphabetical
+          </span>
+        </div>
+        <div className="space-y-4 text-sm text-ink/85 break-words [overflow-wrap:anywhere]">
+          {refs.map((r: any, i: number) => {
+            const entryText = r.formatted || r.apa || (r.authors?.length ? `${r.authors.join(", ")} (${r.year || "n.d."}). ${r.title}. ${r.venue || ""}` : r.title);
+            const linkUrl = r.url || (r.doi ? `https://doi.org/${r.doi}` : `https://scholar.google.com/scholar?q=${encodeURIComponent(r.title + (r.authors?.[0] ? " " + r.authors[0] : ""))}`);
+            return (
+              <div key={i} className="pl-6 -indent-6 leading-relaxed break-words [overflow-wrap:anywhere] group">
+                <a
+                  href={linkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-sage text-ink/90 transition-colors underline-offset-2 hover:underline inline items-baseline"
+                >
+                  <span>{entryText}</span>
+                  <ExternalLink className="inline-block size-3 ml-1.5 text-sage opacity-75 group-hover:opacity-100" />
+                </a>
+                {r.citation_key && (
+                  <span className="ml-2 inline-block px-1.5 py-0.5 text-[10px] font-mono text-ink/60 bg-ink/5 rounded border border-ink/10 whitespace-nowrap">
+                    In-text: {r.citation_key}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Revise Modal */}

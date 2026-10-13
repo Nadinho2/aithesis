@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { fetchScholarlyRefs, formatAPA } from "./scholarly.server";
+import { fetchScholarlyRefs, formatAPA, extractSearchKeywords } from "./scholarly.server";
 import { buildThesisDocx, toBase64 } from "./docx.server";
 import { getUserEmail } from "./mail-helper";
 import { checkGenerateLimit, incrementUsage } from "./admin-limits.functions";
@@ -16,6 +16,18 @@ const ManualTopic = z.object({
   area_of_interest: z.string().max(200).optional().default(""),
   country: z.string().max(80).optional().default(""),
   research_type: z.string().max(80).optional().default(""),
+  is_primary_data: z.boolean().optional().default(false),
+  primary_instrument: z.string().max(120).optional().default(""),
+  target_population: z.string().max(500).optional().default(""),
+  sample_size: z.string().max(200).optional().default(""),
+  sample_questions: z.array(z.string().min(2).max(500)).optional().default([]),
+  empirical_notes: z.string().max(5000).optional().default(""),
+});
+
+const ChapterTemplateSchema = z.object({
+  order: z.number().int(),
+  title: z.string().min(2).max(300),
+  sections: z.array(z.string().min(1).max(300)),
 });
 
 const GenerateInput = z
@@ -25,6 +37,7 @@ const GenerateInput = z
     level: z.enum(["undergraduate", "masters", "phd"]).default("undergraduate"),
     target_words: z.number().int().min(6000).max(80000).default(8000),
     citation_style: z.enum(["apa_7", "harvard"]).default("apa_7"),
+    custom_chapters: z.array(ChapterTemplateSchema).optional(),
   })
   .refine((d) => d.topic_id || d.manual, { message: "topic_id or manual required" });
 
@@ -73,6 +86,12 @@ export const generateThesis = createServerFn({ method: "POST" })
         area_of_interest: topic.area_of_interest,
         country: topic.country,
         research_type: topic.research_type,
+        is_primary_data: (topic as any).is_primary_data || false,
+        primary_instrument: (topic as any).primary_instrument || null,
+        target_population: (topic as any).target_population || null,
+        sample_size: (topic as any).sample_size || null,
+        sample_questions: (topic as any).sample_questions || [],
+        empirical_notes: (topic as any).empirical_notes || null,
         id: topic.id,
       };
     } else {
@@ -86,13 +105,32 @@ export const generateThesis = createServerFn({ method: "POST" })
         area_of_interest: m.area_of_interest || null,
         country: m.country || null,
         research_type: m.research_type || null,
+        is_primary_data: m.is_primary_data || false,
+        primary_instrument: m.primary_instrument || null,
+        target_population: m.target_population || null,
+        sample_size: m.sample_size || null,
+        sample_questions: m.sample_questions || [],
+        empirical_notes: m.empirical_notes || null,
         id: null,
       };
     }
 
-    // Fetch references
-    const query = `${topicCtx.title} ${topicCtx.area_of_interest ?? ""}`.trim();
-    const refs = await fetchScholarlyRefs(query, 8);
+    // Fetch references using focused academic keywords
+    const keywords = extractSearchKeywords(topicCtx.title, topicCtx.area_of_interest ?? "");
+    const query = keywords.length > 5 ? keywords : topicCtx.title;
+    let refs = await fetchScholarlyRefs(query, 10);
+    // If fewer than 8 refs retrieved, also search with title
+    if (refs.length < 8 && query !== topicCtx.title) {
+      const fallbackRefs = await fetchScholarlyRefs(topicCtx.title.slice(0, 150), 8);
+      const seen = new Set(refs.map((r) => r.doi || r.title.toLowerCase().trim()));
+      for (const fr of fallbackRefs) {
+        const key = fr.doi || fr.title.toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          refs.push(fr);
+        }
+      }
+    }
     if (refs.length === 0) throw new Error("No scholarly references could be retrieved.");
 
     // Processing started email
@@ -135,6 +173,7 @@ export const generateThesis = createServerFn({ method: "POST" })
         topicCtx,
         refs: refs.slice(0, 30),
         isPaid,
+        custom_chapters: data.custom_chapters,
       },
     });
 
