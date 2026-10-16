@@ -53,9 +53,8 @@ export const Route = createFileRoute("/api/withdrawal/request")({
           const request = ctx.request;
           const supabaseUrl = runtimeEnv("SUPABASE_URL");
           const supabaseKey = runtimeEnv("SUPABASE_SERVICE_ROLE_KEY");
-          const paystackSecretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
 
-          if (!supabaseUrl || !supabaseKey || !paystackSecretKey) {
+          if (!supabaseUrl || !supabaseKey) {
             return new Response(
               JSON.stringify({ success: false, error: "Server configuration error" }),
               { status: 500, headers: { "Content-Type": "application/json" } },
@@ -97,32 +96,6 @@ export const Route = createFileRoute("/api/withdrawal/request")({
             );
           }
 
-          // Create Paystack Transfer Recipient (external API, no DB side effects)
-          const recipientRes = await fetch("https://api.paystack.co/transferrecipient", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${paystackSecretKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              type: "nuban",
-              name: accountName,
-              account_number: String(accountNumber),
-              bank_code: bankCode,
-              currency: "NGN",
-            }),
-          });
-
-          const recipientData = await recipientRes.json();
-          if (!recipientData.status) {
-            return new Response(
-              JSON.stringify({ success: false, error: `Paystack error: ${recipientData.message ?? "Failed to create recipient"}` }),
-              { status: 502, headers: { "Content-Type": "application/json" } },
-            );
-          }
-
-          const recipientCode = recipientData.data.recipient_code;
-
           // Atomically deduct the wallet balance. Returns NULL on insufficient
           // funds, preventing concurrent requests from overdrawing the wallet.
           const { data: newBalance, error: deductError } = await supabase
@@ -144,8 +117,7 @@ export const Route = createFileRoute("/api/withdrawal/request")({
               bank_code: bankCode,
               account_number: String(accountNumber),
               account_name: accountName,
-              paystack_recipient_code: recipientCode,
-              status: "processing",
+              status: "pending",
             })
             .select("id")
             .single();
@@ -161,52 +133,11 @@ export const Route = createFileRoute("/api/withdrawal/request")({
 
           const withdrawalId = (withdrawal as any).id;
 
-          // Initiate Paystack Transfer
-          const transferRes = await fetch("https://api.paystack.co/transfer", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${paystackSecretKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              source: "balance",
-              amount: amount * 100, // Convert to kobo
-              recipient: recipientCode,
-              reason: "MyBrainPadi referral withdrawal",
-              reference: withdrawalId,
-            }),
-          });
-
-          const transferData = await transferRes.json();
-          if (!transferData.status) {
-            // Reverse the wallet deduction and mark the withdrawal failed.
-            await supabase.rpc("refund_wallet", { p_user_id: userId, p_amount: amount });
-
-            await supabase
-              .from("withdrawal_requests")
-              .update({ status: "failed", failure_reason: transferData.message ?? "Transfer initiation failed" })
-              .eq("id", withdrawalId);
-
-            return new Response(
-              JSON.stringify({ success: false, error: `Transfer failed: ${transferData.message ?? "Unknown error"}` }),
-              { status: 502, headers: { "Content-Type": "application/json" } },
-            );
-          }
-
-          const transferCode = transferData.data.transfer_code;
-
-          // Update withdrawal with transfer code
-          await supabase
-            .from("withdrawal_requests")
-            .update({ paystack_transfer_id: transferCode, status: "processing" })
-            .eq("id", withdrawalId);
-
           return new Response(
             JSON.stringify({
               success: true,
-              message: "Withdrawal initiated successfully",
+              message: "Withdrawal request submitted successfully and queued for payment.",
               withdrawalId,
-              transferCode,
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );

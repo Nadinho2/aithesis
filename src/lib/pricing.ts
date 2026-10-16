@@ -21,8 +21,35 @@ export const PRICING = {
   custom_analysis: { label: "Assessment", price: 0, currency: "NGN" },
 } as const;
 
+export type CurrencyType = "NGN" | "USD";
+
+export const USD_PRICING: Record<string, number> = {
+  proposal: 4.99,
+  "thesis:undergraduate": 14.99,
+  "thesis:masters": 29.99,
+  "thesis:phd": 39.99,
+  assignment: 1.99,
+  exam: 1.99,
+  presentation: 2.99,
+  cv: 2.99,
+  seminar_journal: 3.99,
+  seminar_departmental: 2.49,
+  seminar_postgraduate: 2.99,
+  seminar_technical: 2.99,
+  seminar_book_review: 1.99,
+  chat: 0.99,
+  custom_analysis: 0,
+};
+
 export type ProductType = "proposal" | "thesis" | "assignment" | "exam" | "presentation" | "cv" | "seminar_journal" | "seminar_departmental" | "seminar_postgraduate" | "seminar_technical" | "seminar_book_review" | "chat" | "custom_analysis";
 export type ThesisLevel = "undergraduate" | "masters" | "phd";
+
+export function getUsdPrice(product: ProductType, level?: ThesisLevel): number {
+  const key = product === "thesis" && level ? `thesis:${level}` : product;
+  if (key in USD_PRICING) return USD_PRICING[key];
+  const ngn = getPrice(product, level);
+  return Math.max(1, Math.round((ngn / 1300) * 100) / 100);
+}
 
 export function getPrice(product: ProductType, level?: ThesisLevel): number {
   if (product === "thesis" && level) return PRICING.thesis[level].price;
@@ -139,6 +166,18 @@ export async function getPriceFromDB(product: ProductType, level?: ThesisLevel):
   const key = product === "thesis" && level ? `price:thesis:${level}` : `price:${product}`;
   const map = await getPriceMap();
   return map[key]?.price ?? getPrice(product, level);
+}
+
+/** Get price dynamically based on currency (NGN or USD) */
+export async function getPriceForCurrency(
+  product: ProductType,
+  level?: ThesisLevel,
+  currency: CurrencyType = "NGN",
+): Promise<number> {
+  if (currency === "USD") {
+    return getUsdPrice(product, level);
+  }
+  return getPriceFromDB(product, level);
 }
 
 /** Get all prices (React Server Components / server-side use) */

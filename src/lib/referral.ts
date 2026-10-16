@@ -1,7 +1,7 @@
 /**
  * Referral system utilities — code generation, tracking, and commission crediting.
  *
- * All amounts are in naira (not kobo). Only convert to kobo when sending to Paystack API.
+ * All amounts are in standard currency units (Naira / USD).
  *
  * Commission model (20% total cap):
  *   - L1 (direct referrer, B) always earns 15% on the referred user's (C) payments.

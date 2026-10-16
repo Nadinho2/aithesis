@@ -5,7 +5,7 @@ import { verifyPayment as verifyPaymentFn } from "@/lib/payment.functions";
 import { toast } from "sonner";
 
 /**
- * Save form data to sessionStorage before Paystack redirect so it can be
+ * Save form data to sessionStorage before payment redirect so it can be
  * restored when the user returns after payment.
  */
 export function saveFormBeforePay(formData: Record<string, unknown>) {
@@ -13,7 +13,7 @@ export function saveFormBeforePay(formData: Record<string, unknown>) {
 }
 
 /**
- * Restore form data from sessionStorage after Paystack redirect.
+ * Restore form data from sessionStorage after payment redirect.
  * Returns the saved data or null if nothing was saved.
  * Automatically clears the saved data after reading.
  */
@@ -30,10 +30,10 @@ export function restoreFormAfterPay<T extends Record<string, unknown>>(): T | nu
 }
 
 /**
- * Hook for service pages to handle Paystack redirect callback.
+ * Hook for service pages to handle Bachs redirect callback.
  *
- * When Paystack redirects back to the page after payment, it appends
- * ?reference=REF&trxref=REF to the URL. This hook detects that and
+ * When Bachs redirects back to the page after payment, it appends
+ * the checkout session reference to the URL. This hook detects that and
  * auto-verifies the payment silently. It also restores form data that
  * was saved via saveFormBeforePay() before the redirect.
  *
@@ -64,6 +64,9 @@ export function usePaymentCallback() {
         const url = new URL(window.location.href);
         url.searchParams.delete("reference");
         url.searchParams.delete("trxref");
+        url.searchParams.delete("checkout_id");
+        url.searchParams.delete("session_id");
+        url.searchParams.delete("id");
         window.history.replaceState({}, "", url.toString());
       }
     },
@@ -75,7 +78,11 @@ export function usePaymentCallback() {
   useEffect(() => {
     if (typeof window === "undefined" || verified) return;
     const params = new URLSearchParams(window.location.search);
-    const ref = params.get("reference");
+    const ref =
+      params.get("reference") ||
+      params.get("checkout_id") ||
+      params.get("session_id") ||
+      params.get("id");
     if (ref) {
       verifyMut.mutate(ref);
     }

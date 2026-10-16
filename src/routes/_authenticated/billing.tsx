@@ -42,7 +42,7 @@ function BillingPage() {
     setPayLevel(level);
   };
 
-  // Handle Paystack redirect back after payment — just verify silently
+  // Handle payment redirect back after payment — just verify silently
   usePaymentCallback();
 
   return (

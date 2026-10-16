@@ -19,7 +19,7 @@ function PrivacyPage() {
             When you sign up for Mybrainpadi, we collect your email address and a user profile
             name. We also store the topics, proposals, theses, assignments, exam materials,
             presentations, CVs, and other content you create or upload while using the platform.
-            Payment information is processed by Paystack; we do not store credit card details.
+            Payment information is processed by Bachs (bachs.io); we do not store credit card details.
           </p>
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">2. How We Use Your Data</h2>
@@ -39,7 +39,7 @@ function PrivacyPage() {
 
           <h2 className="font-serif text-xl text-ink mt-8 mb-3">4. Third-Party Services</h2>
           <p>
-            Mybrainpadi integrates with Clerk (authentication), Supabase (database), Paystack
+            Mybrainpadi integrates with Clerk (authentication), Supabase (database), Bachs
             (payments), OpenAlex and Crossref (citation lookup). Each service has its own privacy
             policy governing how it handles your data. We only share the minimum data necessary
             for each service to function.

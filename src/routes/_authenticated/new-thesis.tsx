@@ -31,7 +31,7 @@ function NewThesisPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  // Restore form data if returning from Paystack redirect (check both keys)
+  // Restore form data if returning from payment redirect (check both keys)
   const savedForm = restoreFormAfterPay<{
     title: string; problem_statement: string; research_gap: string;
     objectives: string[]; department: string; area_of_interest: string;
@@ -143,7 +143,7 @@ function NewThesisPage() {
 
   const checkAccessFn = useServerFn(checkAccess);
 
-  // Handle Paystack redirect back after payment — just verify silently
+  // Handle payment redirect back after payment — just verify silently
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

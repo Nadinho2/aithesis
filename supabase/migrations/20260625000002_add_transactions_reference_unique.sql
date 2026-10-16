@@ -1,5 +1,5 @@
 -- Add unique constraint on transactions.reference for upsert in verifyPayment
--- This allows initPayment to save a pending record before Paystack redirect,
+-- This allows initPayment to save a pending record before payment gateway redirect,
 -- and verifyPayment to upsert it to completed status.
 
 -- First, deduplicate any existing rows with duplicate references (keep the newest)

@@ -24,6 +24,7 @@ import { Route as ApiSubmitUniversityRouteImport } from './routes/api/submit-uni
 import { Route as ApiCustomAnalysisRouteImport } from './routes/api/custom-analysis'
 import { Route as ApiClerkWebhookRouteImport } from './routes/api/clerk-webhook'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiBachsWebhookRouteImport } from './routes/api/bachs-webhook'
 import { Route as AuthenticatedTopicGeneratorRouteImport } from './routes/_authenticated/topic-generator'
 import { Route as AuthenticatedThesesRouteImport } from './routes/_authenticated/theses'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -153,6 +154,11 @@ const ApiClerkWebhookRoute = ApiClerkWebhookRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBachsWebhookRoute = ApiBachsWebhookRouteImport.update({
+  id: '/api/bachs-webhook',
+  path: '/api/bachs-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTopicGeneratorRoute =
@@ -491,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
+  '/api/bachs-webhook': typeof ApiBachsWebhookRoute
   '/api/chat': typeof ApiChatRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
@@ -563,6 +570,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/theses': typeof AuthenticatedThesesRoute
   '/topic-generator': typeof AuthenticatedTopicGeneratorRoute
+  '/api/bachs-webhook': typeof ApiBachsWebhookRoute
   '/api/chat': typeof ApiChatRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
@@ -637,6 +645,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/theses': typeof AuthenticatedThesesRoute
   '/_authenticated/topic-generator': typeof AuthenticatedTopicGeneratorRoute
+  '/api/bachs-webhook': typeof ApiBachsWebhookRoute
   '/api/chat': typeof ApiChatRoute
   '/api/clerk-webhook': typeof ApiClerkWebhookRoute
   '/api/custom-analysis': typeof ApiCustomAnalysisRoute
@@ -711,6 +720,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/theses'
     | '/topic-generator'
+    | '/api/bachs-webhook'
     | '/api/chat'
     | '/api/clerk-webhook'
     | '/api/custom-analysis'
@@ -783,6 +793,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/theses'
     | '/topic-generator'
+    | '/api/bachs-webhook'
     | '/api/chat'
     | '/api/clerk-webhook'
     | '/api/custom-analysis'
@@ -856,6 +867,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/theses'
     | '/_authenticated/topic-generator'
+    | '/api/bachs-webhook'
     | '/api/chat'
     | '/api/clerk-webhook'
     | '/api/custom-analysis'
@@ -919,6 +931,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  ApiBachsWebhookRoute: typeof ApiBachsWebhookRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiClerkWebhookRoute: typeof ApiClerkWebhookRoute
   ApiCustomAnalysisRoute: typeof ApiCustomAnalysisRoute
@@ -1033,6 +1046,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bachs-webhook': {
+      id: '/api/bachs-webhook'
+      path: '/api/bachs-webhook'
+      fullPath: '/api/bachs-webhook'
+      preLoaderRoute: typeof ApiBachsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/topic-generator': {
@@ -1667,6 +1687,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  ApiBachsWebhookRoute: ApiBachsWebhookRoute,
   ApiChatRoute: ApiChatRoute,
   ApiClerkWebhookRoute: ApiClerkWebhookRoute,
   ApiCustomAnalysisRoute: ApiCustomAnalysisRoute,

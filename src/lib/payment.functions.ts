@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireClerkAuth } from "@/integrations/clerk/clerk-auth-middleware";
 import { z } from "zod";
-import { getPriceFromDB, type ProductType, type ThesisLevel } from "./pricing";
+import { getPriceFromDB, getPriceForCurrency, type ProductType, type ThesisLevel, type CurrencyType } from "./pricing";
 import { sendPaymentConfirmedEmail, sendPaymentFailedEmail } from "./mail";
 import type { BrainPadiTool } from "./mail";
 import { getUserEmail, productToTool } from "./mail-helper";
@@ -16,12 +16,113 @@ function runtimeEnv(key: string): string | undefined {
   }
 }
 
-// --- Initialize Paystack Payment ---
+function getBachsBaseUrl(secretKey: string): string {
+  const custom = runtimeEnv("BACHS_API_BASE_URL");
+  if (custom) return custom.replace(/\/+$/, "");
+  if (secretKey.startsWith("sk_sandbox_") || secretKey.startsWith("sandbox_")) {
+    return "https://sandbox-api.bachs.io";
+  }
+  return "https://api.bachs.io";
+}
+
+// ─── Shared Payment Fulfillment (used by verifyPayment and Bachs Webhook) ───
+
+export async function fulfillPayment(
+  supabase: any,
+  params: {
+    userId: string;
+    reference: string;
+    amount: number;
+    currency?: string;
+    product: string;
+    level?: string | null;
+    rawData?: any;
+  },
+) {
+  const { userId, reference, amount, currency = "NGN", product, level, rawData } = params;
+
+  // Idempotency: verify if this reference was already marked completed
+  const { data: existing } = await (supabase as any)
+    .from("transactions")
+    .select("id, status")
+    .eq("reference", reference)
+    .maybeSingle();
+
+  if (existing && existing.status === "completed") {
+    return { alreadyFulfilled: true };
+  }
+
+  // Upsert transaction (pending record was saved during initPayment)
+  const { error: txError } = await (supabase as any)
+    .from("transactions")
+    .upsert(
+      {
+        user_id: userId,
+        reference,
+        amount,
+        currency,
+        product,
+        level: level || null,
+        status: "completed",
+        metadata: rawData ?? {},
+      },
+      { onConflict: "reference" },
+    );
+
+  if (txError) throw new Error("Failed to record payment");
+
+  // Chat: increment chat_available by 50 messages (₦500 = 50 messages)
+  if (product === "chat") {
+    const { data: limitData } = await (supabase as any)
+      .from("user_limits")
+      .select("chat_available")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const current = limitData?.chat_available ?? 0;
+    await (supabase as any)
+      .from("user_limits")
+      .upsert(
+        { user_id: userId, chat_available: current + 50, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
+  }
+
+  // Credit referral commission (fire-and-forget — never block payment flow)
+  import("./referral")
+    .then(({ creditReferralCommission }) =>
+      creditReferralCommission({
+        paymentId: reference,
+        referredUserId: userId,
+        paymentAmount: amount,
+        tool: product ?? "unknown",
+      }).catch(() => {}),
+    )
+    .catch(() => {});
+
+  // Send payment confirmed email (fire-and-forget)
+  const userEmail = await getUserEmail(userId);
+  const toolName = productToTool(product) as BrainPadiTool | null;
+  if (userEmail && toolName) {
+    const userName = userEmail.split("@")[0];
+    sendPaymentConfirmedEmail({
+      to: userEmail,
+      name: userName,
+      tool: toolName,
+      amount: amount.toLocaleString(),
+    });
+  }
+
+  return { fulfilled: true };
+}
+
+// --- Initialize Payment (Bachs Checkout) ---
 
 const InitPaymentInput = z.object({
   product: z.enum(["proposal", "thesis", "assignment", "exam", "presentation", "cv", "seminar_journal", "seminar_departmental", "seminar_postgraduate", "seminar_technical", "seminar_book_review", "chat", "custom_analysis"]),
   level: z.enum(["undergraduate", "masters", "phd"]).optional(),
   email: z.string().email(),
+  currency: z.enum(["NGN", "USD"]).optional().default("NGN"),
   callbackUrl: z.string().optional(),
 });
 
@@ -30,60 +131,84 @@ export const initPayment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InitPaymentInput.parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const secretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
-    if (!secretKey) throw new Error("Payment is not configured.");
+    const bachsKey = runtimeEnv("BACHS_SECRET_KEY");
 
-    const amount = await getPriceFromDB(data.product, data.level as ThesisLevel);
+    if (!bachsKey) {
+      throw new Error("Payment is not configured. Please configure BACHS_SECRET_KEY.");
+    }
+
+    const currency = (data.currency || "NGN") as CurrencyType;
+    const amount = await getPriceForCurrency(data.product, data.level as ThesisLevel, currency);
     if (amount <= 0) throw new Error("Invalid product or level");
 
     const metadata = {
       userId,
       product: data.product,
       level: data.level ?? null,
+      currency,
     };
 
     const callbackUrl = runtimeEnv("NEXT_PUBLIC_APP_URL") || "https://mybrainpadi.com";
-    const redirectUrl = data.callbackUrl
+    const redirectBase = data.callbackUrl
       ? data.callbackUrl
       : data.level
         ? `${callbackUrl}/dashboard?payment_verify=thesis&level=${data.level}`
         : `${callbackUrl}/dashboard?payment_verify=proposal`;
 
-    const resp = await fetch("https://api.paystack.co/transaction/initialize", {
+    const { supabase } = context;
+
+    const baseUrl = getBachsBaseUrl(bachsKey);
+    const successUrl = redirectBase.includes("?")
+      ? `${redirectBase}&reference={CHECKOUT_SESSION_ID}`
+      : `${redirectBase}?reference={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = data.callbackUrl || `${callbackUrl}/billing`;
+
+    const resp = await fetch(`${baseUrl}/v1/checkout-sessions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${secretKey}`,
+        Authorization: `Bearer ${bachsKey}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify({
-        email: data.email,
-        amount: amount * 100, // Paystack uses kobo (cents)
-        currency: "NGN",
+        pricing: {
+          amount: String(amount),
+          currency: currency,
+        },
+        customer: {
+          email: data.email,
+        },
         metadata,
-        callback_url: redirectUrl,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
       }),
     });
 
-    const json = await resp.json();
-    if (!json.status) throw new Error(json.message || "Payment initiation failed");
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      const errorMsg = json.message || json.error || resp.statusText || "Bachs payment initiation failed";
+      throw new Error(errorMsg);
+    }
 
-    const reference = json.data.reference;
+    const checkoutId = json.checkout_id || json.id || json.data?.checkout_id || json.data?.id;
+    const checkoutUrl = json.checkout_url || json.url || json.data?.checkout_url || json.data?.url;
 
-    // Save pending transaction immediately so it persists even if the
-    // post-payment callback (verifyPayment) fails due to network outage
-    const { supabase } = context;
+    if (!checkoutId || !checkoutUrl) {
+      throw new Error("Invalid response received from Bachs checkout API");
+    }
+
     await (supabase as any).from("transactions").insert({
       user_id: userId,
-      reference,
+      reference: checkoutId,
       amount,
-      currency: "NGN",
+      currency,
       product: data.product,
       level: data.level ?? null,
       status: "pending",
-      metadata: {},
+      metadata: json,
     });
 
-    return { authorization_url: json.data.authorization_url, reference };
+    return { authorization_url: checkoutUrl, reference: checkoutId };
   });
 
 // --- Verify Payment ---
@@ -97,87 +222,86 @@ export const verifyPayment = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => VerifyPaymentInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const secretKey = runtimeEnv("PAYSTACK_SECRET_KEY");
-    if (!secretKey) throw new Error("Payment is not configured.");
+    const bachsKey = runtimeEnv("BACHS_SECRET_KEY");
 
-    const resp = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(data.reference)}`, {
-      headers: { Authorization: `Bearer ${secretKey}` },
-    });
+    if (!bachsKey) throw new Error("Payment is not configured. Please configure BACHS_SECRET_KEY.");
 
-    const json = await resp.json();
-    if (!json.status || json.data.status !== "success") {
-      throw new Error("Payment verification failed");
-    }
-
-    const { metadata } = json.data;
-    const amount = json.data.amount / 100; // Convert back from kobo
-
-    // Ensure the payment actually belongs to the authenticated user so a
-    // leaked/guessed reference can't be replayed to credit another account.
-    if (!metadata || metadata.userId !== userId) {
-      throw new Error("Payment does not belong to this user");
-    }
-
-    // Upsert transaction (pending record was already saved in initPayment)
-    // Note: used column may not exist yet. Omit it — DEFAULT false handles it.
-    const { error: txError } = await (supabase as any)
+    // 1. Check if transaction was already completed (e.g., by Bachs webhook)
+    const { data: existingTx } = await (supabase as any)
       .from("transactions")
-      .upsert({
-        user_id: userId,
-        reference: data.reference,
-        amount,
-        currency: "NGN",
-        product: metadata.product,
-        level: metadata.level || null,
-        status: "completed",
-        metadata: json.data,
-      }, { onConflict: "reference" });
+      .select("*")
+      .eq("reference", data.reference)
+      .maybeSingle();
 
-    if (txError) throw new Error("Failed to record payment");
-
-    // Chat: increment chat_available by 50 messages (₦500 = 50 messages)
-    if (metadata.product === "chat") {
-      const { data: existing } = await (supabase as any)
-        .from("user_limits")
-        .select("chat_available")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      const current = existing?.chat_available ?? 0;
-      await (supabase as any)
-        .from("user_limits")
-        .upsert({ user_id: userId, chat_available: current + 50, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (existingTx && existingTx.status === "completed") {
+      if (existingTx.user_id !== userId) {
+        throw new Error("Payment does not belong to this user");
+      }
+      return { success: true, product: existingTx.product, level: existingTx.level };
     }
 
-    // Credit referral commission (fire-and-forget — never block payment flow).
-    // This runs independently of the email below so commission is never skipped
-    // when email lookup or tool-name mapping fails.
-    import("./referral").then(({ creditReferralCommission }) =>
-      creditReferralCommission({
-        paymentId: data.reference,
-        referredUserId: userId,
-        paymentAmount: amount,
-        tool: metadata.product ?? "unknown",
-      }).catch(() => {}),
-    ).catch(() => {});
-
-    // Send payment confirmed email (fire-and-forget)
-    const userEmail = await getUserEmail(userId);
-    const toolName = productToTool(metadata.product) as BrainPadiTool | null;
-    if (userEmail && toolName) {
-      const userName = userEmail.split("@")[0];
-      sendPaymentConfirmedEmail({
-        to: userEmail,
-        name: userName,
-        tool: toolName,
-        amount: amount.toLocaleString(),
+    // 2. Verify with Bachs.io API
+    try {
+      const baseUrl = getBachsBaseUrl(bachsKey);
+      const resp = await fetch(`${baseUrl}/v1/checkout-sessions/${encodeURIComponent(data.reference)}`, {
+        headers: {
+          Authorization: `Bearer ${bachsKey}`,
+          Accept: "application/json",
+        },
       });
+
+      if (resp.ok) {
+        const json = await resp.json().catch(() => ({}));
+        const session = json.data ?? json;
+        const status = (session.status || "").toLowerCase();
+        const isSuccess =
+          status === "completed" ||
+          status === "succeeded" ||
+          status === "paid" ||
+          session.payment_status === "paid" ||
+          session.charge?.status === "succeeded";
+
+        if (isSuccess) {
+          const metadata = session.metadata || existingTx?.metadata || {};
+          const amount = session.pricing?.amount
+            ? Number(session.pricing.amount)
+            : session.amount
+              ? Number(session.amount)
+              : existingTx?.amount || 0;
+          const currency = session.pricing?.currency || session.currency || "NGN";
+
+          if (metadata.userId && metadata.userId !== userId) {
+            throw new Error("Payment does not belong to this user");
+          }
+          if (existingTx && existingTx.user_id !== userId) {
+            throw new Error("Payment does not belong to this user");
+          }
+
+          await fulfillPayment(supabase, {
+            userId,
+            reference: data.reference,
+            amount,
+            currency,
+            product: metadata.product || existingTx?.product,
+            level: metadata.level || existingTx?.level || null,
+            rawData: session,
+          });
+
+          return {
+            success: true,
+            product: metadata.product || existingTx?.product,
+            level: metadata.level || existingTx?.level,
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("[verifyPayment] Bachs verification check error:", err);
     }
 
-    return { success: true, product: metadata.product, level: metadata.level };
+    throw new Error("Payment verification failed. If you were debited, your transaction will be credited shortly.");
   });
 
-// --- Send payment failed email (called from Paystack webhook) ---
+// --- Send payment failed email ---
 
 export const handlePaymentFailed = createServerFn({ method: "POST" })
   .middleware([requireClerkAuth])
@@ -277,7 +401,7 @@ export const checkAccess = createServerFn({ method: "POST" })
     const unused = await countUnusedTx(context.supabase, userId, data.product, data.level as string | undefined);
     if (unused > 0) return { allowed: true, price };
 
-    // Fallback 1: user just paid via Paystack but hook hasn't fired yet (pending < 3 min)
+    // Fallback 1: user just paid via Bachs but webhook hasn't fired yet (pending < 3 min)
     try {
       const freshCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
       const { count: recentPending } = await (context.supabase as any)

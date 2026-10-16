@@ -25,7 +25,7 @@ function QuickProposalPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
-  // Restore form data if returning from Paystack redirect
+  // Restore form data if returning from payment redirect
   const savedForm = restoreFormAfterPay<{
     title: string; problem_statement: string; research_gap: string;
     objectives: string[]; department: string; area_of_interest: string;
@@ -98,7 +98,7 @@ function QuickProposalPage() {
     onError: (e) => toast.error(String(e instanceof Error ? e.message : e)),
   });
 
-  // Handle Paystack redirect back after payment — just verify silently
+  // Handle payment redirect back after payment — just verify silently
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -3,9 +3,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { initPayment as initPaymentFn, verifyPayment as verifyPaymentFn } from "@/lib/payment.functions";
 import { useUser } from "@clerk/clerk-react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Globe, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import type { ProductType, ThesisLevel } from "@/lib/pricing";
+import { getUsdPrice, type ProductType, type ThesisLevel, type CurrencyType } from "@/lib/pricing";
 
 type Props = {
   open: boolean;
@@ -29,8 +29,26 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const [reference, setReference] = useState<string | null>(null);
 
+  // Auto-detect currency: default to USD if user's timezone is outside Nigeria
+  const [currency, setCurrency] = useState<CurrencyType>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+        if (tz && !tz.includes("Lagos") && !tz.includes("Nigeria")) {
+          return "USD";
+        }
+      } catch {
+        return "NGN";
+      }
+    }
+    return "NGN";
+  });
+
   const initPay = useServerFn(initPaymentFn);
   const verifyPay = useServerFn(verifyPaymentFn);
+
+  const usdPrice = getUsdPrice(product, level);
+  const displayAmount = currency === "USD" ? `$${usdPrice.toFixed(2)}` : `₦${price.toLocaleString()}`;
 
   const initMut = useMutation({
     mutationFn: () => {
@@ -38,7 +56,7 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
         ? `${window.location.protocol}//${window.location.host}`
         : "https://mybrainpadi.com";
       const callbackUrl = callbackPath ? `${appUrl}${callbackPath}` : undefined;
-      return initPay({ data: { product, level, email, callbackUrl } });
+      return initPay({ data: { product, level, email, currency, callbackUrl } });
     },
     onSuccess: (res) => {
       setReference(res.reference);
@@ -60,9 +78,12 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
     },
   });
 
-  // Handle Paystack redirect callback (?reference=xxx)
+  // Handle Bachs redirect callback (?reference=xxx or ?checkout_id=xxx)
   const urlRef = typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("reference")
+    ? new URLSearchParams(window.location.search).get("reference") ||
+      new URLSearchParams(window.location.search).get("checkout_id") ||
+      new URLSearchParams(window.location.search).get("session_id") ||
+      new URLSearchParams(window.location.search).get("id")
     : null;
   if (urlRef && !reference) {
     setReference(urlRef);
@@ -72,14 +93,14 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-xs">
       <div className="bg-white rounded-sm shadow-xl w-full max-w-sm mx-4 p-6 relative">
         <button onClick={onClose} className="absolute top-3 right-3 text-ink/40 hover:text-ink">
           <X className="size-5" />
         </button>
 
         <h2 className="font-serif text-xl mb-1">Complete Payment</h2>
-        <p className="text-sm text-ink/60 mb-6">
+        <p className="text-sm text-ink/60 mb-4">
           {product === "proposal"
             ? "Unlock proposal drafting"
             : product === "thesis"
@@ -87,15 +108,61 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
               : "Unlock this tool"}
         </p>
 
-        <div className="border border-ink/10 rounded-sm p-4 mb-6">
-          <p className="text-xs text-ink/40 uppercase tracking-wider mb-1">Amount</p>
-          <p className="font-serif text-3xl">₦{price.toLocaleString()}</p>
+        {/* Currency Switcher */}
+        <div className="flex items-center p-1 bg-ink/5 rounded-sm mb-4">
+          <button
+            type="button"
+            onClick={() => setCurrency("NGN")}
+            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-xs transition-all flex items-center justify-center gap-1.5 ${
+              currency === "NGN"
+                ? "bg-white text-ink shadow-xs"
+                : "text-ink/60 hover:text-ink"
+            }`}
+          >
+            <span>🇳🇬</span>
+            <span>Naira (NGN)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrency("USD")}
+            className={`flex-1 py-1.5 px-2 text-xs font-medium rounded-xs transition-all flex items-center justify-center gap-1.5 ${
+              currency === "USD"
+                ? "bg-white text-ink shadow-xs"
+                : "text-ink/60 hover:text-ink"
+            }`}
+          >
+            <span>🌐</span>
+            <span>USD ($) / Global</span>
+          </button>
+        </div>
+
+        <div className="border border-ink/10 rounded-sm p-4 mb-5">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-ink/40 uppercase tracking-wider">Amount</p>
+            <span className="text-[11px] font-medium text-sage flex items-center gap-1">
+              {currency === "USD" ? (
+                <>
+                  <Globe className="size-3" /> Global Checkout
+                </>
+              ) : (
+                <>
+                  <CreditCard className="size-3" /> Local Checkout
+                </>
+              )}
+            </span>
+          </div>
+          <p className="font-serif text-3xl">{displayAmount}</p>
           <p className="text-xs text-ink/40 mt-1">
             {product === "proposal"
               ? "Research Proposal"
               : product === "thesis"
                 ? `${level?.charAt(0).toUpperCase()}${level?.slice(1)} Thesis`
                 : toolLabels[product] ?? product}
+          </p>
+          <p className="text-[11px] text-ink/50 mt-2 border-t border-ink/5 pt-2">
+            {currency === "USD"
+              ? "Accepts International Cards, Apple Pay, Google Pay, and Crypto (USDT/USDC)."
+              : "Accepts Nigerian Debit Cards, Bank Transfer, and USSD."}
           </p>
         </div>
 
@@ -113,13 +180,13 @@ export function PaymentModal({ open, onClose, product, level, price, onPaid, cal
             {initMut.isPending ? (
               <><Loader2 className="size-4 animate-spin" /> Redirecting…</>
             ) : (
-              "Pay with Paystack"
+              `Pay ${displayAmount} with Bachs`
             )}
           </button>
         )}
 
         <p className="text-xs text-ink/40 text-center mt-4">
-          Secured by Paystack. You will be redirected to complete payment.
+          Secured by Bachs. You will be redirected to complete payment.
         </p>
       </div>
     </div>
