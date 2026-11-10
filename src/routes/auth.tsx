@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth, useSignIn, useSignUp } from "@clerk/clerk-react";
-import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound, Gift } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, Mail, User, KeyRound, Gift, ShieldCheck, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -71,6 +71,10 @@ function AuthForms() {
   const [pendingVerification, setPendingVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
+  const [pendingSecondFactor, setPendingSecondFactor] = useState(false);
+  const [secondFactorCode, setSecondFactorCode] = useState("");
+  const [secondFactorTarget, setSecondFactorTarget] = useState("");
+  const [secondFactorStrategy, setSecondFactorStrategy] = useState("email_code");
 
   // Capture ref code from URL on mount and persist across auth flows
   useEffect(() => {
@@ -124,11 +128,62 @@ function AuthForms() {
       if (result.status === "complete") {
         await setSignInActive({ session: result.createdSessionId });
         navigate({ to: "/dashboard" });
+      } else if (result.status === "needs_second_factor") {
+        const factor =
+          result.supportedSecondFactors?.find((f) => f.strategy === "email_code") ||
+          result.supportedSecondFactors?.[0];
+        const strategy = factor?.strategy || "email_code";
+        const target = (factor as any)?.safeIdentifier || email;
+        setSecondFactorStrategy(strategy);
+        setSecondFactorTarget(target);
+        setPendingSecondFactor(true);
+        toast.info("A verification code was sent to your email.");
       } else {
         toast.error("Something went wrong. Please try again.");
       }
     } catch (err: any) {
       toast.error(err.errors?.[0]?.longMessage ?? err.message ?? "Sign in failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSecondFactorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signIn) return;
+    if (!secondFactorCode.trim()) {
+      toast.error("Please enter the verification code.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await signIn.attemptSecondFactor({
+        strategy: secondFactorStrategy as any,
+        code: secondFactorCode.trim(),
+      });
+      if (result.status === "complete") {
+        await setSignInActive({ session: result.createdSessionId });
+        navigate({ to: "/dashboard" });
+      } else {
+        toast.error("Verification incomplete. Please check the code and try again.");
+      }
+    } catch (err: any) {
+      toast.error(err.errors?.[0]?.longMessage ?? err.message ?? "Verification failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendSecondFactorCode = async () => {
+    if (!signIn) return;
+    setBusy(true);
+    try {
+      await signIn.prepareSecondFactor({
+        strategy: secondFactorStrategy as any,
+      });
+      toast.success("A new verification code has been sent.");
+    } catch (err: any) {
+      toast.error(err.errors?.[0]?.longMessage ?? err.message ?? "Failed to resend code.");
     } finally {
       setBusy(false);
     }
@@ -232,7 +287,9 @@ function AuthForms() {
   const switchMode = () => {
     setMode(mode === "signin" ? "signup" : "signin");
     setPendingVerification(false);
+    setPendingSecondFactor(false);
     setVerificationCode("");
+    setSecondFactorCode("");
     setUsername("");
     setPassword("");
     setConfirmPassword("");
@@ -260,7 +317,64 @@ function AuthForms() {
         </div>
 
         <div className="bg-white border border-[#E5E2D8] rounded-lg p-6 shadow-sm">
-          {pendingVerification ? (
+          {pendingSecondFactor ? (
+            <form onSubmit={handleSecondFactorSubmit} className="space-y-4">
+              <div className="text-center mb-4">
+                <div className="size-12 mx-auto mb-3 rounded-full bg-amber-bg flex items-center justify-center">
+                  <ShieldCheck className="size-6 text-amber-text" />
+                </div>
+                <h2 className="font-serif text-lg text-ink">Two-Factor Authentication</h2>
+                <p className="text-sm text-ink-secondary mt-1">
+                  {secondFactorTarget ? (
+                    <>We sent a verification code to <strong className="text-ink">{secondFactorTarget}</strong></>
+                  ) : (
+                    "Please enter the verification code sent to your email."
+                  )}
+                </p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-ink/60 mb-1 block">Verification Code</label>
+                <input
+                  type="text"
+                  value={secondFactorCode}
+                  onChange={(e) => setSecondFactorCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  className="w-full bg-card border border-ink/15 rounded-sm px-3 py-2.5 text-sm text-center tracking-[0.3em] text-lg focus:outline-none focus:border-sage"
+                  maxLength={6}
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full py-2.5 bg-ink text-paper font-medium rounded-lg hover:opacity-90 transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {busy ? <><Loader2 className="size-4 animate-spin" /> Verifying…</> : <><KeyRound className="size-4" /> Verify &amp; Sign In</>}
+              </button>
+              {secondFactorStrategy === "email_code" && (
+                <button
+                  type="button"
+                  onClick={resendSecondFactorCode}
+                  disabled={busy}
+                  className="w-full py-2 text-xs text-ink/50 hover:text-ink transition-colors disabled:opacity-40"
+                >
+                  Didn't receive the code? Send again
+                </button>
+              )}
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingSecondFactor(false);
+                    setSecondFactorCode("");
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-ink/50 hover:text-ink transition-colors"
+                >
+                  <ArrowLeft className="size-3" /> Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : pendingVerification ? (
             <form onSubmit={verifyEmail} className="space-y-4">
               <div className="text-center mb-4">
                 <div className="size-12 mx-auto mb-3 rounded-full bg-amber-bg flex items-center justify-center">
