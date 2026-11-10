@@ -13,8 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-      - run: npm ci
+      - run: npm install --legacy-peer-deps
       - name: Check env vars
         run: |
           echo "SUPABASE_URL set: ${{ secrets.SUPABASE_URL != '' }}"
@@ -22,7 +21,7 @@ jobs:
           echo "DEEPSEEK_API_KEY set: ${{ secrets.DEEPSEEK_API_KEY != '' }}"
           echo "RESEND_API_KEY set: ${{ secrets.RESEND_API_KEY != '' }}"
           echo "CLERK_SECRET_KEY set: ${{ secrets.CLERK_SECRET_KEY != '' }}"
-      - run: ./node_modules/.bin/tsx src/worker.ts
+      - run: npx tsx src/worker.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
